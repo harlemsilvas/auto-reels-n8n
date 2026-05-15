@@ -1,0 +1,56 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: socialbot_postgres
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - socialbot_network
+
+  redis:
+    image: redis:7
+    container_name: socialbot_redis
+    restart: always
+    volumes:
+      - ./redis:/data
+    networks:
+      - socialbot_network
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: socialbot_n8n
+    restart: always
+    ports:
+      - "5678:5678"
+    env_file:
+      - .env
+    environment:
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB}
+      - DB_POSTGRESDB_USER=${POSTGRES_USER}
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
+
+      - QUEUE_BULL_REDIS_HOST=redis
+
+      - N8N_SECURE_COOKIE=false
+
+    depends_on:
+      - postgres
+      - redis
+
+    volumes:
+      - ./n8n:/home/node/.n8n
+      - /home/socialbot/media:/media
+
+    networks:
+      - socialbot_network
+
+networks:
+  socialbot_network:
+    driver: bridge

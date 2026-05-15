@@ -1,0 +1,60 @@
+# Sistema
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+
+# IDE / Editor
+.vscode/
+.idea/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Node.js (monorepo)
+node_modules/
+backend/node_modules/
+dashboard/node_modules/
+
+# Build outputs
+dist/
+build/
+coverage/
+dashboard/dist/
+
+# Variaveis sensiveis e segredos
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.kdbx
+
+# Dados persistidos locais (Docker)
+postgres/
+redis/
+n8n/
+
+# Midias e binarios grandes
+media/
+*.mp4
+*.mov
+*.avi
+*.mkv
+
+# Pastas solicitadas para nao versionar
+config/
+docs/
+plano_desenvolvimento/
+
+# Arquivos operacionais opcionais
+*.pid
+*.seed

@@ -1,0 +1,20 @@
+module.exports = {
+  apps: [
+    {
+      name: "socialbot-backend",
+      cwd: "/home/socialbot/apps/auto-reels-n8n/backend",
+      script: "src/server.js",
+      instances: 1,
+      exec_mode: "fork",
+      autorestart: true,
+      watch: false,
+      max_memory_restart: "300M",
+      env: {
+        NODE_ENV: "production",
+        API_PORT: 3000,
+        CORS_ALLOWED_ORIGINS: "https://dashboard.seudominio.com",
+        MEDIA_ROOT: "/home/socialbot/media/reels",
+      },
+    },
+  ],
+};
