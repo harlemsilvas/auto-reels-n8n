@@ -50,10 +50,14 @@ media/
 *.avi
 *.mkv
 
-# Pastas solicitadas para nao versionar
-config/
-docs/
-plano_desenvolvimento/
+# Pastas solicitadas para nao versionar (somente na raiz)
+/config/
+/docs/
+/plano_desenvolvimento/
+
+# Garantir versionamento de config interna do backend
+!backend/src/config/
+!backend/src/config/**
 
 # Arquivos operacionais opcionais
 *.pid

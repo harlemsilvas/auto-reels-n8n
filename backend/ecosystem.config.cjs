@@ -11,8 +11,8 @@ module.exports = {
       max_memory_restart: "300M",
       env: {
         NODE_ENV: "production",
-        API_PORT: 3000,
-        CORS_ALLOWED_ORIGINS: "https://dashboard.seudominio.com",
+        API_PORT: 3101,
+        CORS_ALLOWED_ORIGINS: "https://dashboard.hrmmotos.com.br",
         MEDIA_ROOT: "/home/socialbot/media/reels",
       },
     },
