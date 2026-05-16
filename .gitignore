@@ -62,3 +62,6 @@ media/
 # Arquivos operacionais opcionais
 *.pid
 *.seed
+
+# Artefatos antigos que nao serao mais utilizados
+/nao_usaremos/

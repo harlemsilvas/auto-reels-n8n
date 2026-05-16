@@ -1,0 +1,294 @@
+-- =========================================================
+-- SOCIALBOT DATABASE STRUCTURE
+-- PostgreSQL + Instagram Automation Platform
+-- =========================================================
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- =========================================================
+-- UPDATED_AT TRIGGER FUNCTION
+-- =========================================================
+
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- =========================================================
+-- ENUMS
+-- =========================================================
+
+DO $$ BEGIN
+    CREATE TYPE post_status AS ENUM (
+        'pending',
+        'scheduled',
+        'queued',
+        'processing',
+        'uploading',
+        'publishing',
+        'published',
+        'retrying',
+        'error',
+        'canceled'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE storage_status AS ENUM (
+        'local',
+        'uploaded',
+        'archived',
+        'deleted',
+        'error'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+-- =========================================================
+-- WORKSPACES
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS workspaces (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nome TEXT NOT NULL,
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ
+);
+
+-- =========================================================
+-- INSTAGRAM ACCOUNTS
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS instagram_accounts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
+
+    nome TEXT NOT NULL,
+    instagram_id TEXT UNIQUE NOT NULL,
+    page_id TEXT UNIQUE,
+
+    access_token TEXT NOT NULL,
+    token_expires_at TIMESTAMPTZ,
+
+    ativo BOOLEAN NOT NULL DEFAULT TRUE,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ
+);
+
+-- =========================================================
+-- UPLOADS
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS uploads (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    original_filename TEXT NOT NULL,
+    stored_filename TEXT NOT NULL,
+
+    mime_type TEXT,
+    file_size BIGINT,
+
+    duration_seconds INTEGER,
+    width INTEGER,
+    height INTEGER,
+
+    storage_path TEXT NOT NULL,
+
+    storage_status storage_status NOT NULL DEFAULT 'local',
+
+    checksum TEXT,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ
+);
+
+-- =========================================================
+-- POSTS
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS posts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+    workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
+
+    account_id UUID NOT NULL REFERENCES instagram_accounts(id) ON DELETE CASCADE,
+
+    upload_id UUID REFERENCES uploads(id) ON DELETE SET NULL,
+
+    caption TEXT,
+
+    hashtags TEXT[],
+
+    source_path TEXT NOT NULL DEFAULT '/home/socialbot/media/reels/pending',
+
+    scheduled_at TIMESTAMPTZ,
+
+    publish_window_start TIMESTAMPTZ,
+    publish_window_end TIMESTAMPTZ,
+
+    timezone TEXT DEFAULT 'America/Sao_Paulo',
+
+    best_time_score NUMERIC(5,2),
+
+    published_at TIMESTAMPTZ,
+
+    status post_status NOT NULL DEFAULT 'pending',
+
+    meta_container_id TEXT,
+    meta_media_id TEXT,
+
+    error_message TEXT,
+
+    retry_count INTEGER NOT NULL DEFAULT 0,
+
+    last_retry_at TIMESTAMPTZ,
+    next_retry_at TIMESTAMPTZ,
+
+    processing_started_at TIMESTAMPTZ,
+    processing_finished_at TIMESTAMPTZ,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ
+);
+
+-- =========================================================
+-- POST EVENTS
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS post_events (
+    id BIGSERIAL PRIMARY KEY,
+
+    post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+
+    event_type TEXT NOT NULL,
+
+    details JSONB NOT NULL DEFAULT '{}'::jsonb,
+
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- =========================================================
+-- POST METRICS / ANALYTICS
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS post_metrics (
+    id BIGSERIAL PRIMARY KEY,
+
+    post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+
+    views INTEGER NOT NULL DEFAULT 0,
+    likes INTEGER NOT NULL DEFAULT 0,
+    comments INTEGER NOT NULL DEFAULT 0,
+    shares INTEGER NOT NULL DEFAULT 0,
+    saved INTEGER NOT NULL DEFAULT 0,
+    reach INTEGER NOT NULL DEFAULT 0,
+
+    engagement_rate NUMERIC(10,2),
+
+    fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- =========================================================
+-- INDEXES
+-- =========================================================
+
+CREATE INDEX IF NOT EXISTS idx_workspaces_ativo
+ON workspaces(ativo);
+
+CREATE INDEX IF NOT EXISTS idx_instagram_accounts_workspace_id
+ON instagram_accounts(workspace_id);
+
+CREATE INDEX IF NOT EXISTS idx_instagram_accounts_ativo
+ON instagram_accounts(ativo);
+
+CREATE INDEX IF NOT EXISTS idx_instagram_accounts_token_expires
+ON instagram_accounts(token_expires_at);
+
+CREATE INDEX IF NOT EXISTS idx_uploads_storage_status
+ON uploads(storage_status);
+
+CREATE INDEX IF NOT EXISTS idx_posts_workspace_id
+ON posts(workspace_id);
+
+CREATE INDEX IF NOT EXISTS idx_posts_account_id
+ON posts(account_id);
+
+CREATE INDEX IF NOT EXISTS idx_posts_upload_id
+ON posts(upload_id);
+
+CREATE INDEX IF NOT EXISTS idx_posts_status
+ON posts(status);
+
+CREATE INDEX IF NOT EXISTS idx_posts_scheduled_at
+ON posts(scheduled_at);
+
+CREATE INDEX IF NOT EXISTS idx_posts_published_at
+ON posts(published_at);
+
+CREATE INDEX IF NOT EXISTS idx_posts_next_retry_at
+ON posts(next_retry_at);
+
+CREATE INDEX IF NOT EXISTS idx_posts_created_at
+ON posts(created_at);
+
+CREATE INDEX IF NOT EXISTS idx_post_events_post_id
+ON post_events(post_id);
+
+CREATE INDEX IF NOT EXISTS idx_post_events_event_type
+ON post_events(event_type);
+
+CREATE INDEX IF NOT EXISTS idx_post_metrics_post_id
+ON post_metrics(post_id);
+
+CREATE INDEX IF NOT EXISTS idx_post_metrics_fetched_at
+ON post_metrics(fetched_at);
+
+-- =========================================================
+-- TRIGGERS
+-- =========================================================
+
+DROP TRIGGER IF EXISTS trg_workspaces_updated_at ON workspaces;
+
+CREATE TRIGGER trg_workspaces_updated_at
+BEFORE UPDATE ON workspaces
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_instagram_accounts_updated_at
+ON instagram_accounts;
+
+CREATE TRIGGER trg_instagram_accounts_updated_at
+BEFORE UPDATE ON instagram_accounts
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_uploads_updated_at
+ON uploads;
+
+CREATE TRIGGER trg_uploads_updated_at
+BEFORE UPDATE ON uploads
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_posts_updated_at
+ON posts;
+
+CREATE TRIGGER trg_posts_updated_at
+BEFORE UPDATE ON posts
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+

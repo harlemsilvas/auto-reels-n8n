@@ -71,6 +71,60 @@ async function saveCaptionForVideo(baseName, captionText) {
   await fs.writeFile(captionPath, `${captionText.trim()}\n`, "utf-8");
 }
 
+async function readCaptionForBaseName(baseName) {
+  const captionPath = path.join(MEDIA_PENDING_DIR, `${baseName}.txt`);
+
+  try {
+    const content = await fs.readFile(captionPath, "utf-8");
+    return content.trim();
+  } catch (error) {
+    if (error && error.code === "ENOENT") {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+async function moveIfExists(sourcePath, targetPath) {
+  try {
+    await fs.rename(sourcePath, targetPath);
+    return true;
+  } catch (error) {
+    if (error && error.code === "ENOENT") {
+      return false;
+    }
+
+    throw error;
+  }
+}
+
+async function movePendingItem(baseName, targetDir) {
+  const videoSourcePath = path.join(MEDIA_PENDING_DIR, `${baseName}.mp4`);
+  const captionSourcePath = path.join(MEDIA_PENDING_DIR, `${baseName}.txt`);
+
+  const videoTargetPath = path.join(targetDir, `${baseName}.mp4`);
+  const captionTargetPath = path.join(targetDir, `${baseName}.txt`);
+
+  const [movedVideo, movedCaption] = await Promise.all([
+    moveIfExists(videoSourcePath, videoTargetPath),
+    moveIfExists(captionSourcePath, captionTargetPath),
+  ]);
+
+  return {
+    movedVideo,
+    movedCaption,
+  };
+}
+
+async function movePendingItemToPublished(baseName) {
+  return movePendingItem(baseName, MEDIA_PUBLISHED_DIR);
+}
+
+async function movePendingItemToError(baseName) {
+  return movePendingItem(baseName, MEDIA_ERROR_DIR);
+}
+
 function buildDashboardQueueFromPending(pendingItems) {
   return pendingItems.slice(0, 10).map((item) => {
     const createdAt = new Date(item.createdAt);
@@ -136,8 +190,26 @@ async function getDashboardSummary() {
   };
 }
 
+async function getFileOperationalCounts() {
+  const [pending, published, error] = await Promise.all([
+    listPendingMedia(),
+    countVideosInDir(MEDIA_PUBLISHED_DIR),
+    countVideosInDir(MEDIA_ERROR_DIR),
+  ]);
+
+  return {
+    pending: pending.items.length,
+    published,
+    error,
+  };
+}
+
 module.exports = {
   listPendingMedia,
   saveCaptionForVideo,
+  readCaptionForBaseName,
+  movePendingItemToPublished,
+  movePendingItemToError,
+  getFileOperationalCounts,
   getDashboardSummary,
 };

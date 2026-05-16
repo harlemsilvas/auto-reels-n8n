@@ -1,78 +1,103 @@
-```bash
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# =========================================================
-# CONFIGURAÇÕES
-# =========================================================
+# Uso:
+#   bash scripts/create-user.sh local
+#   bash scripts/create-user.sh vps
+#
+# Variaveis opcionais:
+#   APP_USER=socialbot
+#   APP_HOME=/home/socialbot
+#   MEDIA_ROOT=/home/socialbot/media
+#   SET_PASSWORD=true|false   (apenas vps)
 
-APP_USER="socialbot"
-APP_HOME="/home/$APP_USER"
+MODE="${1:-local}"
+APP_USER="${APP_USER:-socialbot}"
+APP_HOME="${APP_HOME:-/home/${APP_USER}}"
+MEDIA_ROOT="${MEDIA_ROOT:-/home/socialbot/media}"
+SET_PASSWORD="${SET_PASSWORD:-false}"
 
-echo "========================================="
-echo " Criando usuário da automação"
-echo "========================================="
+if [[ "${MODE}" != "local" && "${MODE}" != "vps" ]]; then
+  echo "Modo invalido: ${MODE}. Use: local ou vps."
+  exit 1
+fi
 
-# =========================================================
-# CRIA USUÁRIO
-# =========================================================
+if [[ ${EUID} -eq 0 ]]; then
+  SUDO=""
+else
+  SUDO="sudo"
+fi
 
-sudo adduser --disabled-password --gecos "" $APP_USER
+log() {
+  echo "[setup] $*"
+}
 
-# Define senha
-sudo passwd $APP_USER
+ensure_dir() {
+  local dir_path="$1"
+  ${SUDO} mkdir -p "${dir_path}"
+}
 
-# =========================================================
-# ADICIONA AO GRUPO DOCKER
-# =========================================================
+log "Iniciando setup (${MODE})"
+log "APP_USER=${APP_USER}"
+log "APP_HOME=${APP_HOME}"
+log "MEDIA_ROOT=${MEDIA_ROOT}"
 
-sudo usermod -aG docker $APP_USER
+if [[ "${MODE}" == "vps" ]]; then
+  if id -u "${APP_USER}" >/dev/null 2>&1; then
+    log "Usuario ${APP_USER} ja existe."
+  else
+    log "Criando usuario ${APP_USER}..."
+    ${SUDO} adduser --disabled-password --gecos "" "${APP_USER}"
 
-# =========================================================
-# CRIA ESTRUTURA DE PASTAS
-# =========================================================
+    if [[ "${SET_PASSWORD}" == "true" ]]; then
+      log "Defina a senha do usuario ${APP_USER}:"
+      ${SUDO} passwd "${APP_USER}"
+    fi
+  fi
 
-sudo mkdir -p $APP_HOME/app
-sudo mkdir -p $APP_HOME/docker
-sudo mkdir -p $APP_HOME/media/reels
-sudo mkdir -p $APP_HOME/backups
-sudo mkdir -p $APP_HOME/logs
-sudo mkdir -p $APP_HOME/scripts
+  if getent group docker >/dev/null 2>&1; then
+    log "Adicionando ${APP_USER} ao grupo docker..."
+    ${SUDO} usermod -aG docker "${APP_USER}"
+  else
+    log "Grupo docker nao encontrado. Pulei usermod -aG docker."
+  fi
 
-# =========================================================
-# AJUSTA PERMISSÕES
-# =========================================================
+  ensure_dir "${APP_HOME}/apps"
+  ensure_dir "${APP_HOME}/docker"
+  ensure_dir "${APP_HOME}/backups"
+  ensure_dir "${APP_HOME}/logs"
+  ensure_dir "${APP_HOME}/scripts"
+fi
 
-sudo chown -R $APP_USER:$APP_USER $APP_HOME
+# Estrutura usada no projeto atual (local e vps)
+ensure_dir "${MEDIA_ROOT}/reels/pending"
+ensure_dir "${MEDIA_ROOT}/reels/published"
+ensure_dir "${MEDIA_ROOT}/reels/error"
 
-sudo chmod -R 755 $APP_HOME
+# Arquivo .env de apoio no modo vps
+if [[ "${MODE}" == "vps" ]]; then
+  ensure_dir "${APP_HOME}/docker"
+  ${SUDO} touch "${APP_HOME}/docker/.env"
+fi
 
-# =========================================================
-# CRIA ARQUIVO .ENV INICIAL
-# =========================================================
+# Ajusta ownership quando o usuario alvo existe
+if id -u "${APP_USER}" >/dev/null 2>&1; then
+  log "Ajustando ownership para ${APP_USER}:${APP_USER}"
+  ${SUDO} chown -R "${APP_USER}:${APP_USER}" "${MEDIA_ROOT}" || true
 
-sudo touch $APP_HOME/docker/.env
+  if [[ "${MODE}" == "vps" ]]; then
+    ${SUDO} chown -R "${APP_USER}:${APP_USER}" "${APP_HOME}" || true
+  fi
+fi
 
-sudo chown $APP_USER:$APP_USER $APP_HOME/docker/.env
+log "Setup finalizado."
 
-# =========================================================
-# EXIBE RESULTADO
-# =========================================================
+echo
+echo "Resumo:"
+echo "- Modo: ${MODE}"
+echo "- Media: ${MEDIA_ROOT}/reels/{pending,published,error}"
 
-echo ""
-echo "========================================="
-echo " Usuário criado com sucesso!"
-echo "========================================="
-echo ""
-echo "Usuário: $APP_USER"
-echo "Home: $APP_HOME"
-echo ""
-echo "Estrutura criada:"
-echo ""
-tree $APP_HOME
-echo ""
-echo "Agora faça login com:"
-echo ""
-echo "su - $APP_USER"
-echo ""
-echo "========================================="
-```
+if [[ "${MODE}" == "vps" ]]; then
+  echo "- Home app: ${APP_HOME}"
+  echo "- Proximo passo: su - ${APP_USER}"
+fi

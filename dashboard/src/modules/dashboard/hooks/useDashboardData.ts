@@ -1,16 +1,21 @@
 import { useEffect, useState } from "react";
-import type { DashboardSummary } from "../../../shared/types/dashboard";
+import type {
+  DashboardOperationalOverview,
+  DashboardSummary,
+} from "../../../shared/types/dashboard";
 import { dashboardService } from "../services/dashboard.service";
 
 type State = {
-  data: DashboardSummary | null;
+  summary: DashboardSummary | null;
+  overview: DashboardOperationalOverview | null;
   isLoading: boolean;
   error: string | null;
 };
 
 export function useDashboardData() {
   const [state, setState] = useState<State>({
-    data: null,
+    summary: null,
+    overview: null,
     isLoading: true,
     error: null,
   });
@@ -18,17 +23,20 @@ export function useDashboardData() {
   useEffect(() => {
     let isMounted = true;
 
-    dashboardService
-      .getSummary()
-      .then((data) => {
+    Promise.all([
+      dashboardService.getSummary(),
+      dashboardService.getOperationalOverview(),
+    ])
+      .then(([summary, overview]) => {
         if (isMounted) {
-          setState({ data, isLoading: false, error: null });
+          setState({ summary, overview, isLoading: false, error: null });
         }
       })
       .catch(() => {
         if (isMounted) {
           setState({
-            data: null,
+            summary: null,
+            overview: null,
             isLoading: false,
             error: "Falha ao carregar dashboard.",
           });

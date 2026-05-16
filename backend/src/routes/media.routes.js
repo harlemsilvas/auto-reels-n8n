@@ -8,6 +8,7 @@ const {
   saveCaptionForVideo,
 } = require("../services/media.service");
 const { sanitizeBaseName } = require("../utils/fs.utils");
+const { createFromUpload } = require("../modules/posts/posts.service");
 
 const router = express.Router();
 
@@ -65,6 +66,15 @@ router.post("/upload", upload.single("video"), async (req, res, next) => {
 
     const itemId = path.parse(req.file.filename).name;
     await saveCaptionForVideo(itemId, captionText);
+
+    await createFromUpload({
+      baseName: itemId,
+      originalFileName: req.file.originalname,
+      storedFileName: req.file.filename,
+      fileSize: req.file.size,
+      storagePath: MEDIA_PENDING_DIR,
+      captionText,
+    });
 
     res.status(201).json({
       message: "Video e legenda enviados para pending.",

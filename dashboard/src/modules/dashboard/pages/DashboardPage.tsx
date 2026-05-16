@@ -1,5 +1,9 @@
 import { useDashboardData } from "../hooks/useDashboardData";
-import type { MetricTone } from "../../../shared/types/dashboard";
+import type {
+  DashboardOperationalOverview,
+  Metric,
+  MetricTone,
+} from "../../../shared/types/dashboard";
 
 function toneClass(tone: MetricTone) {
   if (tone === "danger") return "tone-danger";
@@ -7,18 +11,59 @@ function toneClass(tone: MetricTone) {
   return "tone-ok";
 }
 
+function buildOperationalMetrics(
+  overview: DashboardOperationalOverview,
+): Metric[] {
+  const { posts, queue } = overview;
+
+  return [
+    {
+      label: "Posts publicados",
+      value: String(posts.published),
+      trend: "Status atual no banco",
+      tone: "ok",
+    },
+    {
+      label: "Pendentes",
+      value: String(posts.pending + posts.scheduled),
+      trend: `${posts.queued} em fila para worker`,
+      tone: posts.pending + posts.scheduled > 0 ? "warn" : "ok",
+    },
+    {
+      label: "Processando",
+      value: String(posts.processing),
+      trend: `${queue.active} jobs ativos`,
+      tone: posts.processing > 0 ? "warn" : "ok",
+    },
+    {
+      label: "Erros",
+      value: String(posts.error),
+      trend: `${queue.failed} falhas na fila`,
+      tone: posts.error > 0 || queue.failed > 0 ? "danger" : "ok",
+    },
+    {
+      label: "Fila aguardando",
+      value: String(queue.waiting + queue.delayed),
+      trend: `Concluidos: ${queue.completed}`,
+      tone: queue.waiting + queue.delayed > 0 ? "warn" : "ok",
+    },
+  ];
+}
+
 export function DashboardPage() {
-  const { data, isLoading, error } = useDashboardData();
+  const { summary, overview, isLoading, error } = useDashboardData();
 
   if (isLoading) {
     return <p>Carregando dashboard...</p>;
   }
 
-  if (error || !data) {
+  if (error || !summary || !overview) {
     return (
       <p className="error-text">{error ?? "Falha ao carregar dashboard."}</p>
     );
   }
+
+  const metrics = buildOperationalMetrics(overview);
 
   return (
     <>
@@ -39,7 +84,7 @@ export function DashboardPage() {
       </header>
 
       <section className="metrics-grid" aria-label="indicadores principais">
-        {data.metrics.map((metric) => (
+        {metrics.map((metric) => (
           <article key={metric.label} className="metric-card">
             <p className="metric-label">{metric.label}</p>
             <p className="metric-value">{metric.value}</p>
@@ -75,7 +120,7 @@ export function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.queue.map((item) => (
+                {summary.queue.map((item) => (
                   <tr key={item.id}>
                     <td>{item.accountName}</td>
                     <td>{item.videoName}</td>

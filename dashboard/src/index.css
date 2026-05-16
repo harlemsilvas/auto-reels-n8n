@@ -338,6 +338,96 @@ th {
   gap: 0.5rem;
 }
 
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.panel-actions input,
+.panel-actions select,
+.panel-actions button {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.45rem 0.6rem;
+  font: inherit;
+}
+
+.panel-actions button {
+  background: var(--accent-soft);
+  border-color: #8acbb9;
+  cursor: pointer;
+}
+
+.panel-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.mono-text {
+  font-family: 'IBM Plex Mono', 'Consolas', 'Courier New', monospace;
+  font-size: 0.82rem;
+}
+
+.last-published-card {
+  display: grid;
+  gap: 0.3rem;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+.last-published-card strong {
+  color: var(--ink);
+}
+
+.fresh-chip {
+  width: fit-content;
+  border: 1px solid #8acbb9;
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  background: #e7f7ef;
+  color: #0b7a38;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.toast-banner {
+  position: sticky;
+  top: 0.5rem;
+  z-index: 20;
+  grid-column: 1 / -1;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  padding: 0.75rem 0.9rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: 0 8px 20px rgba(17, 24, 39, 0.12);
+}
+
+.toast-ok {
+  color: #0b7a38;
+  border-color: #8acbb9;
+  background: #e7f7ef;
+}
+
+.toast-warn {
+  color: #9a6700;
+  border-color: #e3c274;
+  background: #fff6de;
+}
+
+.toast-error {
+  color: #9f1239;
+  border-color: #efb3c2;
+  background: #fdecef;
+}
+
 @media (max-width: 980px) {
   .hero-block {
     grid-template-columns: 1fr;
