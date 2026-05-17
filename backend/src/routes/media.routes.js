@@ -52,7 +52,7 @@ router.get("/pending", async (_req, res, next) => {
 
 router.post("/upload", upload.single("video"), async (req, res, next) => {
   try {
-    const captionText = String(req.body.captionText ?? "").trim();
+    const captionText = String(req.body?.captionText ?? "").trim();
 
     if (!req.file) {
       res.status(400).json({ message: "Arquivo de video nao enviado." });

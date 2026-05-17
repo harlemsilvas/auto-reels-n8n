@@ -93,6 +93,32 @@ BEGIN
   END IF;
 END $$;
 
+-- Compatibilidade com schema legado: algumas instalacoes antigas exigem
+-- video_filename/caption_filename NOT NULL, o que quebra o fluxo atual
+-- baseado em uploads + upload_id.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'posts'
+      AND column_name = 'video_filename'
+  ) THEN
+    EXECUTE 'ALTER TABLE posts ALTER COLUMN video_filename DROP NOT NULL';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'posts'
+      AND column_name = 'caption_filename'
+  ) THEN
+    EXECUTE 'ALTER TABLE posts ALTER COLUMN caption_filename DROP NOT NULL';
+  END IF;
+END $$;
+
 -- Trigger updated_at na tabela instagram_accounts
 DROP TRIGGER IF EXISTS trg_instagram_accounts_updated_at ON instagram_accounts;
 CREATE TRIGGER trg_instagram_accounts_updated_at
