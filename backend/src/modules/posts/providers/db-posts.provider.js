@@ -43,6 +43,13 @@ async function createPostFromUpload(input) {
     throw error;
   }
 
+  const scheduleAt = input.scheduleAt ? new Date(input.scheduleAt) : null;
+  const hasFutureSchedule =
+    scheduleAt && !Number.isNaN(scheduleAt.getTime())
+      ? scheduleAt.getTime() > Date.now()
+      : false;
+  const initialStatus = hasFutureSchedule ? "scheduled" : "pending";
+
   const uploadResult = await query(
     `
       INSERT INTO uploads (
@@ -77,11 +84,12 @@ async function createPostFromUpload(input) {
         upload_id,
         caption,
         source_path,
+        scheduled_at,
         status,
         created_at,
         updated_at
       )
-      VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, 'pending', NOW(), NOW())
+      VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6::timestamptz, $7, NOW(), NOW())
       RETURNING id::text AS id, status::text AS status
     `,
     [
@@ -90,6 +98,8 @@ async function createPostFromUpload(input) {
       uploadId,
       input.captionText,
       input.storagePath,
+      hasFutureSchedule ? scheduleAt.toISOString() : null,
+      initialStatus,
     ],
   );
 
@@ -175,7 +185,11 @@ async function listPosts(filters = {}) {
       FROM posts p
       LEFT JOIN uploads u ON u.id = p.upload_id
       WHERE ${where.join(" AND ")}
-      ORDER BY p.updated_at DESC, p.created_at DESC
+      ORDER BY
+        CASE WHEN p.scheduled_at IS NULL THEN 1 ELSE 0 END,
+        p.scheduled_at ASC,
+        p.created_at ASC,
+        p.updated_at DESC
       LIMIT $${param}
     `,
     values,
@@ -267,6 +281,11 @@ async function updateStatus(id, status, extra = {}) {
     values.push(extra.meta_container_id);
   }
 
+  if (Object.prototype.hasOwnProperty.call(extra, "scheduled_at")) {
+    fields.push(`scheduled_at = $${nextIndex++}`);
+    values.push(extra.scheduled_at);
+  }
+
   const sql = `
     UPDATE posts
     SET ${fields.join(", ")}
@@ -328,6 +347,13 @@ async function markPostError(id, errorMessage) {
   });
 }
 
+async function cancelPostSchedule(id) {
+  return updateStatus(id, "canceled", {
+    scheduled_at: null,
+    error_message: "Cancelado pelo usuario.",
+  });
+}
+
 async function addPostEvent(postId, eventType, details = {}) {
   await query(
     `
@@ -349,5 +375,6 @@ module.exports = {
   markPostQueued,
   markPostPublished,
   markPostError,
+  cancelPostSchedule,
   addPostEvent,
 };

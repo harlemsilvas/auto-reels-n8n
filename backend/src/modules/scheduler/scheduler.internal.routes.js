@@ -5,6 +5,12 @@ const {
   addEvent,
 } = require("../posts/posts.service");
 const { enqueuePublishJob, getQueueStats } = require("./scheduler.queue");
+const {
+  listSlots,
+  createSlot,
+  updateSlot,
+  deleteSlot,
+} = require("./scheduler-slots.service");
 
 const router = express.Router();
 
@@ -12,6 +18,43 @@ router.get("/stats", async (_req, res, next) => {
   try {
     const stats = await getQueueStats();
     res.json(stats);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/slots", async (req, res, next) => {
+  try {
+    const onlyEnabled = String(req.query?.onlyEnabled ?? "false") === "true";
+    const data = await listSlots({ onlyEnabled });
+    res.json(data);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/slots", async (req, res, next) => {
+  try {
+    const slot = await createSlot(req.body ?? {});
+    res.status(201).json(slot);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/slots/:id", async (req, res, next) => {
+  try {
+    const slot = await updateSlot(req.params.id, req.body ?? {});
+    res.json(slot);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/slots/:id", async (req, res, next) => {
+  try {
+    const result = await deleteSlot(req.params.id);
+    res.json(result);
   } catch (error) {
     next(error);
   }

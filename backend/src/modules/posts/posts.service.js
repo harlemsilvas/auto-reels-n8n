@@ -42,6 +42,10 @@ async function markError(id, errorMessage) {
   return getProvider().markPostError(id, errorMessage);
 }
 
+async function cancelSchedule(id) {
+  return getProvider().cancelPostSchedule(id);
+}
+
 async function addEvent(postId, eventType, details = {}) {
   return getProvider().addPostEvent(postId, eventType, details);
 }
@@ -55,5 +59,6 @@ module.exports = {
   markQueued,
   markPublished,
   markError,
+  cancelSchedule,
   addEvent,
 };

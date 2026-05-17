@@ -18,6 +18,8 @@ export type MetricItem = {
   id: number;
   postId: string;
   accountId: string;
+  metaMediaId: string | null;
+  caption: string | null;
   views: number;
   likes: number;
   comments: number;

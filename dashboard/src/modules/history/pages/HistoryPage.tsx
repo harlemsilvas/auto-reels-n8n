@@ -4,6 +4,8 @@ import {
   type MetricItem,
   type PostEventItem,
 } from "../services/history.service";
+import { buildApiUrl } from "../../../shared/config/api";
+import { getEventLabel } from "../../../shared/lib/status-dictionary";
 
 function shortId(value: string) {
   return value.slice(0, 8);
@@ -126,7 +128,14 @@ export function HistoryPage() {
                 <tr key={event.id}>
                   <td>{formatDateTime(event.createdAt)}</td>
                   <td className="mono-text">{shortId(event.postId)}</td>
-                  <td>{event.eventType}</td>
+                  <td>
+                    <span
+                      className={`status-pill status-${getEventLabel(event.eventType).tone}`}
+                      title={event.eventType}
+                    >
+                      {getEventLabel(event.eventType).label}
+                    </span>
+                  </td>
                   <td className="mono-text">{JSON.stringify(event.details)}</td>
                 </tr>
               ))}
@@ -164,7 +173,18 @@ export function HistoryPage() {
               {metrics.map((metric) => (
                 <tr key={metric.id}>
                   <td>{formatDateTime(metric.fetchedAt)}</td>
-                  <td className="mono-text">{shortId(metric.postId)}</td>
+                  <td className="mono-text">
+                    <a
+                      href={buildApiUrl(
+                        `/api/internal/posts/events?postId=${metric.postId}&limit=20`,
+                      )}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={`Post: ${metric.postId}${metric.metaMediaId ? ` | Meta: ${metric.metaMediaId}` : ""}${metric.caption ? ` | Legenda: ${metric.caption}` : ""}`}
+                    >
+                      {shortId(metric.postId)}
+                    </a>
+                  </td>
                   <td>{metric.views}</td>
                   <td>{metric.likes}</td>
                   <td>{metric.comments}</td>

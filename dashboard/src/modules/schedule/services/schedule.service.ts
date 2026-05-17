@@ -44,6 +44,21 @@ export type PostsResponse = {
   total: number;
 };
 
+export type ScheduleTimeSlot = {
+  id: number;
+  label: string;
+  timeValue: string;
+  enabled: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ScheduleSlotsResponse = {
+  items: ScheduleTimeSlot[];
+  total: number;
+};
+
 function buildPostsUrl(limit: number, statusFilter: string) {
   const params = new URLSearchParams();
   params.set("limit", String(limit));
@@ -81,5 +96,58 @@ export const scheduleService = {
       buildApiUrl(`/api/internal/scheduler/enqueue/${postId}`),
       {},
     );
+  },
+
+  async cancelPost(postId: string): Promise<{ id: string; status: string }> {
+    return postJson<{ id: string; status: string }>(
+      buildApiUrl(`/api/internal/posts/${postId}/cancel`),
+      {},
+    );
+  },
+
+  async getSlots(onlyEnabled = false): Promise<ScheduleSlotsResponse> {
+    return getJson<ScheduleSlotsResponse>(
+      buildApiUrl(`/api/internal/scheduler/slots?onlyEnabled=${onlyEnabled}`),
+    );
+  },
+
+  async createSlot(payload: {
+    label: string;
+    timeValue: string;
+    enabled?: boolean;
+    sortOrder?: number;
+  }): Promise<ScheduleTimeSlot> {
+    return postJson<ScheduleTimeSlot>(
+      buildApiUrl("/api/internal/scheduler/slots"),
+      payload,
+    );
+  },
+
+  async updateSlot(
+    slotId: number,
+    payload: Partial<{
+      label: string;
+      timeValue: string;
+      enabled: boolean;
+      sortOrder: number;
+    }>,
+  ): Promise<ScheduleTimeSlot> {
+    return postJson<ScheduleTimeSlot>(
+      buildApiUrl(`/api/internal/scheduler/slots/${slotId}`),
+      payload,
+    );
+  },
+
+  async deleteSlot(slotId: number): Promise<{ success: boolean }> {
+    const response = await fetch(
+      buildApiUrl(`/api/internal/scheduler/slots/${slotId}`),
+      { method: "DELETE", headers: { Accept: "application/json" } },
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    return (await response.json()) as { success: boolean };
   },
 };

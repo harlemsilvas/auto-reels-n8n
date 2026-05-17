@@ -53,6 +53,8 @@ router.get("/pending", async (_req, res, next) => {
 router.post("/upload", upload.single("video"), async (req, res, next) => {
   try {
     const captionText = String(req.body?.captionText ?? "").trim();
+    const scheduleAtRaw = String(req.body?.scheduleAt ?? "").trim();
+    const scheduleAt = scheduleAtRaw ? new Date(scheduleAtRaw) : null;
 
     if (!req.file) {
       res.status(400).json({ message: "Arquivo de video nao enviado." });
@@ -61,6 +63,13 @@ router.post("/upload", upload.single("video"), async (req, res, next) => {
 
     if (!captionText) {
       res.status(400).json({ message: "captionText e obrigatorio." });
+      return;
+    }
+
+    if (scheduleAtRaw && Number.isNaN(scheduleAt?.getTime())) {
+      res.status(400).json({
+        message: "scheduleAt invalido. Use formato de data/hora valido.",
+      });
       return;
     }
 
@@ -74,6 +83,7 @@ router.post("/upload", upload.single("video"), async (req, res, next) => {
       fileSize: req.file.size,
       storagePath: MEDIA_PENDING_DIR,
       captionText,
+      scheduleAt: scheduleAt ? scheduleAt.toISOString() : null,
     });
 
     res.status(201).json({

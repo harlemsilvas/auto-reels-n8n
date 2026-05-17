@@ -131,6 +131,16 @@ async function markPostError(id, errorMessage) {
   };
 }
 
+async function cancelPostSchedule(id) {
+  return {
+    found: true,
+    payload: {
+      id,
+      status: "canceled",
+    },
+  };
+}
+
 async function addPostEvent(_postId, _eventType, _details = {}) {
   return true;
 }
@@ -144,5 +154,6 @@ module.exports = {
   markPostQueued,
   markPostPublished,
   markPostError,
+  cancelPostSchedule,
   addPostEvent,
 };

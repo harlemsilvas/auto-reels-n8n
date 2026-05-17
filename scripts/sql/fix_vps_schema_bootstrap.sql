@@ -213,3 +213,32 @@ CREATE TRIGGER trg_uploads_updated_at
 BEFORE UPDATE ON uploads
 FOR EACH ROW
 EXECUTE FUNCTION set_updated_at();
+
+-- 5) horarios fixos de agendamento
+CREATE TABLE IF NOT EXISTS schedule_time_slots (
+  id BIGSERIAL PRIMARY KEY,
+  label TEXT NOT NULL,
+  time_value TIME NOT NULL,
+  enabled BOOLEAN NOT NULL DEFAULT TRUE,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (time_value)
+);
+
+INSERT INTO schedule_time_slots (label, time_value, enabled, sort_order)
+VALUES
+  ('08:00', '08:00', true, 10),
+  ('10:30', '10:30', true, 20),
+  ('12:00', '12:00', true, 30),
+  ('14:30', '14:30', true, 40),
+  ('17:00', '17:00', true, 50),
+  ('19:30', '19:30', true, 60),
+  ('21:00', '21:00', true, 70)
+ON CONFLICT (time_value) DO NOTHING;
+
+DROP TRIGGER IF EXISTS trg_schedule_time_slots_updated_at ON schedule_time_slots;
+CREATE TRIGGER trg_schedule_time_slots_updated_at
+BEFORE UPDATE ON schedule_time_slots
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();

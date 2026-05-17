@@ -4,6 +4,7 @@ import {
   type PostListItem,
   type QueueStats,
 } from "../services/schedule.service";
+import { getStatusLabel } from "../../../shared/lib/status-dictionary";
 
 const DEFAULT_STATS: QueueStats = {
   waiting: 0,
@@ -76,6 +77,31 @@ export function SchedulePage() {
     () => stats.waiting + stats.active + stats.delayed,
     [stats],
   );
+
+  const sortedPosts = useMemo(() => {
+    return [...posts].sort((a, b) => {
+      const aScheduled = a.scheduledAt
+        ? new Date(a.scheduledAt).getTime()
+        : null;
+      const bScheduled = b.scheduledAt
+        ? new Date(b.scheduledAt).getTime()
+        : null;
+
+      if (aScheduled !== null && bScheduled !== null) {
+        return aScheduled - bScheduled;
+      }
+
+      if (aScheduled !== null) {
+        return -1;
+      }
+
+      if (bScheduled !== null) {
+        return 1;
+      }
+
+      return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+    });
+  }, [posts]);
 
   async function loadData() {
     setIsLoading(true);
@@ -182,6 +208,20 @@ export function SchedulePage() {
     }
   }
 
+  async function onCancelOne(postId: string) {
+    setError(null);
+    setToast(null);
+
+    try {
+      await scheduleService.cancelPost(postId);
+      showToast(`Agendamento ${shortId(postId)} cancelado com sucesso.`, "ok");
+      await loadData();
+    } catch {
+      setError("Falha ao cancelar agendamento.");
+      showToast("Falha ao cancelar agendamento.", "error");
+    }
+  }
+
   return (
     <section className="dashboard-grid">
       {toast ? (
@@ -265,13 +305,14 @@ export function SchedulePage() {
               style={{ marginLeft: 8 }}
             >
               <option value="all">Todos</option>
-              <option value="pending">pending</option>
-              <option value="queued">queued</option>
-              <option value="processing">processing</option>
-              <option value="published">published</option>
-              <option value="error">error</option>
-              <option value="retrying">retrying</option>
-              <option value="scheduled">scheduled</option>
+              <option value="pending">Pendente</option>
+              <option value="queued">Na fila</option>
+              <option value="processing">Processando</option>
+              <option value="published">Publicado</option>
+              <option value="error">Erro</option>
+              <option value="retrying">Tentando novamente</option>
+              <option value="scheduled">Agendado</option>
+              <option value="canceled">Cancelado</option>
             </select>
           </label>
         </div>
@@ -289,6 +330,7 @@ export function SchedulePage() {
                 <tr>
                   <th>ID</th>
                   <th>Status</th>
+                  <th>Agendado para</th>
                   <th>Video</th>
                   <th>Retry</th>
                   <th>Atualizado</th>
@@ -297,31 +339,52 @@ export function SchedulePage() {
                 </tr>
               </thead>
               <tbody>
-                {posts.map((post) => (
+                {sortedPosts.map((post) => (
                   <tr key={post.id}>
                     <td className="mono-text">{shortId(post.id)}</td>
-                    <td>{post.status}</td>
+                    <td>
+                      <span
+                        className={`status-pill status-${getStatusLabel(post.status).tone}`}
+                      >
+                        {getStatusLabel(post.status).label}
+                      </span>
+                    </td>
+                    <td>{formatDateTime(post.scheduledAt)}</td>
                     <td>{post.videoFile ?? "-"}</td>
                     <td>{post.retryCount}</td>
                     <td>{formatDateTime(post.updatedAt)}</td>
                     <td>{post.errorMessage ?? "-"}</td>
                     <td>
-                      <button
-                        type="button"
-                        onClick={() => void onEnqueueOne(post.id)}
-                        disabled={
-                          post.status !== "pending" &&
-                          post.status !== "scheduled"
-                        }
+                      <div
+                        style={{ display: "flex", gap: 8, flexWrap: "wrap" }}
                       >
-                        Enfileirar
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => void onEnqueueOne(post.id)}
+                          disabled={
+                            post.status !== "pending" &&
+                            post.status !== "scheduled"
+                          }
+                        >
+                          Enfileirar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void onCancelOne(post.id)}
+                          disabled={
+                            post.status !== "pending" &&
+                            post.status !== "scheduled"
+                          }
+                        >
+                          Excluir agendamento
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
-                {posts.length === 0 ? (
+                {sortedPosts.length === 0 ? (
                   <tr>
-                    <td colSpan={7}>Nenhum post encontrado para o filtro.</td>
+                    <td colSpan={8}>Nenhum post encontrado para o filtro.</td>
                   </tr>
                 ) : null}
               </tbody>

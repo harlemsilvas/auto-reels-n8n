@@ -6,6 +6,8 @@ const {
   markProcessing,
   markPublished,
   markError,
+  cancelSchedule,
+  addEvent,
 } = require("./posts.service");
 
 const router = express.Router();
@@ -85,6 +87,25 @@ router.post("/:id/mark-error", async (req, res, next) => {
       res.status(404).json(result.payload);
       return;
     }
+
+    res.json(result.payload);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/:id/cancel", async (req, res, next) => {
+  try {
+    const result = await cancelSchedule(req.params.id);
+
+    if (!result.found) {
+      res.status(404).json(result.payload);
+      return;
+    }
+
+    await addEvent(req.params.id, "canceled", {
+      source: "posts.internal.cancel",
+    }).catch(() => null);
 
     res.json(result.payload);
   } catch (error) {

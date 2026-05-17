@@ -479,6 +479,8 @@ async function getMetricsHistory(filters = {}) {
         pm.id,
         pm.post_id::text AS "postId",
         p.account_id::text AS "accountId",
+        p.meta_media_id AS "metaMediaId",
+        p.caption AS caption,
         pm.views,
         pm.likes,
         pm.comments,

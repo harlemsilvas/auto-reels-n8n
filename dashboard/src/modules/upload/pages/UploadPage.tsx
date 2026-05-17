@@ -1,5 +1,16 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useUploadModule } from "../hooks/useUploadModule";
+import { scheduleService } from "../../schedule/services/schedule.service";
+
+const FIXED_TIME_SLOTS = [
+  "08:00",
+  "10:30",
+  "12:00",
+  "14:30",
+  "17:00",
+  "19:30",
+  "21:00",
+];
 
 export function UploadPage() {
   const {
@@ -15,7 +26,31 @@ export function UploadPage() {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [captionText, setCaptionText] = useState("");
   const [accountName, setAccountName] = useState("");
-  const [scheduleAt, setScheduleAt] = useState("");
+  const [scheduleDate, setScheduleDate] = useState("");
+  const [scheduleSlot, setScheduleSlot] = useState("");
+  const [availableSlots, setAvailableSlots] =
+    useState<string[]>(FIXED_TIME_SLOTS);
+
+  useEffect(() => {
+    scheduleService
+      .getSlots(true)
+      .then((data) => {
+        const slots = data.items.map((item) => item.timeValue).filter(Boolean);
+
+        if (slots.length > 0) {
+          setAvailableSlots(slots);
+        }
+      })
+      .catch(() => null);
+  }, []);
+
+  const scheduleAt = useMemo(() => {
+    if (!scheduleDate || !scheduleSlot) {
+      return "";
+    }
+
+    return `${scheduleDate}T${scheduleSlot}:00`;
+  }, [scheduleDate, scheduleSlot]);
 
   const canSubmit = useMemo(() => {
     return Boolean(videoFile) && captionText.trim().length > 0 && !isUploading;
@@ -39,7 +74,8 @@ export function UploadPage() {
       setVideoFile(null);
       setCaptionText("");
       setAccountName("");
-      setScheduleAt("");
+      setScheduleDate("");
+      setScheduleSlot("");
     }
   }
 
@@ -50,11 +86,19 @@ export function UploadPage() {
         <p className="hero-copy">Fluxo alvo do worker: {pendingPath}</p>
 
         <form className="upload-form" onSubmit={handleSubmit}>
+          {isUploading ? (
+            <div className="upload-progress" role="status" aria-live="polite">
+              <span className="upload-spinner" aria-hidden="true" />
+              <span>Enviando para pending, aguarde...</span>
+            </div>
+          ) : null}
+
           <label>
             Arquivo de video (.mp4)
             <input
               type="file"
               accept="video/mp4"
+              disabled={isUploading}
               onChange={(event) =>
                 setVideoFile(event.target.files?.[0] ?? null)
               }
@@ -65,6 +109,7 @@ export function UploadPage() {
             Legenda (gera o .txt)
             <textarea
               value={captionText}
+              disabled={isUploading}
               onChange={(event) => setCaptionText(event.target.value)}
               rows={5}
               placeholder="Escreva a legenda com hashtags"
@@ -75,22 +120,53 @@ export function UploadPage() {
             Conta (opcional)
             <input
               value={accountName}
+              disabled={isUploading}
               onChange={(event) => setAccountName(event.target.value)}
               placeholder="HRM Motos"
             />
           </label>
 
           <label>
-            Agendar para (opcional)
+            Dia do agendamento (opcional)
             <input
-              type="datetime-local"
-              value={scheduleAt}
-              onChange={(event) => setScheduleAt(event.target.value)}
+              type="date"
+              value={scheduleDate}
+              disabled={isUploading}
+              onChange={(event) => setScheduleDate(event.target.value)}
             />
           </label>
 
+          <label>
+            Horario fixo (opcional)
+            <select
+              value={scheduleSlot}
+              disabled={isUploading}
+              onChange={(event) => setScheduleSlot(event.target.value)}
+            >
+              <option value="">Selecione um horario</option>
+              {availableSlots.map((slot) => (
+                <option key={slot} value={slot}>
+                  {slot}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {scheduleAt ? (
+            <p className="helper-text">
+              Agendamento selecionado: {scheduleDate} as {scheduleSlot}
+            </p>
+          ) : null}
+
           <button type="submit" disabled={!canSubmit}>
-            {isUploading ? "Enviando..." : "Enviar para pending"}
+            {isUploading ? (
+              <span className="btn-busy-wrap">
+                <span className="upload-spinner" aria-hidden="true" />
+                <span>Enviando...</span>
+              </span>
+            ) : (
+              "Enviar para pending"
+            )}
           </button>
         </form>
       </article>
