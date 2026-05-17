@@ -145,7 +145,7 @@ async function listPosts(filters = {}) {
   let param = 1;
 
   if (filters.status) {
-    where.push(`p.status = $${param++}::post_status`);
+    where.push(`p.status::text = $${param++}::text`);
     values.push(filters.status);
   }
 
