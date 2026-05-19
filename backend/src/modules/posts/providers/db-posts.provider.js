@@ -33,22 +33,49 @@ async function findDefaultActiveAccount() {
 }
 
 async function createPostFromUpload(input) {
+  console.log("======================================");
+  console.log("[CREATE POST FROM UPLOAD]");
+  console.log("INPUT:", {
+    originalFileName: input.originalFileName,
+    storedFileName: input.storedFileName,
+    storagePath: input.storagePath,
+    fileSize: input.fileSize,
+    scheduleAt: input.scheduleAt,
+  });
+
   const account = await findDefaultActiveAccount();
+
+  console.log("[ACTIVE ACCOUNT]", account);
 
   if (!account) {
     const error = new Error(
       "Nenhuma conta ativa cadastrada para vincular o post.",
     );
+
     error.status = 400;
+
     throw error;
   }
 
-  const scheduleAt = input.scheduleAt ? new Date(input.scheduleAt) : null;
-  const hasFutureSchedule =
-    scheduleAt && !Number.isNaN(scheduleAt.getTime())
-      ? scheduleAt.getTime() > Date.now()
-      : false;
+  let scheduleAt = null;
+  let hasFutureSchedule = false;
+
+  if (input.scheduleAt) {
+    const parsedDate = new Date(input.scheduleAt);
+
+    if (!Number.isNaN(parsedDate.getTime())) {
+      scheduleAt = parsedDate;
+      hasFutureSchedule = parsedDate.getTime() > Date.now();
+    }
+  }
+
   const initialStatus = hasFutureSchedule ? "scheduled" : "pending";
+
+  console.log("[SCHEDULE]", {
+    scheduleAt,
+    hasFutureSchedule,
+    initialStatus,
+  });
 
   const uploadResult = await query(
     `
@@ -74,6 +101,8 @@ async function createPostFromUpload(input) {
     ],
   );
 
+  console.log("[UPLOAD CREATED]", uploadResult.rows[0]);
+
   const uploadId = uploadResult.rows[0].id;
 
   const postResult = await query(
@@ -89,19 +118,36 @@ async function createPostFromUpload(input) {
         created_at,
         updated_at
       )
-      VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6::timestamptz, $7, NOW(), NOW())
-      RETURNING id::text AS id, status::text AS status
+      VALUES (
+        $1::uuid,
+        $2::uuid,
+        $3::uuid,
+        $4,
+        $5,
+        $6::timestamptz,
+        $7,
+        NOW(),
+        NOW()
+      )
+      RETURNING
+        id::text AS id,
+        status::text AS status,
+        scheduled_at AS "scheduledAt"
     `,
     [
       account.workspaceId,
       account.id,
       uploadId,
-      input.captionText,
+      input.captionText ?? null,
       input.storagePath,
       hasFutureSchedule ? scheduleAt.toISOString() : null,
       initialStatus,
     ],
   );
+
+  console.log("[POST CREATED]", postResult.rows[0]);
+
+  console.log("======================================");
 
   return {
     found: true,
@@ -110,42 +156,75 @@ async function createPostFromUpload(input) {
 }
 
 async function listReadyPosts() {
-  const result = await query(
-    `
-      SELECT
-        p.id::text AS id,
-        COALESCE(u.stored_filename, p.id::text || '.mp4') AS "videoFile",
-        p.caption AS "captionText",
-        p.created_at AS "createdAt",
-        p.status::text AS status,
-        ia.instagram_id AS "igAccountId",
-        ia.access_token AS "accountToken"
-      FROM posts p
-      LEFT JOIN uploads u ON u.id = p.upload_id
-      INNER JOIN instagram_accounts ia ON ia.id = p.account_id
-      WHERE p.deleted_at IS NULL
-        AND p.status IN ('pending', 'scheduled', 'queued', 'retrying')
-        AND (p.scheduled_at IS NULL OR p.scheduled_at <= NOW())
-      ORDER BY COALESCE(p.scheduled_at, p.created_at) ASC
-      LIMIT 50
-    `,
-  );
+  console.log("======================================");
+  console.log("[DB READY POSTS]");
+  console.log("Buscando posts prontos para fila...");
 
-  const items = result.rows.map((row) => ({
-    id: row.id,
-    videoFile: row.videoFile,
-    captionText: row.captionText,
-    createdAt: new Date(row.createdAt).toISOString(),
-    status: row.status,
-    igAccountId: row.igAccountId,
-    metaToken: row.accountToken || META_FALLBACK_TOKEN || null,
-    metaGraphVersion: META_GRAPH_API_VERSION,
-    mediaPublicBaseUrl: MEDIA_PUBLIC_BASE_URL || undefined,
-  }));
+  const sql = `
+    SELECT
+      p.id::text AS id,
+      p.status::text AS status,
+      p.caption,
+      p.error_message AS "errorMessage",
+      p.scheduled_at AS "scheduledAt",
+      p.published_at AS "publishedAt",
+      p.created_at AS "createdAt",
+      p.updated_at AS "updatedAt",
+      p.retry_count AS "retryCount",
+      p.meta_media_id AS "metaMediaId",
+      p.account_id::text AS "accountId",
+
+      u.id::text AS "uploadId",
+      u.stored_filename AS "videoFile",
+      u.storage_path AS "storagePath"
+
+    FROM posts p
+
+    LEFT JOIN uploads u
+      ON u.id = p.upload_id
+
+    WHERE p.deleted_at IS NULL
+
+      AND (
+        p.status = 'pending'
+
+        OR (
+          p.status = 'scheduled'
+          AND p.scheduled_at <= NOW()
+        )
+      )
+
+    ORDER BY
+      COALESCE(p.scheduled_at, p.created_at) ASC
+
+    LIMIT 50
+  `;
+
+  console.log("[READY SQL]");
+  console.log(sql);
+
+  const result = await query(sql);
+
+  console.log("[DB READY POSTS] TOTAL:", result.rows.length);
+
+  if (result.rows.length === 0) {
+    console.log("[DB READY POSTS] Nenhum post pronto encontrado");
+  }
+
+  result.rows.forEach((row) => {
+    console.log("[READY ITEM]", {
+      id: row.id,
+      status: row.status,
+      scheduledAt: row.scheduledAt,
+      videoFile: row.videoFile,
+    });
+  });
+
+  console.log("======================================");
 
   return {
-    items,
-    total: items.length,
+    total: result.rows.length,
+    items: result.rows,
   };
 }
 

@@ -1,3 +1,10 @@
+// file-posts.provider.js
+const {
+  MEDIA_PUBLIC_BASE_URL,
+  META_GRAPH_API_VERSION,
+  META_FALLBACK_TOKEN,
+} = require("../../../config/env");
+
 const {
   listPendingMedia,
   readCaptionForBaseName,
@@ -21,14 +28,28 @@ async function listReadyPosts() {
   const items = await Promise.all(
     pending.items.map(async (item) => ({
       id: item.id,
-      videoFile: item.videoFile,
-      captionText: await readCaptionForBaseName(item.baseName),
-      createdAt: item.createdAt,
+
       status: "pending",
+
+      videoFile: item.videoFile,
+
+      caption: await readCaptionForBaseName(item.baseName),
+
+      createdAt: item.createdAt,
+      updatedAt: item.createdAt,
+
+      scheduledAt: null,
+      publishedAt: null,
+
+      retryCount: 0,
+
       igAccountId: null,
-      metaToken: null,
-      metaGraphVersion: "v25.0",
-      mediaPublicBaseUrl: undefined,
+
+      metaToken: META_FALLBACK_TOKEN,
+
+      metaGraphVersion: META_GRAPH_API_VERSION,
+
+      mediaPublicBaseUrl: MEDIA_PUBLIC_BASE_URL,
     })),
   );
 
