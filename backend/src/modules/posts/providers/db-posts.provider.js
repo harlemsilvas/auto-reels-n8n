@@ -172,7 +172,15 @@ async function listReadyPosts() {
       p.updated_at AS "updatedAt",
       p.retry_count AS "retryCount",
       p.meta_media_id AS "metaMediaId",
+
       p.account_id::text AS "accountId",
+
+      ia.instagram_id AS "igAccountId",
+
+      COALESCE(
+        ia.access_token,
+        $1
+      ) AS "metaToken",
 
       u.id::text AS "uploadId",
       u.stored_filename AS "videoFile",
@@ -182,6 +190,9 @@ async function listReadyPosts() {
 
     LEFT JOIN uploads u
       ON u.id = p.upload_id
+
+    LEFT JOIN instagram_accounts ia
+      ON ia.id = p.account_id
 
     WHERE p.deleted_at IS NULL
 
@@ -203,7 +214,7 @@ async function listReadyPosts() {
   console.log("[READY SQL]");
   console.log(sql);
 
-  const result = await query(sql);
+  const result = await query(sql, [META_FALLBACK_TOKEN ?? null]);
 
   console.log("[DB READY POSTS] TOTAL:", result.rows.length);
 
@@ -211,20 +222,28 @@ async function listReadyPosts() {
     console.log("[DB READY POSTS] Nenhum post pronto encontrado");
   }
 
-  result.rows.forEach((row) => {
+  const items = result.rows.map((row) => ({
+    ...row,
+    captionText: row.caption,
+    metaGraphVersion: META_GRAPH_API_VERSION,
+    mediaPublicBaseUrl: MEDIA_PUBLIC_BASE_URL,
+  }));
+
+  items.forEach((row) => {
     console.log("[READY ITEM]", {
       id: row.id,
       status: row.status,
       scheduledAt: row.scheduledAt,
       videoFile: row.videoFile,
+      igAccountId: row.igAccountId,
     });
   });
 
   console.log("======================================");
 
   return {
-    total: result.rows.length,
-    items: result.rows,
+    total: items.length,
+    items,
   };
 }
 
@@ -260,9 +279,14 @@ async function listPosts(filters = {}) {
         p.retry_count AS "retryCount",
         p.meta_media_id AS "metaMediaId",
         p.account_id::text AS "accountId",
+        ia.instagram_id AS "igAccountId",
+        ia.access_token AS "metaToken",
         u.stored_filename AS "videoFile"
-      FROM posts p
-      LEFT JOIN uploads u ON u.id = p.upload_id
+        FROM posts p
+        LEFT JOIN uploads u
+          ON u.id = p.upload_id
+        LEFT JOIN instagram_accounts ia
+          ON ia.id = p.account_id
       WHERE ${where.join(" AND ")}
       ORDER BY
         CASE WHEN p.scheduled_at IS NULL THEN 1 ELSE 0 END,
