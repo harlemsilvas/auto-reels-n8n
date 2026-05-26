@@ -1,11 +1,18 @@
 const express = require("express");
 const cors = require("cors");
+
 const dashboardRoutes = require("./routes/dashboard.routes");
 const mediaRoutes = require("./routes/media.routes");
+
 const internalAccountsRoutes = require("./modules/accounts/accounts.internal.routes");
 const internalPostsRoutes = require("./modules/posts/posts.internal.routes");
 const internalSchedulerRoutes = require("./modules/scheduler/scheduler.internal.routes");
 const internalMetricsRoutes = require("./modules/metrics/metrics.internal.routes");
+const instagramMessagesRoutes = require("./modules/webhooks/instagram-messages.routes");
+
+const instagramSendInternalRoutes = require("./modules/instagram/instagram-send.internal.routes");
+
+const metaOAuthRoutes = require("./modules/auth/meta-oauth.routes");
 const { getAllowedOrigins } = require("./config/env");
 
 const app = express();
@@ -25,6 +32,12 @@ if (allowedOrigins === "*") {
 }
 
 app.use(express.json());
+
+app.use("/api/webhooks/instagram", instagramMessagesRoutes);
+
+app.use("/api/auth/meta", metaOAuthRoutes);
+
+app.use("/api/internal/instagram", instagramSendInternalRoutes);
 
 app.use((req, res, next) => {
   const startedAt = Date.now();
@@ -54,7 +67,9 @@ app.use((req, res, next) => {
       safeBody.access_token = "***hidden***";
     }
 
-    console.log("BODY:", safeBody);
+    if (process.env.NODE_ENV !== "production") {
+      console.log("BODY:", safeBody);
+    }
   }
 
   res.on("finish", () => {
@@ -75,6 +90,7 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/media", mediaRoutes);
+
 app.use("/api/internal/accounts", internalAccountsRoutes);
 app.use("/api/internal/posts", internalPostsRoutes);
 app.use("/api/internal/scheduler", internalSchedulerRoutes);
@@ -88,14 +104,16 @@ app.use("/api/internal/metrics", internalMetricsRoutes);
 // });
 
 app.use((error, req, res, _next) => {
-  console.error("======================================");
-  console.error("[ERROR]");
-  console.error("METHOD:", req.method);
-  console.error("URL:", req.originalUrl);
-  console.error("ERROR MESSAGE:", error?.message);
-  console.error("ERROR NAME:", error?.name);
-  console.error("STACK:", error?.stack);
-  console.error("======================================");
+  if (process.env.NODE_ENV !== "production") {
+    console.error("======================================");
+    console.error("[ERROR]");
+    console.error("METHOD:", req.method);
+    console.error("URL:", req.originalUrl);
+    console.error("ERROR MESSAGE:", error?.message);
+    console.error("ERROR NAME:", error?.name);
+    console.error("STACK:", error?.stack);
+    console.error("======================================");
+  }
 
   const status = error?.status ?? 500;
   const message = error?.message ?? "Erro interno do servidor.";

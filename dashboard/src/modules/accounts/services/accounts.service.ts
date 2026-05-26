@@ -35,6 +35,9 @@ async function requestJson<T>(url: string, init: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
+// connectInstagram();
+// listAccounts();
+
 export const accountsService = {
   async list(): Promise<ListResponse> {
     return getJson<ListResponse>(buildApiUrl("/api/internal/accounts"));

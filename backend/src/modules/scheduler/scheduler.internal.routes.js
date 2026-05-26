@@ -167,7 +167,7 @@ router.post("/enqueue/:id", async (req, res, next) => {
       log("READY ITEM", {
         id: item.id,
         status: item.status,
-        scheduled_at: item.scheduled_at,
+        scheduled_at: item.scheduledAt,
       });
     });
 

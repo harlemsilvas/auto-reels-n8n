@@ -51,9 +51,9 @@ async function getReadyPosts() {
     log("READY ITEM", {
       id: item.id,
       status: item.status,
-      scheduled_at: item.scheduled_at,
-      published_at: item.published_at,
-      filename: item.video_filename,
+      scheduled_at: item.scheduledAt,
+      published_at: item.publishedAt,
+      filename: item.videoFilename,
     });
   });
 

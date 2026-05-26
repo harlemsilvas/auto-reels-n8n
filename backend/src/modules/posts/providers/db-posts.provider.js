@@ -203,6 +203,13 @@ async function listReadyPosts() {
           p.status = 'scheduled'
           AND p.scheduled_at <= NOW()
         )
+        OR (
+          p.status = 'retrying'
+          AND (
+            p.next_retry_at IS NULL
+            OR p.next_retry_at <= NOW()
+          )
+        )
       )
 
     ORDER BY
@@ -212,7 +219,9 @@ async function listReadyPosts() {
   `;
 
   console.log("[READY SQL]");
-  console.log(sql);
+  if (process.env.NODE_ENV !== "production") {
+    console.log(sql);
+  }
 
   const result = await query(sql, [META_FALLBACK_TOKEN ?? null]);
 
@@ -226,7 +235,9 @@ async function listReadyPosts() {
     ...row,
     captionText: row.caption,
     metaGraphVersion: META_GRAPH_API_VERSION,
-    mediaPublicBaseUrl: MEDIA_PUBLIC_BASE_URL,
+    mediaPublicUrl: row.videoFile
+      ? `${MEDIA_PUBLIC_BASE_URL}/pending/${row.videoFile}`
+      : null,
   }));
 
   items.forEach((row) => {
@@ -389,6 +400,15 @@ async function updateStatus(id, status, extra = {}) {
     values.push(extra.scheduled_at);
   }
 
+  if (Object.prototype.hasOwnProperty.call(extra, "next_retry_at")) {
+    fields.push(`next_retry_at = $${nextIndex++}`);
+    values.push(extra.next_retry_at);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(extra, "retry_count")) {
+    fields.push(`retry_count = $${nextIndex++}`);
+    values.push(extra.retry_count);
+  }
   const sql = `
     UPDATE posts
     SET ${fields.join(", ")}
@@ -440,13 +460,18 @@ async function markPostPublished(id, payload = {}) {
   });
 }
 
-async function markPostError(id, errorMessage) {
+async function markPostError(id, errorMessage, currentRetryCount = 0) {
   const now = new Date();
+  const nextRetryCount = currentRetryCount + 1;
 
-  return updateStatus(id, "error", {
+  const shouldFailPermanently = nextRetryCount >= 5;
+
+  return updateStatus(id, shouldFailPermanently ? "error" : "retrying", {
     processing_finished_at: now,
     error_message: errorMessage,
     last_retry_at: now,
+    next_retry_at: new Date(now.getTime() + 60_000),
+    retry_count: nextRetryCount,
   });
 }
 

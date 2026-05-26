@@ -1,0 +1,327 @@
+const axios = require("axios");
+
+const {
+  META_APP_ID,
+  META_APP_SECRET,
+  META_REDIRECT_URI,
+  META_GRAPH_API_VERSION,
+  FRONTEND_URL,
+} = require("../../config/env");
+
+const { upsertAccount } = require("../accounts/accounts.service");
+
+const GRAPH_BASE_URL = `https://graph.facebook.com/${META_GRAPH_API_VERSION}`;
+
+function log(...args) {
+  console.log(`[META OAUTH ${new Date().toISOString()}]`, ...args);
+}
+
+/**
+ * ======================================
+ * BUILD META OAUTH URL
+ * ======================================
+ */
+
+function buildOAuthUrl() {
+  const scopes = [
+    "instagram_basic",
+    "instagram_content_publish",
+    "pages_show_list",
+    "pages_read_engagement",
+    "business_management",
+  ];
+
+  const params = new URLSearchParams({
+    client_id: META_APP_ID,
+    redirect_uri: META_REDIRECT_URI,
+    response_type: "code",
+    scope: scopes.join(","),
+  });
+
+  return `https://www.facebook.com/${META_GRAPH_API_VERSION}/dialog/oauth?${params.toString()}`;
+}
+
+/**
+ * ======================================
+ * EXCHANGE CODE FOR ACCESS TOKEN
+ * ======================================
+ */
+
+async function exchangeCodeForToken(code) {
+  log("Exchanging OAuth code for token");
+
+  const response = await axios.get(`${GRAPH_BASE_URL}/oauth/access_token`, {
+    params: {
+      client_id: META_APP_ID,
+      client_secret: META_APP_SECRET,
+      redirect_uri: META_REDIRECT_URI,
+      code,
+    },
+  });
+
+  return response.data;
+}
+
+/**
+ * ======================================
+ * GET LONG LIVED TOKEN
+ * ======================================
+ */
+
+async function exchangeForLongLivedToken(shortToken) {
+  log("Generating long-lived token");
+
+  const response = await axios.get(`${GRAPH_BASE_URL}/oauth/access_token`, {
+    params: {
+      grant_type: "fb_exchange_token",
+      client_id: META_APP_ID,
+      client_secret: META_APP_SECRET,
+      fb_exchange_token: shortToken,
+    },
+  });
+
+  return response.data;
+}
+
+/**
+ * ======================================
+ * GET FACEBOOK USER
+ * ======================================
+ */
+
+async function getFacebookUser(accessToken) {
+  log("Fetching Facebook user");
+
+  const response = await axios.get(`${GRAPH_BASE_URL}/me`, {
+    params: {
+      fields: "id,name",
+      access_token: accessToken,
+    },
+  });
+
+  return response.data;
+}
+
+/**
+ * ======================================
+ * GET FACEBOOK PAGES
+ * ======================================
+ */
+
+async function getFacebookPages(accessToken) {
+  log("Fetching Facebook pages");
+
+  const response = await axios.get(`${GRAPH_BASE_URL}/me/accounts`, {
+    params: {
+      fields: "id,name,access_token,instagram_business_account",
+      access_token: accessToken,
+    },
+  });
+
+  return response.data?.data ?? [];
+}
+
+/**
+ * ======================================
+ * GET INSTAGRAM ACCOUNT
+ * ======================================
+ */
+
+async function getInstagramAccount(igUserId, pageAccessToken) {
+  log("Fetching Instagram account:", igUserId);
+
+  const response = await axios.get(`${GRAPH_BASE_URL}/${igUserId}`, {
+    params: {
+      fields:
+        "id,username,profile_picture_url,name,followers_count,follows_count,media_count",
+      access_token: pageAccessToken,
+    },
+  });
+
+  return response.data;
+}
+
+/**
+ * ======================================
+ * SAVE ACCOUNT
+ * ======================================
+ */
+
+async function persistInstagramAccount({
+  facebookUser,
+  page,
+  instagramAccount,
+  token,
+  expiresIn,
+}) {
+  log("Persisting Instagram account");
+
+  const expiresAt = expiresIn ? new Date(Date.now() + expiresIn * 1000) : null;
+
+  return upsertAccount({
+    nome: instagramAccount?.name || instagramAccount?.username || page?.name,
+
+    instagramId: instagramAccount?.id,
+
+    pageId: page?.id,
+
+    accessToken: token,
+
+    tokenExpiresAt: expiresAt ? expiresAt.toISOString() : null,
+
+    ativo: true,
+
+    facebookUserId: facebookUser?.id,
+
+    username: instagramAccount?.username,
+
+    profilePictureUrl: instagramAccount?.profile_picture_url,
+
+    accountType: "instagram_business",
+  });
+}
+
+/**
+ * ======================================
+ * PROCESS OAUTH CALLBACK
+ * ======================================
+ */
+
+async function processOAuthCallback(code) {
+  try {
+    log("======================================");
+    log("START OAUTH CALLBACK");
+
+    /**
+     * STEP 1
+     * Exchange code -> short token
+     */
+
+    const shortTokenData = await exchangeCodeForToken(code);
+
+    const shortToken = shortTokenData.access_token;
+
+    if (!shortToken) {
+      throw new Error("Falha ao obter access token.");
+    }
+
+    /**
+     * STEP 2
+     * Long-lived token
+     */
+
+    const longLivedData = await exchangeForLongLivedToken(shortToken);
+
+    const accessToken = longLivedData.access_token;
+
+    const expiresIn = longLivedData.expires_in;
+
+    /**
+     * STEP 3
+     * Facebook user
+     */
+
+    const facebookUser = await getFacebookUser(accessToken);
+
+    /**
+     * STEP 4
+     * Pages
+     */
+
+    const pages = await getFacebookPages(accessToken);
+
+    if (!pages.length) {
+      throw new Error("Nenhuma pagina Facebook encontrada.");
+    }
+
+    /**
+     * STEP 5
+     * Find page with IG account
+     */
+
+    const validPage = pages.find((page) => page.instagram_business_account?.id);
+
+    if (!validPage) {
+      throw new Error("Nenhuma conta Instagram Business conectada.");
+    }
+
+    const igUserId = validPage.instagram_business_account.id;
+
+    /**
+     * STEP 6
+     * Instagram data
+     */
+
+    const instagramAccount = await getInstagramAccount(
+      igUserId,
+      validPage.access_token,
+    );
+
+    /**
+     * STEP 7
+     * Persist account
+     */
+
+    const savedAccount = await persistInstagramAccount({
+      facebookUser,
+      page: validPage,
+      instagramAccount,
+      token: accessToken,
+      expiresIn,
+    });
+
+    log("ACCOUNT SAVED:", {
+      instagramId: instagramAccount?.id,
+      username: instagramAccount?.username,
+    });
+
+    log("END OAUTH CALLBACK");
+    log("======================================");
+
+    return {
+      success: true,
+      account: savedAccount,
+      facebookUser,
+      instagramAccount,
+    };
+  } catch (error) {
+    console.error("[META OAUTH ERROR]", error?.response?.data || error.message);
+
+    throw error;
+  }
+}
+
+/**
+ * ======================================
+ * FRONTEND SUCCESS REDIRECT
+ * ======================================
+ */
+
+function buildSuccessRedirect() {
+  return `${FRONTEND_URL}/accounts?connected=true`;
+}
+
+/**
+ * ======================================
+ * FRONTEND ERROR REDIRECT
+ * ======================================
+ */
+
+function buildErrorRedirect(message) {
+  const encoded = encodeURIComponent(message || "oauth_error");
+
+  return `${FRONTEND_URL}/accounts?error=${encoded}`;
+}
+
+module.exports = {
+  buildOAuthUrl,
+  exchangeCodeForToken,
+  exchangeForLongLivedToken,
+  getFacebookUser,
+  getFacebookPages,
+  getInstagramAccount,
+  persistInstagramAccount,
+  processOAuthCallback,
+  buildSuccessRedirect,
+  buildErrorRedirect,
+};
