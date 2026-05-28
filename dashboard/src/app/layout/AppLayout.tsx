@@ -8,6 +8,7 @@ const links = [
   { to: "/agendamentos", label: "Agendamentos" },
   { to: "/horarios", label: "Horarios" },
   { to: "/historico", label: "Historico" },
+  { to: "/inbox", label: "Inbox" },
 ];
 
 export function AppLayout() {

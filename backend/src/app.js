@@ -12,6 +12,11 @@ const instagramMessagesRoutes = require("./modules/webhooks/instagram-messages.r
 
 const instagramSendInternalRoutes = require("./modules/instagram/instagram-send.internal.routes");
 
+const instagramConversationsRoutes = require("./modules/conversations/instagram-conversations.routes");
+const instagramSendMessageRoutes = require("./modules/inbox/instagram-send-message.routes");
+
+const realtimeRoutes = require("./modules/realtime/realtime.routes");
+
 const metaOAuthRoutes = require("./modules/auth/meta-oauth.routes");
 const { getAllowedOrigins } = require("./config/env");
 
@@ -38,6 +43,12 @@ app.use("/api/webhooks/instagram", instagramMessagesRoutes);
 app.use("/api/auth/meta", metaOAuthRoutes);
 
 app.use("/api/internal/instagram", instagramSendInternalRoutes);
+
+app.use("/api/internal/conversations", instagramConversationsRoutes);
+
+app.use("/api/inbox/send-message", instagramSendMessageRoutes);
+
+app.use("/api/realtime", realtimeRoutes);
 
 app.use((req, res, next) => {
   const startedAt = Date.now();
@@ -95,6 +106,8 @@ app.use("/api/internal/accounts", internalAccountsRoutes);
 app.use("/api/internal/posts", internalPostsRoutes);
 app.use("/api/internal/scheduler", internalSchedulerRoutes);
 app.use("/api/internal/metrics", internalMetricsRoutes);
+
+app.use("/api/internal/messages", instagramSendMessageRoutes);
 
 // app.use((error, _req, res, _next) => {
 //   const status = error?.status ?? 500;

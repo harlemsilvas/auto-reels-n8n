@@ -10,17 +10,51 @@ function log(...args) {
 
 /**
  * ======================================
- * SEND INSTAGRAM MESSAGE
+ * SEND API REQUEST
  * ======================================
  */
 
-async function sendInstagramMessage({ accessToken, recipientId, messageText }) {
+async function sendApiRequest({ accessToken, payload }) {
   try {
-    log("SEND INSTAGRAM MESSAGE");
-
     const url = `${GRAPH_BASE_URL}/me/messages`;
 
-    const payload = {
+    log("SEND API REQUEST");
+
+    log({
+      url,
+      payload,
+    });
+
+    const response = await axios.post(url, payload, {
+      params: {
+        access_token: accessToken,
+      },
+    });
+
+    log("SUCCESS RESPONSE");
+
+    return response.data;
+  } catch (error) {
+    console.error(
+      "[INSTAGRAM API ERROR]",
+      error?.response?.data || error.message,
+    );
+
+    throw error;
+  }
+}
+
+/**
+ * ======================================
+ * SEND TEXT MESSAGE
+ * ======================================
+ */
+
+async function sendTextMessage({ accessToken, recipientId, messageText }) {
+  return sendApiRequest({
+    accessToken,
+
+    payload: {
       recipient: {
         id: recipientId,
       },
@@ -30,33 +64,120 @@ async function sendInstagramMessage({ accessToken, recipientId, messageText }) {
       message: {
         text: messageText,
       },
-    };
+    },
+  });
+}
 
-    log("REQUEST:", {
-      url,
-      recipientId,
-      messageText,
-    });
+/**
+ * ======================================
+ * SEND QUICK REPLIES
+ * ======================================
+ */
 
-    const response = await axios.post(url, payload, {
-      params: {
-        access_token: accessToken,
+async function sendQuickReplies({
+  accessToken,
+  recipientId,
+  messageText,
+  replies = [],
+}) {
+  return sendApiRequest({
+    accessToken,
+
+    payload: {
+      recipient: {
+        id: recipientId,
       },
-    });
 
-    log("SUCCESS RESPONSE:", response.data);
+      messaging_type: "RESPONSE",
 
-    return response.data;
-  } catch (error) {
-    console.error(
-      "[INSTAGRAM SEND ERROR]",
-      error?.response?.data || error.message,
-    );
+      message: {
+        text: messageText,
 
-    throw error;
-  }
+        quick_replies: replies.map((item) => ({
+          content_type: "text",
+          title: item.title,
+          payload: item.payload,
+        })),
+      },
+    },
+  });
+}
+
+/**
+ * ======================================
+ * SEND IMAGE
+ * ======================================
+ */
+
+async function sendImageMessage({ accessToken, recipientId, imageUrl }) {
+  return sendApiRequest({
+    accessToken,
+
+    payload: {
+      recipient: {
+        id: recipientId,
+      },
+
+      messaging_type: "RESPONSE",
+
+      message: {
+        attachment: {
+          type: "image",
+
+          payload: {
+            url: imageUrl,
+            is_reusable: true,
+          },
+        },
+      },
+    },
+  });
+}
+
+/**
+ * ======================================
+ * SEND TYPING INDICATOR
+ * ======================================
+ */
+
+async function sendTypingIndicator({ accessToken, recipientId }) {
+  return sendApiRequest({
+    accessToken,
+
+    payload: {
+      recipient: {
+        id: recipientId,
+      },
+
+      sender_action: "typing_on",
+    },
+  });
+}
+
+/**
+ * ======================================
+ * MARK MESSAGE AS SEEN
+ * ======================================
+ */
+
+async function markSeen({ accessToken, recipientId }) {
+  return sendApiRequest({
+    accessToken,
+
+    payload: {
+      recipient: {
+        id: recipientId,
+      },
+
+      sender_action: "mark_seen",
+    },
+  });
 }
 
 module.exports = {
-  sendInstagramMessage,
+  sendTextMessage,
+  sendQuickReplies,
+  sendImageMessage,
+  sendTypingIndicator,
+  markSeen,
 };

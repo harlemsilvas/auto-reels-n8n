@@ -12,6 +12,7 @@ import { SchedulePage } from "../../modules/schedule/pages/SchedulePage";
 import { ScheduleSlotsPage } from "../../modules/schedule/pages/ScheduleSlotsPage";
 import { HistoryPage } from "../../modules/history/pages/HistoryPage";
 import { UploadPage } from "../../modules/upload/pages/UploadPage";
+import InstagramInboxPage from "../../modules/inbox/pages/InstagramInboxPage";
 
 const router = createBrowserRouter([
   {
@@ -31,6 +32,7 @@ const router = createBrowserRouter([
           { path: "/agendamentos", element: <SchedulePage /> },
           { path: "/horarios", element: <ScheduleSlotsPage /> },
           { path: "/historico", element: <HistoryPage /> },
+          { path: "/inbox", element: <InstagramInboxPage /> },
         ],
       },
     ],

@@ -69,7 +69,7 @@ export function DashboardPage() {
     <>
       <header className="hero-block">
         <div>
-          <p className="eyebrow">Fase 9 · Painel Administrativo</p>
+          <p className="eyebrow">Painel Administrativo</p>
           <h1>SocialBot Dashboard</h1>
           <p className="hero-copy">
             Controle de publicacoes, filas e status das contas Instagram em um

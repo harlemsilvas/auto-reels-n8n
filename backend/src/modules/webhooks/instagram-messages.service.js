@@ -1,6 +1,7 @@
 const repository = require("./instagram-messages.repository");
 
 const { query } = require("../../lib/db");
+const realtimeEvents = require("../realtime/realtime.events");
 
 function log(...args) {
   console.log(`[INSTAGRAM WEBHOOK ${new Date().toISOString()}]`, ...args);
@@ -174,7 +175,8 @@ async function processMessagingEvent(event) {
      * Save message
      */
 
-    await repository.saveMessage({
+    // Monta o objeto da mensagem salva para emitir
+    const savedMessage = {
       conversationId: conversation.id,
       metaMessageId,
       senderId,
@@ -182,9 +184,12 @@ async function processMessagingEvent(event) {
       messageText: messageText || (hasAttachments ? "[attachment]" : null),
       payload: event,
       sentBy: "user",
-    });
+    };
 
     log("MESSAGE SAVED");
+
+    // Emite o evento com o objeto correto
+    realtimeEvents.emitNewMessage(savedMessage);
 
     /**
      * ======================================
