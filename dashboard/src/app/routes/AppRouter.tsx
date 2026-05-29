@@ -3,6 +3,7 @@ import {
   createBrowserRouter,
   RouterProvider,
 } from "react-router-dom";
+import InstagramInboxPage from "../../modules/inbox/pages/InstagramInboxPage";
 import { ProtectedRoute } from "../guards/ProtectedRoute";
 import { AppLayout } from "../layout/AppLayout";
 import { LoginPage } from "../../modules/auth/pages/LoginPage";
@@ -12,7 +13,6 @@ import { SchedulePage } from "../../modules/schedule/pages/SchedulePage";
 import { ScheduleSlotsPage } from "../../modules/schedule/pages/ScheduleSlotsPage";
 import { HistoryPage } from "../../modules/history/pages/HistoryPage";
 import { UploadPage } from "../../modules/upload/pages/UploadPage";
-import InstagramInboxPage from "../../modules/inbox/pages/InstagramInboxPage";
 
 const router = createBrowserRouter([
   {
