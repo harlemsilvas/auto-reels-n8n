@@ -1,4 +1,5 @@
-import { useState, KeyboardEvent } from "react";
+import { useState } from "react";
+import type { KeyboardEvent } from "react";
 /**
  * ======================================
  * PROPS
@@ -29,7 +30,7 @@ export default function MessageComposer({
    */
 
   const [message, setMessage] = useState("");
-  const [typing, setTyping] = useState(false);
+  // const [typing, setTyping] = useState(false);
 
   /**
    * ======================================

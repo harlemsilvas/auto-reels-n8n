@@ -95,10 +95,9 @@ export interface PaginatedResponse<T> {
  */
 
 export interface SendMessagePayload {
+  conversationId: string;
   accountId: string;
-
   recipientId: string;
-
   messageText: string;
 }
 

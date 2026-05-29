@@ -38,7 +38,7 @@ export function useConversations(accountId?: string) {
 
       setError(null);
 
-      const response = await inboxService.listConversations(accountId);
+      const response = await inboxService.listConversations({ accountId });
 
       setConversations(response.items);
 
