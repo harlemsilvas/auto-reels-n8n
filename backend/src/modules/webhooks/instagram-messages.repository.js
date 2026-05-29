@@ -81,23 +81,24 @@ async function findOrCreateConversation({
 
 async function saveMessage({
   conversationId,
-  metaMessageId,
   senderId,
   recipientId,
   messageText,
+  metaMessageId,
   payload,
-  sentBy,
+  sentBy = "user",
 }) {
-  await query(
+  const result = await query(
     `
       INSERT INTO instagram_messages (
         conversation_id,
-        meta_message_id,
         sender_id,
         recipient_id,
+        sender_type,
         message_text,
-        raw_payload,
-        sent_by
+        meta_message_id,
+        payload,
+        created_at
       )
       VALUES (
         $1::uuid,
@@ -105,33 +106,32 @@ async function saveMessage({
         $3,
         $4,
         $5,
-        $6::jsonb,
-        $7
+        $6,
+        $7::jsonb,
+        NOW()
       )
-      ON CONFLICT (meta_message_id)
-      DO NOTHING
+      RETURNING
+        id::text AS id,
+        conversation_id::text AS "conversationId",
+        sender_id AS "senderId",
+        recipient_id AS "recipientId",
+        sender_type AS "sentBy",
+        message_text AS "messageText",
+        meta_message_id AS "metaMessageId",
+        created_at AS "createdAt"
     `,
     [
       conversationId,
-      metaMessageId,
       senderId,
       recipientId,
-      messageText,
-      JSON.stringify(payload),
       sentBy,
+      messageText,
+      metaMessageId,
+      JSON.stringify(payload),
     ],
   );
 
-  await query(
-    `
-      UPDATE instagram_conversations
-      SET
-        last_message_at = NOW(),
-        updated_at = NOW()
-      WHERE id = $1::uuid
-    `,
-    [conversationId],
-  );
+  return result.rows[0];
 }
 
 module.exports = {

@@ -176,15 +176,16 @@ async function processMessagingEvent(event) {
      */
 
     // Monta o objeto da mensagem salva para emitir
-    const savedMessage = {
+
+    const savedMessage = await repository.saveMessage({
       conversationId: conversation.id,
-      metaMessageId,
       senderId,
       recipientId,
       messageText: messageText || (hasAttachments ? "[attachment]" : null),
+      metaMessageId,
       payload: event,
       sentBy: "user",
-    };
+    });
 
     log("MESSAGE SAVED");
 
