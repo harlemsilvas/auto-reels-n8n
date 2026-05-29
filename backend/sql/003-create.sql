@@ -8,3 +8,4 @@ CREATE TABLE IF NOT EXISTS webhook_events (
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
