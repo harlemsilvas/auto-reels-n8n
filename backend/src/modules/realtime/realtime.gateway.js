@@ -30,7 +30,17 @@ function removeClient(client) {
  * ======================================
  */
 
+// function broadcast(event, payload = {}) {
+//   const data = `event: ${event}\n` + `data: ${JSON.stringify(payload)}\n\n`;
+
+//   for (const client of clients) {
+//     client.write(data);
+//   }
+// }
+
 function broadcast(event, payload = {}) {
+  console.log("[REALTIME GATEWAY] broadcast", event, `clients=${clients.size}`);
+
   const data = `event: ${event}\n` + `data: ${JSON.stringify(payload)}\n\n`;
 
   for (const client of clients) {

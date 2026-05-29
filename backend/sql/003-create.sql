@@ -9,3 +9,5 @@ CREATE TABLE IF NOT EXISTS webhook_events (
 );
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+SELECT * FROM webhook_events LIMIT 1;

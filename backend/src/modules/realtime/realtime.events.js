@@ -40,9 +40,16 @@ function emitOnline(data) {
   realtimeGateway.broadcast("online", data);
 }
 
+function emitNewMessage(message) {
+  console.log("[REALTIME EVENTS] emitNewMessage", message?.conversationId);
+
+  realtimeGateway.broadcast("new-message", message);
+}
+
 module.exports = {
   emitNewMessage,
   emitConversationUpdated,
   emitTyping,
   emitOnline,
+  emitNewMessage,
 };
