@@ -1,25 +1,6 @@
 
 BEGIN;
 
--- Criação de tabelas (se não existirem)
-CREATE TABLE IF NOT EXISTS messages (
-    id SERIAL PRIMARY KEY,
-    conversation_id INTEGER REFERENCES conversations(id),
-    external_message_id VARCHAR(255),
-    sender_id VARCHAR(255),
-    direction VARCHAR(20),
-    message_type VARCHAR(20),
-    message_text TEXT,
-    raw_payload JSONB,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS conversations (
-  id UUID PRIMARY KEY,
-  instagram_user_id TEXT,
-  created_at TIMESTAMP DEFAULT NOW()
-);
-
 CREATE TABLE IF NOT EXISTS instagram_conversations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     account_id UUID REFERENCES instagram_accounts(id) ON DELETE CASCADE,
