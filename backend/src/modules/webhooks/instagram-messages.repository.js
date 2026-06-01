@@ -7,20 +7,44 @@ const { query } = require("../../lib/db");
  */
 
 async function saveWebhookEvent(payload, eventType = null) {
+  const payloadJson = JSON.stringify(payload);
+
+  try {
+    await query(
+      `
+        INSERT INTO webhook_events (
+          provider,
+          event_type,
+          payload
+        )
+        VALUES (
+          'instagram',
+          $1,
+          $2::jsonb
+        )
+      `,
+      [eventType, payloadJson],
+    );
+    return;
+  } catch (error) {
+    // Compatibilidade com schema antigo sem coluna provider.
+    if (error?.code !== "42703") {
+      throw error;
+    }
+  }
+
   await query(
     `
       INSERT INTO webhook_events (
-        provider,
         event_type,
         payload
       )
       VALUES (
-        'instagram',
         $1,
         $2::jsonb
       )
     `,
-    [eventType, JSON.stringify(payload)],
+    [eventType, payloadJson],
   );
 }
 
@@ -88,50 +112,85 @@ async function saveMessage({
   payload,
   sentBy = "user",
 }) {
-  const result = await query(
-    `
-      INSERT INTO instagram_messages (
-        conversation_id,
-        sender_id,
-        recipient_id,
-        sender_type,
-        message_text,
-        meta_message_id,
-        payload,
-        created_at
-      )
-      VALUES (
-        $1::uuid,
-        $2,
-        $3,
-        $4,
-        $5,
-        $6,
-        $7::jsonb,
-        NOW()
-      )
-      RETURNING
-        id::text AS id,
-        conversation_id::text AS "conversationId",
-        sender_id AS "senderId",
-        recipient_id AS "recipientId",
-        sender_type AS "sentBy",
-        message_text AS "messageText",
-        meta_message_id AS "metaMessageId",
-        created_at AS "createdAt"
-    `,
-    [
-      conversationId,
-      senderId,
-      recipientId,
-      sentBy,
-      messageText,
-      metaMessageId,
-      JSON.stringify(payload),
-    ],
-  );
+  const payloadJson = JSON.stringify(payload);
 
-  return result.rows[0];
+  const attempts = [
+    {
+      senderColumn: "sender_type",
+      payloadColumn: "payload",
+    },
+    {
+      senderColumn: "sent_by",
+      payloadColumn: "raw_payload",
+    },
+    {
+      senderColumn: "sent_by",
+      payloadColumn: "payload",
+    },
+    {
+      senderColumn: "sender_type",
+      payloadColumn: "raw_payload",
+    },
+  ];
+
+  let lastError = null;
+
+  for (const attempt of attempts) {
+    try {
+      const result = await query(
+        `
+          INSERT INTO instagram_messages (
+            conversation_id,
+            sender_id,
+            recipient_id,
+            ${attempt.senderColumn},
+            message_text,
+            meta_message_id,
+            ${attempt.payloadColumn},
+            created_at
+          )
+          VALUES (
+            $1::uuid,
+            $2,
+            $3,
+            $4,
+            $5,
+            $6,
+            $7::jsonb,
+            NOW()
+          )
+          RETURNING
+            id::text AS id,
+            conversation_id::text AS "conversationId",
+            sender_id AS "senderId",
+            recipient_id AS "recipientId",
+            ${attempt.senderColumn} AS "sentBy",
+            message_text AS "messageText",
+            meta_message_id AS "metaMessageId",
+            created_at AS "createdAt"
+        `,
+        [
+          conversationId,
+          senderId,
+          recipientId,
+          sentBy,
+          messageText,
+          metaMessageId,
+          payloadJson,
+        ],
+      );
+
+      return result.rows[0];
+    } catch (error) {
+      lastError = error;
+
+      if (error?.code !== "42703") {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError;
 }
 
 module.exports = {
