@@ -9,6 +9,9 @@ const { ensureDirectories } = require("./utils/fs.utils");
 const {
   startInsightsCollector,
 } = require("./modules/metrics/insights.collector");
+const {
+  startEnqueueReadyCollector,
+} = require("./modules/scheduler/enqueue-ready.collector");
 
 async function bootstrap() {
   await ensureDirectories([
@@ -21,6 +24,7 @@ async function bootstrap() {
     console.log(`SocialBot backend rodando na porta ${API_PORT}`);
     console.log(`Pending: ${MEDIA_PENDING_DIR}`);
     startInsightsCollector();
+    startEnqueueReadyCollector();
   });
 }
 

@@ -13,6 +13,8 @@ async function notifyN8n(jobData) {
     throw new Error("N8N_PUBLISH_WEBHOOK nao configurado.");
   }
 
+  console.log("[N8N PAYLOAD]", JSON.stringify(jobData, null, 2));
+
   const response = await fetch(N8N_PUBLISH_WEBHOOK, {
     method: "POST",
     headers: {

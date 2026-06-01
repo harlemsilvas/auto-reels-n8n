@@ -8,6 +8,7 @@ const {
 } = require("../posts/posts.service");
 
 const { enqueuePublishJob, getQueueStats } = require("./scheduler.queue");
+const { enqueueReadyPosts } = require("./enqueue-ready.service");
 
 const {
   listSlots,
@@ -94,54 +95,8 @@ router.delete("/slots/:id", async (req, res, next) => {
 
 router.post("/enqueue-ready", async (_req, res, next) => {
   try {
-    log("Buscando posts prontos para fila");
-
-    const ready = await getReadyPosts();
-
-    log(`Posts prontos encontrados: ${ready.total}`);
-
-    const results = await Promise.all(
-      ready.items.map(async (item) => {
-        log("Enfileirando post:", item.id);
-
-        const enqueueResult = await enqueuePublishJob(item);
-
-        if (enqueueResult.queued) {
-          await markQueued(item.id);
-
-          await addEvent(item.id, "queued", {
-            source: "scheduler.enqueue-ready",
-            jobId: enqueueResult.jobId,
-          });
-
-          log("Post enfileirado:", item.id);
-        } else {
-          await addEvent(item.id, "queue_skipped", {
-            source: "scheduler.enqueue-ready",
-            reason: enqueueResult.reason,
-            jobId: enqueueResult.jobId,
-          });
-
-          log("Post ignorado:", item.id, enqueueResult.reason);
-        }
-
-        return {
-          postId: item.id,
-          ...enqueueResult,
-        };
-      }),
-    );
-
-    const queuedCount = results.filter((item) => item.queued).length;
-
-    const skippedCount = results.length - queuedCount;
-
-    res.json({
-      totalReady: ready.total,
-      queuedCount,
-      skippedCount,
-      jobs: results,
-    });
+    const result = await enqueueReadyPosts("scheduler.enqueue-ready");
+    res.json(result);
   } catch (error) {
     next(error);
   }
