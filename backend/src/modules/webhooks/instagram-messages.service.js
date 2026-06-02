@@ -232,6 +232,26 @@ async function processChangeEvent(change) {
       value: change?.value,
     });
 
+    if (field === "messages") {
+      const value = change?.value ?? {};
+
+      const messagingEvents = Array.isArray(value?.messaging)
+        ? value.messaging
+        : [];
+
+      if (messagingEvents.length > 0) {
+        for (const event of messagingEvents) {
+          await processMessagingEvent(event);
+        }
+      } else if (value?.sender?.id && value?.recipient?.id && value?.message) {
+        await processMessagingEvent({
+          sender: value.sender,
+          recipient: value.recipient,
+          message: value.message,
+        });
+      }
+    }
+
     /**
      * Examples:
      * comments
