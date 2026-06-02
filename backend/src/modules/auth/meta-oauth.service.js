@@ -28,6 +28,8 @@ function buildOAuthUrl() {
     "instagram_content_publish",
     "instagram_manage_messages",
     "pages_show_list",
+    "pages_manage_metadata",
+    "pages_messaging",
     "pages_read_engagement",
     "business_management",
   ];
