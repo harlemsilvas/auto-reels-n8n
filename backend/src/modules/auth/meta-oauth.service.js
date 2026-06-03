@@ -301,7 +301,7 @@ async function processOAuthCallback(code) {
  */
 
 function buildSuccessRedirect() {
-  return `${FRONTEND_URL}/accounts?connected=true`;
+  return `${FRONTEND_URL}/contas?connected=true`;
 }
 
 /**
@@ -313,7 +313,7 @@ function buildSuccessRedirect() {
 function buildErrorRedirect(message) {
   const encoded = encodeURIComponent(message || "oauth_error");
 
-  return `${FRONTEND_URL}/accounts?error=${encoded}`;
+  return `${FRONTEND_URL}/contas?error=${encoded}`;
 }
 
 module.exports = {
