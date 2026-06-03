@@ -1,0 +1,11 @@
+# Formato: URL_OU_ARQUIVO|Legenda opcional
+# Linhas em branco e iniciadas com # sao ignoradas.
+
+# URL completa
+# https://midia.hrmmotos.com.br/reels/pending/video-001.mp4|Reel teste 001
+
+# Nome de arquivo (usa MEDIA_PUBLIC_BASE_URL quando definido no .env)
+# video-002.mp4|Reel teste 002
+
+# Sem legenda na linha (usa CAPTION_DEFAULT se informado)
+# video-003.mp4
