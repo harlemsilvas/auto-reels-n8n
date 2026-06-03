@@ -25,14 +25,17 @@ set -euo pipefail
 #   MAX_TIME_SEC="120"
 
 SCRIPT_NAME="publish_reel"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 API_VERSION="${API_VERSION:-v23.0}"
 GRAPH_BASE="https://graph.facebook.com/${API_VERSION}"
 
-IG_USER_ID="${IG_USER_ID:-${IG_ACCOUNT_ID:-}}"
-PAGE_TOKEN="${PAGE_TOKEN:-${META_TOKEN:-}}"
-VIDEO_URL="${VIDEO_URL:-}"
-CAPTION="${CAPTION:-}"
-SHARE_TO_FEED="${SHARE_TO_FEED:-true}"
+ENV_FILE="${ENV_FILE:-}"
+
+IG_USER_ID=""
+PAGE_TOKEN=""
+VIDEO_URL=""
+CAPTION=""
+SHARE_TO_FEED="true"
 
 POLL_INTERVAL_SEC="${POLL_INTERVAL_SEC:-5}"
 POLL_TIMEOUT_SEC="${POLL_TIMEOUT_SEC:-300}"
@@ -82,6 +85,67 @@ require_env() {
   if [[ -z "${var_value}" ]]; then
     die "Variavel obrigatoria ausente: ${var_name}"
   fi
+}
+
+trim() {
+  local s="$1"
+  s="${s#"${s%%[![:space:]]*}"}"
+  s="${s%"${s##*[![:space:]]}"}"
+  printf '%s' "${s}"
+}
+
+load_env_file() {
+  local env_path="$1"
+  local line key value
+
+  log "INFO" "Carregando env: ${env_path}"
+  while IFS= read -r line || [[ -n "${line}" ]]; do
+    line="$(trim "${line}")"
+
+    if [[ -z "${line}" || "${line:0:1}" == "#" ]]; then
+      continue
+    fi
+
+    if [[ "${line}" =~ ^(export[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*)[[:space:]]*=(.*)$ ]]; then
+      key="${BASH_REMATCH[2]}"
+      value="${BASH_REMATCH[3]}"
+      value="$(trim "${value}")"
+
+      if [[ "${value}" =~ ^\"(.*)\"$ ]]; then
+        value="${BASH_REMATCH[1]}"
+      elif [[ "${value}" =~ ^\'(.*)\'$ ]]; then
+        value="${BASH_REMATCH[1]}"
+      fi
+
+      printf -v "${key}" '%s' "${value}"
+      export "${key}"
+    fi
+  done < "${env_path}"
+}
+
+load_envs() {
+  if [[ -n "${ENV_FILE}" ]]; then
+    if [[ ! -f "${ENV_FILE}" ]]; then
+      die "ENV_FILE nao encontrado: ${ENV_FILE}"
+    fi
+    load_env_file "${ENV_FILE}"
+    return
+  fi
+
+  if [[ -f "${ROOT_DIR}/.env" ]]; then
+    load_env_file "${ROOT_DIR}/.env"
+  fi
+  if [[ -f "${ROOT_DIR}/backend/.env" ]]; then
+    load_env_file "${ROOT_DIR}/backend/.env"
+  fi
+}
+
+init_runtime_config() {
+  IG_USER_ID="${IG_USER_ID:-${IG_ACCOUNT_ID:-}}"
+  PAGE_TOKEN="${PAGE_TOKEN:-${META_TOKEN:-}}"
+  VIDEO_URL="${VIDEO_URL:-}"
+  CAPTION="${CAPTION:-}"
+  SHARE_TO_FEED="${SHARE_TO_FEED:-true}"
 }
 
 assert_bool() {
@@ -162,6 +226,9 @@ api_get() {
 main() {
   require_cmd curl
   require_cmd jq
+
+  load_envs
+  init_runtime_config
 
   require_env "IG_USER_ID (ou IG_ACCOUNT_ID)" "${IG_USER_ID}"
   require_env "PAGE_TOKEN (ou META_TOKEN)" "${PAGE_TOKEN}"
