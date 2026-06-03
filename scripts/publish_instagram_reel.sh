@@ -280,8 +280,9 @@ main() {
   start_ts="$(date +%s)"
 
   while true; do
-    local qs status_http status_code status_text error_message
-    qs="${creation_id}?fields=status_code,status,error_message&access_token=${PAGE_TOKEN}"
+    local qs status_http status_code status_text
+    # Alguns contextos/v23 nao expõem error_message neste node; mantenha somente campos amplamente suportados.
+    qs="${creation_id}?fields=status_code,status&access_token=${PAGE_TOKEN}"
     status_http="$(api_get "${qs}" "${status_body}")"
 
     if [[ "${status_http}" -lt 200 || "${status_http}" -ge 300 ]]; then
@@ -291,13 +292,8 @@ main() {
 
     status_code="$(jq -r '.status_code // empty' "${status_body}")"
     status_text="$(jq -r '.status // empty' "${status_body}")"
-    error_message="$(jq -r '.error_message // empty' "${status_body}")"
 
     log "INFO" "Status container: status_code=${status_code:-n/a} status=${status_text:-n/a}"
-
-    if [[ -n "${error_message}" && "${error_message}" != "null" ]]; then
-      log "ERRO" "Mensagem do processamento: ${error_message}"
-    fi
 
     if [[ "${status_code}" == "FINISHED" ]]; then
       break
