@@ -21,8 +21,8 @@ set -euo pipefail
 #   ENV_FILE="backend/.env" VIDEOS_FILE="scripts/videos_upload.txt" bash scripts/validar_reels_lote.sh
 #
 # Variaveis esperadas no env:
-#   IG_USER_ID
-#   PAGE_TOKEN
+#   IG_USER_ID (ou IG_ACCOUNT_ID)
+#   PAGE_TOKEN (ou META_TOKEN)
 #
 # Variaveis opcionais:
 #   CAPTION_DEFAULT="Legenda padrao"
@@ -168,8 +168,12 @@ publish_one() {
   local item_url="$1"
   local item_caption="$2"
 
-  IG_USER_ID="${IG_USER_ID}" \
-  PAGE_TOKEN="${PAGE_TOKEN}" \
+  local ig_user_id_value page_token_value
+  ig_user_id_value="${IG_USER_ID:-${IG_ACCOUNT_ID:-}}"
+  page_token_value="${PAGE_TOKEN:-${META_TOKEN:-}}"
+
+  IG_USER_ID="${ig_user_id_value}" \
+  PAGE_TOKEN="${page_token_value}" \
   VIDEO_URL="${item_url}" \
   CAPTION="${item_caption}" \
   SHARE_TO_FEED="${SHARE_TO_FEED:-true}" \
@@ -191,8 +195,8 @@ main() {
   load_envs
 
   require_file "${VIDEOS_FILE}" "VIDEOS_FILE"
-  [[ -n "${IG_USER_ID:-}" ]] || die "IG_USER_ID ausente (defina no .env ou no ambiente)."
-  [[ -n "${PAGE_TOKEN:-}" ]] || die "PAGE_TOKEN ausente (defina no .env ou no ambiente)."
+  [[ -n "${IG_USER_ID:-${IG_ACCOUNT_ID:-}}" ]] || die "IG_USER_ID/IG_ACCOUNT_ID ausente (defina no .env ou no ambiente)."
+  [[ -n "${PAGE_TOKEN:-${META_TOKEN:-}}" ]] || die "PAGE_TOKEN/META_TOKEN ausente (defina no .env ou no ambiente)."
 
   TMP_DIR="$(mktemp -d)"
   local ok_file fail_file

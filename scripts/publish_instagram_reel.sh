@@ -11,8 +11,8 @@ set -euo pipefail
 #   CAPTION="Legenda" bash scripts/publish_instagram_reel.sh
 #
 # Variaveis obrigatorias:
-#   IG_USER_ID
-#   PAGE_TOKEN
+#   IG_USER_ID (ou IG_ACCOUNT_ID)
+#   PAGE_TOKEN (ou META_TOKEN)
 #   VIDEO_URL
 #
 # Variaveis opcionais:
@@ -28,8 +28,8 @@ SCRIPT_NAME="publish_reel"
 API_VERSION="${API_VERSION:-v23.0}"
 GRAPH_BASE="https://graph.facebook.com/${API_VERSION}"
 
-IG_USER_ID="${IG_USER_ID:-}"
-PAGE_TOKEN="${PAGE_TOKEN:-}"
+IG_USER_ID="${IG_USER_ID:-${IG_ACCOUNT_ID:-}}"
+PAGE_TOKEN="${PAGE_TOKEN:-${META_TOKEN:-}}"
 VIDEO_URL="${VIDEO_URL:-}"
 CAPTION="${CAPTION:-}"
 SHARE_TO_FEED="${SHARE_TO_FEED:-true}"
@@ -163,8 +163,8 @@ main() {
   require_cmd curl
   require_cmd jq
 
-  require_env "IG_USER_ID" "${IG_USER_ID}"
-  require_env "PAGE_TOKEN" "${PAGE_TOKEN}"
+  require_env "IG_USER_ID (ou IG_ACCOUNT_ID)" "${IG_USER_ID}"
+  require_env "PAGE_TOKEN (ou META_TOKEN)" "${PAGE_TOKEN}"
   require_env "VIDEO_URL" "${VIDEO_URL}"
 
   assert_bool "SHARE_TO_FEED" "${SHARE_TO_FEED}"
