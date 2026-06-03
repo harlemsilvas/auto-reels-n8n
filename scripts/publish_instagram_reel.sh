@@ -31,11 +31,11 @@ GRAPH_BASE="https://graph.facebook.com/${API_VERSION}"
 
 ENV_FILE="${ENV_FILE:-}"
 
-IG_USER_ID=""
-PAGE_TOKEN=""
-VIDEO_URL=""
-CAPTION=""
-SHARE_TO_FEED="true"
+IG_USER_ID="${IG_USER_ID:-}"
+PAGE_TOKEN="${PAGE_TOKEN:-}"
+VIDEO_URL="${VIDEO_URL:-}"
+CAPTION="${CAPTION:-}"
+SHARE_TO_FEED="${SHARE_TO_FEED:-true}"
 
 POLL_INTERVAL_SEC="${POLL_INTERVAL_SEC:-5}"
 POLL_TIMEOUT_SEC="${POLL_TIMEOUT_SEC:-300}"
@@ -96,7 +96,7 @@ trim() {
 
 load_env_file() {
   local env_path="$1"
-  local line key value
+  local line key value current
 
   log "INFO" "Carregando env: ${env_path}"
   while IFS= read -r line || [[ -n "${line}" ]]; do
@@ -110,6 +110,12 @@ load_env_file() {
       key="${BASH_REMATCH[2]}"
       value="${BASH_REMATCH[3]}"
       value="$(trim "${value}")"
+
+      # Prioriza variaveis ja informadas no ambiente de execucao.
+      current="${!key:-}"
+      if [[ -n "${current}" ]]; then
+        continue
+      fi
 
       if [[ "${value}" =~ ^\"(.*)\"$ ]]; then
         value="${BASH_REMATCH[1]}"
