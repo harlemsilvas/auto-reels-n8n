@@ -3,6 +3,7 @@ import {
   accountsService,
   type InstagramAccount,
 } from "../services/accounts.service";
+import { buildApiUrl } from "../../../shared/config/api";
 
 type FormState = {
   nome: string;
@@ -102,6 +103,10 @@ export function AccountsPage() {
     }
   }
 
+  function onMetaLogin() {
+    window.location.href = buildApiUrl("/api/auth/meta/login");
+  }
+
   return (
     <section className="dashboard-grid">
       <article className="panel-card">
@@ -167,6 +172,9 @@ export function AccountsPage() {
           <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
             <button type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Salvando..." : "Salvar conta"}
+            </button>
+            <button type="button" onClick={onMetaLogin}>
+              Logar Meta
             </button>
             <button type="button" onClick={onBootstrapFromEnv}>
               Importar do env
