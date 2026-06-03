@@ -2,11 +2,12 @@
 # Linhas em branco e iniciadas com # sao ignoradas.
 
 # URL completa
-# https://midia.hrmmotos.com.br/reels/pending/video-001.mp4|Reel teste 001
+https://midia.hrmmotos.com.br/reels/pending/video_danidrea_110_720p_21004b9c.mp4|Pastilha de Freio Contact Danidrea - Semimetálica, Kevlar e Carbono.
 
 # Nome de arquivo (usa MEDIA_PUBLIC_BASE_URL quando definido no .env)
 # video-002.mp4|Reel teste 002
-video_danidrea_110_720p_21004b9c.mp4|Pastilha de Freio Contact Danidrea - Semimetálica, Kevlar e Carbono.
+# video_danidrea_110_720p_21004b9c.mp4|Pastilha de Freio Contact Danidrea - Semimetálica, Kevlar e Carbono.
 
 # Sem legenda na linha (usa CAPTION_DEFAULT se informado)
 # video_danidrea_110_720p_21004b9c.mp4
+
