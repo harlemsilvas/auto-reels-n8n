@@ -272,7 +272,10 @@ async function processOAuthCallback(code) {
       token: accessToken,
       expiresIn,
     });
-
+    log("TOKEN DEBUG", {
+      expiresIn,
+      expiresAt: expiresIn ? new Date(Date.now() + expiresIn * 1000) : null,
+    });
     log("ACCOUNT SAVED:", {
       instagramId: instagramAccount?.id,
       username: instagramAccount?.username,
