@@ -215,9 +215,14 @@ async function processOAuthCallback(code) {
 
     const longLivedData = await exchangeForLongLivedToken(shortToken);
 
+    log("LONG LIVED TOKEN RESPONSE", longLivedData);
+
     const accessToken = longLivedData.access_token;
 
-    const expiresIn = longLivedData.expires_in;
+    // Meta nem sempre retorna expires_in no long-lived token.
+    // Fallback: 60 dias em segundos (comportamento padrao da Meta).
+    const SIXTY_DAYS_SECONDS = 60 * 24 * 60 * 60;
+    const expiresIn = longLivedData.expires_in ?? SIXTY_DAYS_SECONDS;
 
     /**
      * STEP 3
