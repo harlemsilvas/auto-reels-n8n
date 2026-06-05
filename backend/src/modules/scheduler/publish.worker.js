@@ -32,6 +32,8 @@ async function notifyN8n(jobData) {
 
   try {
     payload = await response.json();
+    console.log("N8N RESPONSE");
+    console.dir(payload, { depth: null });
   } catch (_error) {
     throw new Error("Webhook n8n retornou 2xx, mas corpo JSON invalido.");
   }
@@ -64,6 +66,8 @@ async function processPublishJob(job) {
 
     await markProcessing(postId);
     const n8nResult = await notifyN8n(job.data);
+    console.log("N8N RESULT:");
+    console.log(JSON.stringify(n8nResult, null, 2));
     await addEvent(postId, "webhook_sent", {
       source: "worker",
       jobId: String(job.id),

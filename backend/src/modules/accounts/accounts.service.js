@@ -85,10 +85,6 @@ async function upsertAccount(input) {
       ? input.ativo
       : String(input.ativo ?? "true").toLowerCase() === "true";
   const tokenExpiresAt = normalizeText(input.tokenExpiresAt);
-  console.log("UPSERT ACCOUNT");
-  console.log({
-    tokenExpiresAt,
-  });
 
   const result = await query(
     `

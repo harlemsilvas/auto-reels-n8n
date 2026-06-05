@@ -215,8 +215,6 @@ async function processOAuthCallback(code) {
 
     const longLivedData = await exchangeForLongLivedToken(shortToken);
 
-    log("LONG LIVED TOKEN RESPONSE", longLivedData);
-
     const accessToken = longLivedData.access_token;
 
     // Meta nem sempre retorna expires_in no long-lived token.
@@ -276,10 +274,6 @@ async function processOAuthCallback(code) {
       instagramAccount,
       token: accessToken,
       expiresIn,
-    });
-    log("TOKEN DEBUG", {
-      expiresIn,
-      expiresAt: expiresIn ? new Date(Date.now() + expiresIn * 1000) : null,
     });
     log("ACCOUNT SAVED:", {
       instagramId: instagramAccount?.id,
