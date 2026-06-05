@@ -80,6 +80,7 @@ async function createPostFromUpload(input) {
   const uploadResult = await query(
     `
       INSERT INTO uploads (
+        workspace_id,
         original_filename,
         stored_filename,
         mime_type,
@@ -89,10 +90,11 @@ async function createPostFromUpload(input) {
         created_at,
         updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, 'local', NOW(), NOW())
+      VALUES ($1::uuid, $2, $3, $4, $5, $6, 'local', NOW(), NOW())
       RETURNING id::text AS id
     `,
     [
+      input.workspaceId,
       input.originalFileName,
       input.storedFileName,
       "video/mp4",
