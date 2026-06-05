@@ -35,12 +35,14 @@ async function findDefaultActiveAccount() {
 async function createPostFromUpload(input) {
   console.log("======================================");
   console.log("[CREATE POST FROM UPLOAD]");
-  console.log("INPUT:", {
+
+  console.log("[INPUT]", {
     originalFileName: input.originalFileName,
     storedFileName: input.storedFileName,
     storagePath: input.storagePath,
     fileSize: input.fileSize,
     scheduleAt: input.scheduleAt,
+    workspaceId: input.workspaceId,
   });
 
   const account = await findDefaultActiveAccount();
@@ -77,6 +79,12 @@ async function createPostFromUpload(input) {
     initialStatus,
   });
 
+  const workspaceId = input.workspaceId || account.workspaceId;
+
+  console.log("[WORKSPACE]", workspaceId);
+
+  console.log("[INSERT UPLOAD START]");
+
   const uploadResult = await query(
     `
       INSERT INTO uploads (
@@ -90,11 +98,21 @@ async function createPostFromUpload(input) {
         created_at,
         updated_at
       )
-      VALUES ($1::uuid, $2, $3, $4, $5, $6, 'local', NOW(), NOW())
+      VALUES (
+        $1::uuid,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        'local',
+        NOW(),
+        NOW()
+      )
       RETURNING id::text AS id
     `,
     [
-      input.workspaceId,
+      workspaceId,
       input.originalFileName,
       input.storedFileName,
       "video/mp4",
@@ -103,9 +121,12 @@ async function createPostFromUpload(input) {
     ],
   );
 
-  console.log("[UPLOAD CREATED]", uploadResult.rows[0]);
+  console.log("[UPLOAD CREATED]");
+  console.log(uploadResult.rows[0]);
 
   const uploadId = uploadResult.rows[0].id;
+
+  console.log("[INSERT POST START]");
 
   const postResult = await query(
     `
@@ -137,7 +158,7 @@ async function createPostFromUpload(input) {
         scheduled_at AS "scheduledAt"
     `,
     [
-      account.workspaceId,
+      workspaceId,
       account.id,
       uploadId,
       input.captionText ?? null,
@@ -147,7 +168,8 @@ async function createPostFromUpload(input) {
     ],
   );
 
-  console.log("[POST CREATED]", postResult.rows[0]);
+  console.log("[POST CREATED]");
+  console.log(postResult.rows[0]);
 
   console.log("======================================");
 
