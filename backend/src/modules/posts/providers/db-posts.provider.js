@@ -245,7 +245,7 @@ async function listReadyPosts() {
   `;
 
   console.log("[READY SQL]");
-  log("Enfileirando post:", {
+  console.log("Enfileirando post:", {
     id: item.id,
     workspaceId: item.workspaceId,
   });
