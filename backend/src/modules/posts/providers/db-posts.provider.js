@@ -245,6 +245,10 @@ async function listReadyPosts() {
   `;
 
   console.log("[READY SQL]");
+  log("Enfileirando post:", {
+    id: item.id,
+    workspaceId: item.workspaceId,
+  });
   if (process.env.NODE_ENV !== "production") {
     console.log(sql);
   }
