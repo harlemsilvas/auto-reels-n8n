@@ -1,3 +1,4 @@
+// db-posts.provider.js
 const { query } = require("../../../lib/db");
 const {
   META_GRAPH_API_VERSION,
@@ -198,6 +199,7 @@ async function listReadyPosts() {
       p.meta_media_id AS "metaMediaId",
 
       p.account_id::text AS "accountId",
+      p.workspace_id::text AS "workspaceId",
 
       ia.instagram_id AS "igAccountId",
 
@@ -506,13 +508,23 @@ async function cancelPostSchedule(id) {
   });
 }
 
-async function addPostEvent(postId, eventType, details = {}) {
+async function addPostEvent(workspaceId, postId, eventType, details = {}) {
   await query(
     `
-      INSERT INTO post_events (post_id, event_type, details)
-      VALUES ($1::uuid, $2, $3::jsonb)
+      INSERT INTO post_events (
+        workspace_id,
+        post_id,
+        event_type,
+        details
+      )
+      VALUES (
+        $1::uuid,
+        $2::uuid,
+        $3,
+        $4::jsonb
+      )
     `,
-    [postId, eventType, JSON.stringify(details)],
+    [workspaceId, postId, eventType, JSON.stringify(details)],
   );
 
   return true;

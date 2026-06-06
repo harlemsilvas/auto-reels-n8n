@@ -162,7 +162,7 @@ async function cancelPostSchedule(id) {
   };
 }
 
-async function addPostEvent(_postId, _eventType, _details = {}) {
+async function addPostEvent(_workspaceId, _postId, _eventType, _details = {}) {
   return true;
 }
 

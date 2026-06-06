@@ -25,14 +25,14 @@ async function enqueueReadyPosts(source = "scheduler.enqueue-ready") {
       if (enqueueResult.queued) {
         await markQueued(item.id);
 
-        await addEvent(item.id, "queued", {
+        await addEvent(item.workspaceId, item.id, "queued", {
           source,
           jobId: enqueueResult.jobId,
         });
 
         log("Post enfileirado:", item.id);
       } else {
-        await addEvent(item.id, "queue_skipped", {
+        await addEvent(item.workspaceId, item.id, "queue_skipped", {
           source,
           reason: enqueueResult.reason,
           jobId: enqueueResult.jobId,

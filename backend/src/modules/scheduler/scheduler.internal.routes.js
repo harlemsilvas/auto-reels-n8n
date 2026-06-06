@@ -147,14 +147,14 @@ router.post("/enqueue/:id", async (req, res, next) => {
     if (result.queued) {
       await markQueued(post.id);
 
-      await addEvent(post.id, "queued", {
+      await addEvent(post.workspaceId, post.id, "queued", {
         source: "scheduler.enqueue",
         jobId: result.jobId,
       });
 
       log("Post marcado como queued:", post.id);
     } else {
-      await addEvent(post.id, "queue_skipped", {
+      await addEvent(post.workspaceId, post.id, "queue_skipped", {
         source: "scheduler.enqueue",
         reason: result.reason,
         jobId: result.jobId,

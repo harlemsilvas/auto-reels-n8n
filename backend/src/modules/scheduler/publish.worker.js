@@ -1,11 +1,13 @@
 const { Worker } = require("bullmq");
 const { N8N_PUBLISH_WEBHOOK, PUBLISH_QUEUE_NAME } = require("../../config/env");
+
 const {
   markProcessing,
   markPublished,
   markError,
   addEvent,
 } = require("../posts/posts.service");
+
 const { getRedisConnection } = require("./scheduler.queue");
 
 async function notifyN8n(jobData) {
@@ -25,6 +27,7 @@ async function notifyN8n(jobData) {
 
   if (!response.ok) {
     const body = await response.text();
+
     throw new Error(`Falha no webhook n8n (${response.status}): ${body}`);
   }
 
@@ -32,6 +35,7 @@ async function notifyN8n(jobData) {
 
   try {
     payload = await response.json();
+
     console.log("N8N RESPONSE");
     console.dir(payload, { depth: null });
   } catch (_error) {
@@ -39,6 +43,7 @@ async function notifyN8n(jobData) {
   }
 
   const publishId = String(payload?.publishId ?? "").trim() || null;
+
   const metaContainerId = String(payload?.creationId ?? "").trim() || null;
 
   if (!publishId) {
@@ -55,20 +60,28 @@ async function notifyN8n(jobData) {
 }
 
 async function processPublishJob(job) {
+  console.log("[JOB DATA]");
+  console.dir(job.data, { depth: null });
+
   const postId = String(job.data.id);
 
+  const workspaceId = String(job.data.workspaceId ?? "").trim() || null;
+
   try {
-    await addEvent(postId, "processing_started", {
+    await addEvent(workspaceId, postId, "processing_started", {
       source: "worker",
       jobId: String(job.id),
       attempt: job.attemptsMade + 1,
     }).catch(() => null);
 
     await markProcessing(postId);
+
     const n8nResult = await notifyN8n(job.data);
+
     console.log("N8N RESULT:");
     console.log(JSON.stringify(n8nResult, null, 2));
-    await addEvent(postId, "webhook_sent", {
+
+    await addEvent(workspaceId, postId, "webhook_sent", {
       source: "worker",
       jobId: String(job.id),
       publishId: n8nResult.publishId,
@@ -78,11 +91,12 @@ async function processPublishJob(job) {
       metaMediaId: n8nResult.publishId,
       metaContainerId: n8nResult.metaContainerId,
     });
+
     if (result && result.found === false) {
       throw new Error("Post nao encontrado ao marcar published.");
     }
 
-    await addEvent(postId, "published", {
+    await addEvent(workspaceId, postId, "published", {
       source: "worker",
       jobId: String(job.id),
       status: "published",
@@ -95,7 +109,8 @@ async function processPublishJob(job) {
     };
   } catch (error) {
     await markError(postId, error.message).catch(() => null);
-    await addEvent(postId, "publish_error", {
+
+    await addEvent(workspaceId, postId, "publish_error", {
       source: "worker",
       jobId: String(job.id),
       message: error.message,
@@ -104,7 +119,7 @@ async function processPublishJob(job) {
     }).catch(() => null);
 
     if (job.attemptsMade + 1 < (job.opts.attempts || 1)) {
-      await addEvent(postId, "retry_scheduled", {
+      await addEvent(workspaceId, postId, "retry_scheduled", {
         source: "worker",
         jobId: String(job.id),
         nextAttempt: job.attemptsMade + 2,

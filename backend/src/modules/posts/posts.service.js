@@ -53,7 +53,7 @@ async function getReadyPosts() {
       status: item.status,
       scheduled_at: item.scheduledAt,
       published_at: item.publishedAt,
-      filename: item.videoFilename,
+      filename: item.videoFile || item.videoFilename,
     });
   });
 
@@ -119,13 +119,14 @@ async function cancelSchedule(id) {
  * ======================================
  */
 
-async function addEvent(postId, eventType, details = {}) {
+async function addEvent(workspaceId, postId, eventType, details = {}) {
   log("Add event:", {
+    workspaceId,
     postId,
     eventType,
   });
 
-  return getProvider().addPostEvent(postId, eventType, details);
+  return getProvider().addPostEvent(workspaceId, postId, eventType, details);
 }
 
 module.exports = {
