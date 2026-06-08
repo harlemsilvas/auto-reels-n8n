@@ -54,11 +54,23 @@ async function enqueuePublishJob(postPayload) {
 
   const existingJob = await queue.getJob(jobId);
   if (existingJob) {
-    return {
-      queued: false,
-      reason: "already_exists",
+    const state = await existingJob.getState();
+
+    console.log("[QUEUE EXISTING JOB]", {
       jobId,
-    };
+      state,
+    });
+
+    if (state === "completed" || state === "failed") {
+      await existingJob.remove();
+    } else {
+      return {
+        queued: false,
+        reason: "already_exists",
+        state,
+        jobId,
+      };
+    }
   }
 
   const job = await queue.add("publish-post", postPayload, { jobId });
@@ -85,6 +97,16 @@ async function getQueueStats() {
 
 let maintenanceTimer = null;
 
+async function removeOrphanJobs(queue) {
+  const jobs = await queue.getJobs(["completed", "failed"], 0, -1, true);
+
+  for (const job of jobs) {
+    await job.remove();
+  }
+
+  return jobs.length;
+}
+
 /**
  * Limpeza diária: remove jobs completed com mais de 24h e
  * jobs failed com mais de 7 dias.
@@ -94,8 +116,11 @@ async function runQueueMaintenance() {
 
   await queue.clean(24 * 60 * 60 * 1000, 1000, "completed");
   await queue.clean(7 * 24 * 60 * 60 * 1000, 1000, "failed");
+  const removedOrphans = await removeOrphanJobs(queue);
 
-  console.log("[QueueMaintenance] Limpeza de jobs antigos concluída.");
+  console.log("[QueueMaintenance] Limpeza de jobs antigos concluída.", {
+    removedOrphans,
+  });
 }
 
 function startDailyMaintenance() {
