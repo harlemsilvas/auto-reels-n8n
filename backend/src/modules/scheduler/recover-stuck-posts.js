@@ -1,4 +1,4 @@
-const { query } = require("../../../lib/db");
+const { query } = require("../../lib/db");
 
 /**
  * Recoloca no ciclo de retry qualquer post que ficou com status = 'processing'
