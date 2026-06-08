@@ -16,18 +16,26 @@ function toPositiveInt(value, fallback) {
   return Math.trunc(n);
 }
 
-async function findDefaultActiveAccount() {
+async function findDefaultActiveAccount(workspaceId = null) {
+  const values = [];
+  const where = ["deleted_at IS NULL", "ativo = true"];
+
+  if (workspaceId) {
+    values.push(workspaceId);
+    where.push(`workspace_id = $${values.length}::uuid`);
+  }
+
   const result = await query(
     `
       SELECT
         id::text AS id,
         workspace_id::text AS "workspaceId"
       FROM instagram_accounts
-      WHERE deleted_at IS NULL
-        AND ativo = true
+      WHERE ${where.join(" AND ")}
       ORDER BY created_at ASC
       LIMIT 1
     `,
+    values,
   );
 
   return result.rowCount > 0 ? result.rows[0] : null;
@@ -37,16 +45,22 @@ async function createPostFromUpload(input) {
   console.log("======================================");
   console.log("[CREATE POST FROM UPLOAD]");
 
+  // const requestedWorkspaceId = String(input.workspaceId ?? "").trim() || null;
+  // Remove espaços e garante que se vier a string "null" ou vazio, vire um null primitivo
+  const rawWorkspace = String(input.workspaceId ?? "").trim();
+  const requestedWorkspaceId =
+    rawWorkspace === "" || rawWorkspace === "null" ? null : rawWorkspace;
+
   console.log("[INPUT]", {
     originalFileName: input.originalFileName,
     storedFileName: input.storedFileName,
     storagePath: input.storagePath,
     fileSize: input.fileSize,
     scheduleAt: input.scheduleAt,
-    workspaceId: input.workspaceId,
+    workspaceId: requestedWorkspaceId,
   });
 
-  const account = await findDefaultActiveAccount();
+  const account = await findDefaultActiveAccount(requestedWorkspaceId);
 
   console.log("[ACTIVE ACCOUNT]", account);
 
@@ -80,9 +94,12 @@ async function createPostFromUpload(input) {
     initialStatus,
   });
 
-  const workspaceId = input.workspaceId || account.workspaceId;
+  const workspaceId = requestedWorkspaceId || account.workspaceId;
 
-  console.log("[WORKSPACE]", workspaceId);
+  console.log("[WORKSPACE]", {
+    requestedWorkspaceId,
+    resolvedWorkspaceId: workspaceId,
+  });
 
   console.log("[INSERT UPLOAD START]");
 
@@ -229,6 +246,7 @@ async function listReadyPosts() {
           p.status = 'scheduled'
           AND p.scheduled_at <= NOW()
         )
+
         OR (
           p.status = 'retrying'
           AND (
@@ -245,10 +263,7 @@ async function listReadyPosts() {
   `;
 
   console.log("[READY SQL]");
-  console.log("Enfileirando post:", {
-    id: item.id,
-    workspaceId: item.workspaceId,
-  });
+
   if (process.env.NODE_ENV !== "production") {
     console.log(sql);
   }
@@ -270,13 +285,14 @@ async function listReadyPosts() {
       : null,
   }));
 
-  items.forEach((row) => {
+  items.forEach((item) => {
     console.log("[READY ITEM]", {
-      id: row.id,
-      status: row.status,
-      scheduledAt: row.scheduledAt,
-      videoFile: row.videoFile,
-      igAccountId: row.igAccountId,
+      id: item.id,
+      workspaceId: item.workspaceId,
+      status: item.status,
+      scheduledAt: item.scheduledAt,
+      videoFile: item.videoFile,
+      igAccountId: item.igAccountId,
     });
   });
 

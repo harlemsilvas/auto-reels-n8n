@@ -54,6 +54,8 @@ router.post("/upload", upload.single("video"), async (req, res, next) => {
   try {
     const captionText = String(req.body?.captionText ?? "").trim();
     const scheduleAtRaw = String(req.body?.scheduleAt ?? "").trim();
+    const workspaceIdRaw = String(req.body?.workspaceId ?? "").trim();
+    const workspaceId = workspaceIdRaw || null;
     const scheduleAt = scheduleAtRaw ? new Date(scheduleAtRaw) : null;
 
     if (!req.file) {
@@ -84,6 +86,7 @@ router.post("/upload", upload.single("video"), async (req, res, next) => {
       storagePath: MEDIA_PENDING_DIR,
       captionText,
       scheduleAt: scheduleAt ? scheduleAt.toISOString() : null,
+      workspaceId,
     });
 
     res.status(201).json({
