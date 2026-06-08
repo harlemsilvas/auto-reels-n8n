@@ -12,6 +12,12 @@ let publishQueue;
 
 function getRedisConnection() {
   if (!connection) {
+    console.log("REDIS CONFIG", {
+      host: REDIS_HOST,
+      port: REDIS_PORT,
+      password: !!REDIS_PASSWORD,
+    });
+
     connection = new IORedis({
       host: REDIS_HOST,
       port: REDIS_PORT,
