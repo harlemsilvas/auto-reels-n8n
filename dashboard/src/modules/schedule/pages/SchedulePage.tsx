@@ -222,6 +222,32 @@ export function SchedulePage() {
     }
   }
 
+  async function onPublishNow(postId: string) {
+    setError(null);
+    setToast(null);
+
+    try {
+      const result = await scheduleService.publishNow(postId);
+
+      if (result.queued) {
+        showToast(
+          `Post ${shortId(postId)} enviado para publicação imediata.`,
+          "ok",
+        );
+      } else {
+        showToast(
+          `Post ${shortId(postId)} não entrou na fila (${result.reason ?? "ignorado"}).`,
+          "warn",
+        );
+      }
+
+      await loadData();
+    } catch {
+      setError("Falha ao publicar post agora.");
+      showToast("Falha ao publicar post agora.", "error");
+    }
+  }
+
   return (
     <section className="dashboard-grid">
       {toast ? (
@@ -367,6 +393,17 @@ export function SchedulePage() {
                           }
                         >
                           Enfileirar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void onPublishNow(post.id)}
+                          disabled={
+                            post.status === "published" ||
+                            post.status === "canceled"
+                          }
+                          style={{ background: "#16a34a", color: "#fff" }}
+                        >
+                          Publicar Agora
                         </button>
                         <button
                           type="button"

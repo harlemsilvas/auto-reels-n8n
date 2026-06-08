@@ -12,8 +12,17 @@ const {
 const {
   startEnqueueReadyCollector,
 } = require("./modules/scheduler/enqueue-ready.collector");
+const {
+  recoverStuckPosts,
+  startRecoveryCollector,
+} = require("./modules/scheduler/recover-stuck-posts");
+const {
+  startDailyMaintenance,
+} = require("./modules/scheduler/scheduler.queue");
 
 async function bootstrap() {
+  await recoverStuckPosts();
+
   await ensureDirectories([
     MEDIA_PENDING_DIR,
     MEDIA_PUBLISHED_DIR,
@@ -25,6 +34,8 @@ async function bootstrap() {
     console.log(`Pending: ${MEDIA_PENDING_DIR}`);
     startInsightsCollector();
     startEnqueueReadyCollector();
+    startRecoveryCollector();
+    startDailyMaintenance();
   });
 }
 

@@ -83,9 +83,48 @@ async function getQueueStats() {
   return counts;
 }
 
+let maintenanceTimer = null;
+
+/**
+ * Limpeza diária: remove jobs completed com mais de 24h e
+ * jobs failed com mais de 7 dias.
+ */
+async function runQueueMaintenance() {
+  const queue = getPublishQueue();
+
+  await queue.clean(24 * 60 * 60 * 1000, 1000, "completed");
+  await queue.clean(7 * 24 * 60 * 60 * 1000, 1000, "failed");
+
+  console.log("[QueueMaintenance] Limpeza de jobs antigos concluída.");
+}
+
+function startDailyMaintenance() {
+  if (maintenanceTimer) {
+    return;
+  }
+
+  const INTERVAL_MS = 24 * 60 * 60 * 1000;
+
+  console.log(
+    `[QueueMaintenance] Manutenção diária iniciada. Intervalo: ${INTERVAL_MS}ms`,
+  );
+
+  // executa uma vez ao iniciar, depois a cada 24h
+  runQueueMaintenance().catch((err) => {
+    console.error("[QueueMaintenance] Falha na limpeza inicial:", err.message);
+  });
+
+  maintenanceTimer = setInterval(() => {
+    runQueueMaintenance().catch((err) => {
+      console.error("[QueueMaintenance] Falha na limpeza diária:", err.message);
+    });
+  }, INTERVAL_MS);
+}
+
 module.exports = {
   getRedisConnection,
   getPublishQueue,
   enqueuePublishJob,
   getQueueStats,
+  startDailyMaintenance,
 };

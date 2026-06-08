@@ -9,7 +9,9 @@ const {
   markPublished,
   markError,
   cancelSchedule,
+  addEvent,
 } = require("./posts.service");
+const { enqueuePublishJob } = require("../scheduler/scheduler.queue");
 
 const router = express.Router();
 
@@ -128,6 +130,35 @@ router.post("/:id/cancel", async (req, res, next) => {
      */
 
     res.json(result.payload);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/:id/publish-now", async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const postsData = await getPosts({ postId: id, limit: 1 });
+    const post = postsData.items[0];
+
+    if (!post) {
+      return res.status(404).json({ message: "Post não encontrado" });
+    }
+
+    if (post.status === "published") {
+      return res.status(409).json({ message: "Post já publicado" });
+    }
+
+    const enqueueResult = await enqueuePublishJob(post);
+
+    await addEvent(post.workspaceId, post.id, "manual_publish", {
+      source: "user",
+      queued: enqueueResult.queued,
+      reason: enqueueResult.reason ?? null,
+    });
+
+    return res.json({ success: true, ...enqueueResult });
   } catch (error) {
     next(error);
   }

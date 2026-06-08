@@ -105,6 +105,20 @@ export const scheduleService = {
     );
   },
 
+  async publishNow(
+    postId: string,
+  ): Promise<{
+    success: boolean;
+    queued: boolean;
+    jobId?: string;
+    reason?: string;
+  }> {
+    return postJson(
+      buildApiUrl(`/api/internal/posts/${postId}/publish-now`),
+      {},
+    );
+  },
+
   async getSlots(onlyEnabled = false): Promise<ScheduleSlotsResponse> {
     return getJson<ScheduleSlotsResponse>(
       buildApiUrl(`/api/internal/scheduler/slots?onlyEnabled=${onlyEnabled}`),
