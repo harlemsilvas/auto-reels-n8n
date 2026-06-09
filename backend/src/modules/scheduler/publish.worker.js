@@ -42,13 +42,41 @@ async function notifyN8n(jobData) {
     throw new Error("Webhook n8n retornou 2xx, mas corpo JSON invalido.");
   }
 
-  const publishId = String(payload?.publishId ?? "").trim() || null;
+  if (payload?.ok === false || payload?.status === "error") {
+    const message =
+      String(payload?.message ?? payload?.errorMessage ?? "").trim() ||
+      "Webhook n8n sinalizou falha na publicacao.";
 
-  const metaContainerId = String(payload?.creationId ?? "").trim() || null;
+    throw new Error(message);
+  }
+
+  if (payload?.hasError === true) {
+    const message =
+      String(payload?.errorMessage ?? payload?.message ?? "").trim() ||
+      "Webhook n8n retornou hasError=true.";
+
+    throw new Error(message);
+  }
+
+  const publishId =
+    String(payload?.publishId ?? payload?.mediaId ?? "").trim() || null;
+
+  const metaContainerId =
+    String(payload?.creationId ?? payload?.containerId ?? "").trim() || null;
 
   if (!publishId) {
     throw new Error(
       `Webhook n8n retornou 2xx sem publishId: ${JSON.stringify(payload)}`,
+    );
+  }
+
+  if (metaContainerId && publishId === metaContainerId) {
+    console.warn(
+      "[N8N WARN] publishId igual ao creationId. Verifique o fluxo n8n/meta:",
+      {
+        publishId,
+        metaContainerId,
+      },
     );
   }
 
@@ -85,6 +113,7 @@ async function processPublishJob(job) {
       source: "worker",
       jobId: String(job.id),
       publishId: n8nResult.publishId,
+      creationId: n8nResult.metaContainerId,
     }).catch(() => null);
 
     const result = await markPublished(postId, {
@@ -101,6 +130,7 @@ async function processPublishJob(job) {
       jobId: String(job.id),
       status: "published",
       publishId: n8nResult.publishId,
+      creationId: n8nResult.metaContainerId,
     }).catch(() => null);
 
     return {
