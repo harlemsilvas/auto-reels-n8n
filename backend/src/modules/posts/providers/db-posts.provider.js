@@ -154,26 +154,30 @@ async function createPostFromUpload(input) {
         upload_id,
         caption,
         source_path,
+        video_filename,
+        media_size,
         scheduled_at,
         status,
         created_at,
         updated_at
-      )
-      VALUES (
-        $1::uuid,
-        $2::uuid,
-        $3::uuid,
-        $4,
-        $5,
-        $6::timestamptz,
-        $7,
-        NOW(),
-        NOW()
-      )
-      RETURNING
-        id::text AS id,
-        status::text AS status,
-        scheduled_at AS "scheduledAt"
+    )
+    VALUES (
+      $1::uuid,
+      $2::uuid,
+      $3::uuid,
+      $4,
+      $5,
+      $6,
+      $7,
+      $8::timestamptz,
+      $9,
+      NOW(),
+      NOW()
+  )
+  RETURNING
+    id::text AS id,
+    status::text AS status,
+    scheduled_at AS "scheduledAt"
     `,
     [
       workspaceId,
@@ -181,6 +185,10 @@ async function createPostFromUpload(input) {
       uploadId,
       input.captionText ?? null,
       input.storagePath,
+
+      input.storedFileName ?? null,
+      input.fileSize ?? null,
+
       hasFutureSchedule ? scheduleAt.toISOString() : null,
       initialStatus,
     ],
@@ -226,8 +234,12 @@ async function listReadyPosts() {
       ) AS "metaToken",
 
       u.id::text AS "uploadId",
-      u.stored_filename AS "videoFile",
-      u.storage_path AS "storagePath"
+      u.storage_path AS "storagePath",
+
+      p.video_filename AS "videoFile",
+      p.media_size AS "mediaSize",
+      p.media_deleted_at AS "mediaDeletedAt",
+      p.source_path AS "sourcePath"  
 
     FROM posts p
 
@@ -338,7 +350,10 @@ async function listPosts(filters = {}) {
         p.account_id::text AS "accountId",
         ia.instagram_id AS "igAccountId",
         ia.access_token AS "metaToken",
-        u.stored_filename AS "videoFile"
+        p.video_filename AS "videoFile",
+        p.media_size AS "mediaSize",
+        p.media_deleted_at AS "mediaDeletedAt",
+        p.source_path AS "sourcePath"
         FROM posts p
         LEFT JOIN uploads u
           ON u.id = p.upload_id

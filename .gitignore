@@ -44,7 +44,7 @@ redis/
 n8n/
 
 # Midias e binarios grandes
-media/
+#media/
 *.mp4
 *.mov
 *.avi

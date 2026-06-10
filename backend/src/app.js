@@ -20,7 +20,7 @@ const realtimeRoutes = require("./modules/realtime/realtime.routes");
 const metaOAuthRoutes = require("./modules/auth/meta-oauth.routes");
 const { getAllowedOrigins } = require("./config/env");
 
-const mediaInternalRoutes = require("./modules/");
+const mediaInternalRoutes = require("./modules/media/media.internal.routes");
 
 const app = express();
 
