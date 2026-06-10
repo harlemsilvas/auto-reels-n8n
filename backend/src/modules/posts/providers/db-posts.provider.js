@@ -254,7 +254,9 @@ async function listReadyPosts() {
     LEFT JOIN instagram_accounts ia
       ON ia.id = p.account_id
 
+    
     WHERE p.deleted_at IS NULL
+    AND COALESCE(p.video_filename, '') <> ''
 
       AND (
         p.status = 'pending'
