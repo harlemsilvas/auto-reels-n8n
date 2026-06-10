@@ -59,6 +59,11 @@ async function createPostFromUpload(input) {
     scheduleAt: input.scheduleAt,
     workspaceId: requestedWorkspaceId,
   });
+  console.log("[POST INSERT VALUES]");
+  console.log({
+    storedFileName: input.storedFileName,
+    fileSize: input.fileSize,
+  });
 
   const account = await findDefaultActiveAccount(requestedWorkspaceId);
 
@@ -275,6 +280,8 @@ async function listReadyPosts() {
   `;
 
   console.log("[READY SQL]");
+  //log inserido
+  console.log(JSON.stringify(items, null, 2));
 
   if (process.env.NODE_ENV !== "production") {
     console.log(sql);
