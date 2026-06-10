@@ -20,6 +20,8 @@ const realtimeRoutes = require("./modules/realtime/realtime.routes");
 const metaOAuthRoutes = require("./modules/auth/meta-oauth.routes");
 const { getAllowedOrigins } = require("./config/env");
 
+const mediaInternalRoutes = require("./modules/");
+
 const app = express();
 
 app.disable("etag");
@@ -108,6 +110,8 @@ app.use("/api/internal/scheduler", internalSchedulerRoutes);
 app.use("/api/internal/metrics", internalMetricsRoutes);
 
 app.use("/api/internal/messages", instagramSendMessageRoutes);
+
+app.use("/api/internal/media", mediaInternalRoutes);
 
 // app.use((error, _req, res, _next) => {
 //   const status = error?.status ?? 500;

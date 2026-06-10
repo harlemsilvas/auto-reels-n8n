@@ -335,3 +335,37 @@ BEFORE UPDATE ON schedule_time_slots
 FOR EACH ROW
 EXECUTE FUNCTION set_updated_at();
 
+
+
+SELECT id, status, meta_media_id, meta_container_id, published_at FROM posts WHERE meta_media_id = '18138707932543694';
+
+                  id                  |  status   |   meta_media_id   | meta_container_id |        published_at
+--------------------------------------+-----------+-------------------+-------------------+----------------------------
+ ad4063a8-e24f-47a5-9675-58a291dc445d | published | 18138707932543694 |                   | 2026-06-10 10:38:09.507-03
+(1 row)
+
+(END)                  id                  |  status   |   meta_media_id   | meta_container_id |        published_at
+--------------------------------------+-----------+-------------------+-------------------+----------------------------
+ ad4063a8-e24f-47a5-9675-58a291dc445d | published | 18138707932543694 |                   | 2026-06-10 10:38:09.507-03
+(1 row)
+
+SELECT
+    id,
+    status,
+    meta_media_id,
+    meta_container_id,
+    published_at
+FROM posts
+WHERE meta_media_id = '18138707932543694';
+
+                  id                  |  status   |   meta_media_id   | meta_container_id |        published_at
+--------------------------------------+-----------+-------------------+-------------------+----------------------------
+ ad4063a8-e24f-47a5-9675-58a291dc445d | published | 18138707932543694 |                   | 2026-06-10 10:38:09.507-03
+(1 row)
+
+(END)--------------------------------------+-----------+-------------------+-------------------+----------------------------
+ ad4063a8-e24f-47a5-9675-58a291dc445d | published | 18138707932543694 |                   | 2026-06-10 10:38:09.507-03
+(1 row)
+
+SELECT * FROM posts WHERE id = '1cc6bf92-3346-4574-ad73-fc4caff4b005';
+ 1cc6bf92-3346-4574-ad73-fc4caff4b005 | 9420b1ba-a561-428b-835d-73e45d6349df |                | Pastilhas de Freio Brenta Brakes ! Uma ótima escolha para sua moto ! Acompanhe nossas promoções e solicite uma cotação conosco.. | /home/socialbot/media/reels/pending | 2026-06-09 19:30:00-03 | 2026-06-10 08:13:11.681-03 | published |                   | 17929739787320079 |               |           1 | 2026-06-09 19:04:50.888325-03 | 2026-06-10 08:13:11.696829-03 | a21203ce-21a1-4db4-9d93-46f5b547c2ee |            | 3b126ad0-d583-4169-8a70-68b0e368d282 | 2026-06-10 08:
