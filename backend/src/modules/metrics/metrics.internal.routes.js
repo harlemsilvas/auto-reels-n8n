@@ -3,6 +3,7 @@ const {
   getOperationalOverview,
   collectInsightsBatch,
   getMetricsHistory,
+  getTopPosts,
 } = require("./metrics.service");
 
 const router = express.Router();
@@ -30,6 +31,16 @@ router.get("/history", async (req, res, next) => {
   try {
     const { postId, accountId, limit } = req.query;
     const data = await getMetricsHistory({ postId, accountId, limit });
+    res.json(data);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/top-posts", async (req, res, next) => {
+  try {
+    const { sort, limit } = req.query;
+    const data = await getTopPosts({ sort, limit });
     res.json(data);
   } catch (error) {
     next(error);

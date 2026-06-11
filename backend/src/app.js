@@ -9,6 +9,7 @@ const internalPostsRoutes = require("./modules/posts/posts.internal.routes");
 const internalSchedulerRoutes = require("./modules/scheduler/scheduler.internal.routes");
 const internalMetricsRoutes = require("./modules/metrics/metrics.internal.routes");
 const internalQueueRoutes = require("./modules/queue/queue.internal.routes");
+const historyRoutes = require("./modules/history/history.routes");
 const instagramMessagesRoutes = require("./modules/webhooks/instagram-messages.routes");
 
 const instagramSendInternalRoutes = require("./modules/instagram/instagram-send.internal.routes");
@@ -103,6 +104,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/history", historyRoutes);
 app.use("/api/media", mediaRoutes);
 
 app.use("/api/internal/accounts", internalAccountsRoutes);
@@ -110,6 +112,7 @@ app.use("/api/internal/posts", internalPostsRoutes);
 app.use("/api/internal/scheduler", internalSchedulerRoutes);
 app.use("/api/internal/queue", internalQueueRoutes);
 app.use("/api/internal/metrics", internalMetricsRoutes);
+app.use("/api/metrics", internalMetricsRoutes);
 
 app.use("/api/internal/messages", instagramSendMessageRoutes);
 

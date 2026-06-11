@@ -406,10 +406,14 @@ async function listPostEvents(filters = {}) {
       SELECT
         pe.id,
         pe.post_id::text AS "postId",
+        p.video_filename AS "videoFilename",
+        p.caption AS caption,
         pe.event_type AS "eventType",
         pe.details,
         pe.created_at AS "createdAt"
       FROM post_events pe
+      LEFT JOIN posts p
+        ON p.id = pe.post_id
       WHERE ${where.join(" AND ")}
       ORDER BY pe.created_at DESC, pe.id DESC
       LIMIT $${param}

@@ -140,18 +140,9 @@ async function listPublishedPostsForCollection(filters = {}) {
 }
 
 async function getLatestMetricsByPostId(postId) {
-  const result = await query(
-    `
-      SELECT views, likes, comments, shares, saved, reach
-      FROM post_metrics
-      WHERE post_id = $1::uuid
-      ORDER BY fetched_at DESC, id DESC
-      LIMIT 1
-    `,
-    [postId],
-  );
+  const row = await getLatestMetricsRowByPostId(postId);
 
-  if (result.rowCount === 0) {
+  if (!row) {
     return {
       views: 0,
       likes: 0,
@@ -162,7 +153,49 @@ async function getLatestMetricsByPostId(postId) {
     };
   }
 
+  return row;
+}
+
+async function getLatestMetricsRowByPostId(postId) {
+  const result = await query(
+    `
+      SELECT
+        views,
+        likes,
+        comments,
+        shares,
+        saved,
+        reach,
+        engagement_rate AS "engagementRate",
+        fetched_at AS "fetchedAt"
+      FROM post_metrics
+      WHERE post_id = $1::uuid
+      ORDER BY fetched_at DESC, id DESC
+      LIMIT 1
+    `,
+    [postId],
+  );
+
+  if (result.rowCount === 0) {
+    return null;
+  }
+
   return result.rows[0];
+}
+
+function metricsAreEqual(previous, current) {
+  if (!previous) {
+    return false;
+  }
+
+  return (
+    Number(previous.views ?? 0) === current.views &&
+    Number(previous.likes ?? 0) === current.likes &&
+    Number(previous.comments ?? 0) === current.comments &&
+    Number(previous.shares ?? 0) === current.shares &&
+    Number(previous.saved ?? 0) === current.saved &&
+    Number(previous.reach ?? 0) === current.reach
+  );
 }
 
 function buildMetricsSnapshot(baseMetrics) {
@@ -376,7 +409,12 @@ async function insertMetrics(postId, workspaceId, snapshot) {
   );
 }
 
-async function appendCollectionEvent(workspaceId, postId, details) {
+async function appendCollectionEvent(
+  workspaceId,
+  postId,
+  details,
+  eventType = "metrics_collected",
+) {
   await query(
     `
       INSERT INTO post_events (
@@ -388,12 +426,187 @@ async function appendCollectionEvent(workspaceId, postId, details) {
       VALUES (
         $1::uuid,
         $2::uuid,
-        'metrics_collected',
-        $3::jsonb
+        $3,
+        $4::jsonb
       )
     `,
-    [workspaceId, postId, JSON.stringify(details)],
+    [workspaceId, postId, eventType, JSON.stringify(details)],
   );
+}
+
+async function collectMetricsForPost(post) {
+  let sourceMode = "fallback-snapshot";
+  let sourceError = null;
+  let metricsInput;
+
+  try {
+    metricsInput = await fetchMetaMetricsForPost(post);
+    sourceMode = "meta-api";
+  } catch (error) {
+    sourceError = error.message;
+    metricsInput = await getLatestMetricsByPostId(post.id);
+  }
+
+  const snapshot = buildMetricsSnapshot(metricsInput);
+  if (!post.workspaceId) {
+    throw new Error(`workspaceId ausente para post ${post.id}`);
+  }
+
+  const previousSnapshot = await getLatestMetricsRowByPostId(post.id);
+  const eventDetails = {
+    source: "metrics.collector",
+    sourceMode,
+    sourceError,
+    accountId: post.accountId,
+    metaMediaId: post.metaMediaId,
+  };
+
+  if (metricsAreEqual(previousSnapshot, snapshot)) {
+    await appendCollectionEvent(
+      post.workspaceId,
+      post.id,
+      {
+        ...eventDetails,
+        reason: "unchanged",
+      },
+      "metrics_unchanged",
+    );
+
+    return {
+      collected: false,
+      reason: "unchanged",
+      sourceMode,
+    };
+  }
+
+  await insertMetrics(post.id, post.workspaceId, snapshot);
+
+  await appendCollectionEvent(
+    post.workspaceId,
+    post.id,
+    eventDetails,
+    "metrics_collected",
+  );
+
+  return {
+    collected: true,
+    sourceMode,
+  };
+}
+
+async function getPostMetricsTimeline(postId, filters = {}) {
+  const values = [postId];
+  const where = ["pm.post_id = $1::uuid"];
+  let param = 2;
+
+  if (filters.days) {
+    where.push(`pm.fetched_at >= NOW() - ($${param++}::int * INTERVAL '1 day')`);
+    values.push(toPositiveInt(filters.days, 30));
+  }
+
+  const result = await query(
+    `
+      SELECT
+        pm.fetched_at AS date,
+        pm.likes,
+        pm.views,
+        pm.reach
+      FROM post_metrics pm
+      WHERE ${where.join(" AND ")}
+      ORDER BY pm.fetched_at ASC, pm.id ASC
+    `,
+    values,
+  );
+
+  return result.rows.map((row) => ({
+    date: row.date,
+    likes: Number(row.likes ?? 0),
+    views: Number(row.views ?? 0),
+    reach: Number(row.reach ?? 0),
+  }));
+}
+
+async function getPostDetail(postId) {
+  const [postResult, metricsResult, eventsResult, timeline] =
+    await Promise.all([
+      query(
+        `
+          SELECT
+            p.id::text AS id,
+            p.video_filename AS "videoFilename",
+            p.caption,
+            p.published_at AS "publishedAt",
+            p.meta_media_id AS "metaMediaId",
+            p.status::text AS status,
+            ia.nome AS "accountName",
+            ia.instagram_id AS "instagramId"
+          FROM posts p
+          LEFT JOIN instagram_accounts ia
+            ON ia.id = p.account_id
+          WHERE p.deleted_at IS NULL
+            AND p.id = $1::uuid
+          LIMIT 1
+        `,
+        [postId],
+      ),
+      query(
+        `
+          SELECT
+            pm.views,
+            pm.likes,
+            pm.comments,
+            pm.shares,
+            pm.saved,
+            pm.reach,
+            pm.engagement_rate AS "engagementRate",
+            pm.fetched_at AS "fetchedAt"
+          FROM post_metrics pm
+          WHERE pm.post_id = $1::uuid
+          ORDER BY pm.fetched_at DESC, pm.id DESC
+          LIMIT 2
+        `,
+        [postId],
+      ),
+      query(
+        `
+          SELECT
+            pe.id,
+            pe.event_type AS "eventType",
+            pe.details,
+            pe.created_at AS "createdAt"
+          FROM post_events pe
+          WHERE pe.post_id = $1::uuid
+          ORDER BY pe.created_at DESC, pe.id DESC
+          LIMIT 50
+        `,
+        [postId],
+      ),
+      getPostMetricsTimeline(postId),
+    ]);
+
+  if (postResult.rowCount === 0) {
+    const error = new Error("Reel nao encontrado.");
+    error.status = 404;
+    throw error;
+  }
+
+  const latest = metricsResult.rows[0] ?? null;
+  const previous = metricsResult.rows[1] ?? null;
+  const delta = latest
+    ? {
+        likes: Number(latest.likes ?? 0) - Number(previous?.likes ?? 0),
+        views: Number(latest.views ?? 0) - Number(previous?.views ?? 0),
+        reach: Number(latest.reach ?? 0) - Number(previous?.reach ?? 0),
+      }
+    : { likes: 0, views: 0, reach: 0 };
+
+  return {
+    post: postResult.rows[0],
+    latestMetrics: latest,
+    delta,
+    timeline,
+    events: eventsResult.rows,
+  };
 }
 
 async function collectInsightsBatch(filters = {}) {
@@ -402,6 +615,7 @@ async function collectInsightsBatch(filters = {}) {
       source: POSTS_DATA_SOURCE,
       collected: 0,
       skipped: 0,
+      unchanged: 0,
       totalCandidates: 0,
       mode: "file-noop",
     };
@@ -410,44 +624,25 @@ async function collectInsightsBatch(filters = {}) {
   const posts = await listPublishedPostsForCollection(filters);
   let collected = 0;
   let skipped = 0;
+  let unchanged = 0;
   let metaCollected = 0;
   let fallbackCollected = 0;
 
   for (const post of posts) {
     try {
-      let sourceMode = "fallback-snapshot";
-      let sourceError = null;
-      let metricsInput;
+      const result = await collectMetricsForPost(post);
 
-      try {
-        metricsInput = await fetchMetaMetricsForPost(post);
-        sourceMode = "meta-api";
-      } catch (error) {
-        sourceError = error.message;
-        metricsInput = await getLatestMetricsByPostId(post.id);
-      }
-
-      const snapshot = buildMetricsSnapshot(metricsInput);
-      if (!post.workspaceId) {
-        throw new Error(`workspaceId ausente para post ${post.id}`);
-      }
-      await insertMetrics(post.id, post.workspaceId, snapshot);
-
-      await appendCollectionEvent(post.workspaceId, post.id, {
-        source: "metrics.collector",
-        sourceMode,
-        sourceError,
-        accountId: post.accountId,
-        metaMediaId: post.metaMediaId,
-      });
-
-      if (sourceMode === "meta-api") {
+      if (result.sourceMode === "meta-api") {
         metaCollected += 1;
       } else {
         fallbackCollected += 1;
       }
 
-      collected += 1;
+      if (result.collected) {
+        collected += 1;
+      } else if (result.reason === "unchanged") {
+        unchanged += 1;
+      }
     } catch (_error) {
       skipped += 1;
     }
@@ -457,6 +652,7 @@ async function collectInsightsBatch(filters = {}) {
     source: POSTS_DATA_SOURCE,
     collected,
     skipped,
+    unchanged,
     metaCollected,
     fallbackCollected,
     totalCandidates: posts.length,
@@ -497,6 +693,7 @@ async function getMetricsHistory(filters = {}) {
         pm.post_id::text AS "postId",
         p.account_id::text AS "accountId",
         p.meta_media_id AS "metaMediaId",
+        p.video_filename AS "videoFilename",
         p.caption AS caption,
         pm.views,
         pm.likes,
@@ -522,8 +719,80 @@ async function getMetricsHistory(filters = {}) {
   };
 }
 
+function normalizeTopPostsSort(sort) {
+  if (sort === "reach" || sort === "views" || sort === "likes") {
+    return sort;
+  }
+
+  return "likes";
+}
+
+async function getTopPosts(filters = {}) {
+  if (POSTS_DATA_SOURCE !== "db") {
+    return {
+      source: POSTS_DATA_SOURCE,
+      sort: normalizeTopPostsSort(filters.sort),
+      items: [],
+      total: 0,
+    };
+  }
+
+  const sort = normalizeTopPostsSort(filters.sort);
+  const limit = Math.min(toPositiveInt(filters.limit, 10), 50);
+
+  const result = await query(
+    `
+      WITH latest_metrics AS (
+        SELECT DISTINCT ON (pm.post_id)
+          pm.post_id,
+          pm.views,
+          pm.likes,
+          pm.reach,
+          pm.engagement_rate,
+          pm.fetched_at
+        FROM post_metrics pm
+        ORDER BY pm.post_id, pm.fetched_at DESC, pm.id DESC
+      )
+      SELECT
+        p.id::text AS "postId",
+        p.video_filename AS "videoFilename",
+        p.caption,
+        COALESCE(lm.likes, 0)::int AS likes,
+        COALESCE(lm.reach, 0)::int AS reach,
+        COALESCE(lm.views, 0)::int AS views,
+        COALESCE(lm.engagement_rate, 0)::float AS "engagementRate",
+        lm.fetched_at AS "fetchedAt"
+      FROM posts p
+      INNER JOIN latest_metrics lm
+        ON lm.post_id = p.id
+      WHERE p.deleted_at IS NULL
+        AND p.status = 'published'
+      ORDER BY
+        CASE
+          WHEN $1 = 'likes' THEN COALESCE(lm.likes, 0)
+          WHEN $1 = 'reach' THEN COALESCE(lm.reach, 0)
+          WHEN $1 = 'views' THEN COALESCE(lm.views, 0)
+          ELSE COALESCE(lm.likes, 0)
+        END DESC,
+        lm.fetched_at DESC
+      LIMIT $2
+    `,
+    [sort, limit],
+  );
+
+  return {
+    source: POSTS_DATA_SOURCE,
+    sort,
+    items: result.rows,
+    total: result.rows.length,
+  };
+}
+
 module.exports = {
   getOperationalOverview,
   collectInsightsBatch,
   getMetricsHistory,
+  getPostMetricsTimeline,
+  getPostDetail,
+  getTopPosts,
 };

@@ -149,7 +149,7 @@ function buildDashboardQueueFromPosts(rows) {
 }
 
 async function getDashboardSummaryFromPosts() {
-  const [countersResult, queueResult] = await Promise.all([
+  const [countersResult, queueResult, executiveResult] = await Promise.all([
     query(`
       SELECT
         COUNT(*) FILTER (WHERE status = 'published')::int AS published,
@@ -195,6 +195,27 @@ async function getDashboardSummaryFromPosts() {
         COALESCE(p.scheduled_at, p.created_at)
       LIMIT 20
     `),
+    query(`
+      WITH latest_metrics AS (
+        SELECT DISTINCT ON (pm.post_id)
+          pm.post_id,
+          pm.views,
+          pm.likes,
+          pm.engagement_rate
+        FROM post_metrics pm
+        ORDER BY pm.post_id, pm.fetched_at DESC, pm.id DESC
+      )
+      SELECT
+        COUNT(p.id)::int AS "totalPublished",
+        COALESCE(SUM(lm.views), 0)::int AS "totalViews",
+        COALESCE(SUM(lm.likes), 0)::int AS "totalLikes",
+        COALESCE(AVG(lm.engagement_rate), 0)::float AS "averageEngagement"
+      FROM posts p
+      LEFT JOIN latest_metrics lm
+        ON lm.post_id = p.id
+      WHERE p.deleted_at IS NULL
+        AND p.status = 'published'
+    `),
   ]);
 
   const counters = countersResult.rows[0] ?? {};
@@ -210,6 +231,8 @@ async function getDashboardSummaryFromPosts() {
     Number(counters.queued ?? 0) +
     Number(counters.processing ?? 0) +
     Number(counters.retrying ?? 0);
+
+  const executive = executiveResult.rows[0] ?? {};
 
   return {
     metrics: [
@@ -255,6 +278,14 @@ async function getDashboardSummaryFromPosts() {
       retrying: Number(counters.retrying ?? 0),
       error: Number(counters.errors ?? 0),
       canceled: Number(counters.canceled ?? 0),
+    },
+    executive: {
+      totalPublished: Number(executive.totalPublished ?? 0),
+      totalViews: Number(executive.totalViews ?? 0),
+      totalLikes: Number(executive.totalLikes ?? 0),
+      averageEngagement: Number(
+        Number(executive.averageEngagement ?? 0).toFixed(2),
+      ),
     },
   };
 }

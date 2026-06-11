@@ -27,10 +27,29 @@ export type DashboardCounters = {
   canceled: number;
 };
 
+export type DashboardExecutiveSummary = {
+  totalPublished: number;
+  totalViews: number;
+  totalLikes: number;
+  averageEngagement: number;
+};
+
+export type TopPostItem = {
+  postId: string;
+  videoFilename: string | null;
+  caption: string | null;
+  likes: number;
+  reach: number;
+  views: number;
+  engagementRate: number;
+  fetchedAt: string;
+};
+
 export type DashboardSummary = {
   metrics: Metric[];
   queue: QueueItem[];
   counters: DashboardCounters;
+  executive: DashboardExecutiveSummary;
 };
 
 export type DashboardQueueStats = {

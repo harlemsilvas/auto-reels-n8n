@@ -4,12 +4,9 @@ import {
   type MetricItem,
   type PostEventItem,
 } from "../services/history.service";
-import { buildApiUrl } from "../../../shared/config/api";
 import { getEventLabel } from "../../../shared/lib/status-dictionary";
-
-function shortId(value: string) {
-  return value.slice(0, 8);
-}
+import { Link } from "react-router-dom";
+import { getReelTitle } from "../lib/reel-title";
 
 function formatDateTime(value: string) {
   return new Date(value).toLocaleString("pt-BR");
@@ -54,7 +51,7 @@ export function HistoryPage() {
     try {
       const result = await historyService.collectMetrics(collectLimit);
       setMessage(
-        `Coleta concluida: ${result.collected} coletados, ${result.skipped} pulados, modo ${result.mode}.`,
+        `Coleta concluida: ${result.collected} coletados, ${result.unchanged ?? 0} sem alteracao, ${result.skipped} pulados, modo ${result.mode}.`,
       );
       await loadData();
     } catch {
@@ -127,7 +124,11 @@ export function HistoryPage() {
               {events.map((event) => (
                 <tr key={event.id}>
                   <td>{formatDateTime(event.createdAt)}</td>
-                  <td className="mono-text">{shortId(event.postId)}</td>
+                  <td>
+                    <Link to={`/reels/${event.postId}`} title={event.postId}>
+                      {getReelTitle(event)}
+                    </Link>
+                  </td>
                   <td>
                     <span
                       className={`status-pill status-${getEventLabel(event.eventType).tone}`}
@@ -173,17 +174,13 @@ export function HistoryPage() {
               {metrics.map((metric) => (
                 <tr key={metric.id}>
                   <td>{formatDateTime(metric.fetchedAt)}</td>
-                  <td className="mono-text">
-                    <a
-                      href={buildApiUrl(
-                        `/api/internal/posts/events?postId=${metric.postId}&limit=20`,
-                      )}
-                      target="_blank"
-                      rel="noreferrer"
+                  <td>
+                    <Link
+                      to={`/reels/${metric.postId}`}
                       title={`Post: ${metric.postId}${metric.metaMediaId ? ` | Meta: ${metric.metaMediaId}` : ""}${metric.caption ? ` | Legenda: ${metric.caption}` : ""}`}
                     >
-                      {shortId(metric.postId)}
-                    </a>
+                      {getReelTitle(metric)}
+                    </Link>
                   </td>
                   <td>{metric.views}</td>
                   <td>{metric.likes}</td>

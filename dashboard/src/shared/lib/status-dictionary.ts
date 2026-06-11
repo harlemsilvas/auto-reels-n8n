@@ -23,6 +23,7 @@ export const EVENT_LABELS: Record<string, { label: string; tone: Tone }> = {
   retry_scheduled: { label: "Nova tentativa agendada", tone: "warn" },
   canceled: { label: "Cancelado", tone: "warn" },
   metrics_collected: { label: "Metricas coletadas", tone: "ok" },
+  metrics_unchanged: { label: "Sem alteracao", tone: "info" },
 };
 
 export function getStatusLabel(status: string | null | undefined) {

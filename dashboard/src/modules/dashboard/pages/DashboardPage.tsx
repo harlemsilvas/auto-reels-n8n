@@ -1,5 +1,7 @@
 import { useDashboardData } from "../hooks/useDashboardData";
 import type { MetricTone } from "../../../shared/types/dashboard";
+import { Link } from "react-router-dom";
+import { getReelTitle } from "../../history/lib/reel-title";
 
 function toneClass(tone: MetricTone) {
   if (tone === "danger") return "tone-danger";
@@ -21,7 +23,8 @@ function formatScheduledAt(scheduledAt: string | null) {
 }
 
 export function DashboardPage() {
-  const { summary, queueStats, isLoading, error } = useDashboardData();
+  const { summary, queueStats, topPosts, isLoading, error } =
+    useDashboardData();
 
   if (isLoading) {
     return <p>Carregando dashboard...</p>;
@@ -34,6 +37,32 @@ export function DashboardPage() {
   }
 
   const metrics = summary.metrics;
+  const executiveItems = [
+    {
+      label: "Total de Reels publicados",
+      value: summary.executive.totalPublished,
+      trend: "Posts com status published",
+      tone: "ok" as MetricTone,
+    },
+    {
+      label: "Total de visualizacoes",
+      value: summary.executive.totalViews,
+      trend: "Ultima metrica por Reel",
+      tone: "ok" as MetricTone,
+    },
+    {
+      label: "Total de curtidas",
+      value: summary.executive.totalLikes,
+      trend: "Ultima metrica por Reel",
+      tone: "ok" as MetricTone,
+    },
+    {
+      label: "Engajamento medio",
+      value: `${summary.executive.averageEngagement}%`,
+      trend: "Media das ultimas coletas",
+      tone: "warn" as MetricTone,
+    },
+  ];
   const operationalItems = [
     ["Publicados hoje", summary.counters.publishedToday],
     ["Publicados semana", summary.counters.publishedWeek],
@@ -69,7 +98,7 @@ export function DashboardPage() {
       </header>
 
       <section className="metrics-grid" aria-label="indicadores principais">
-        {metrics.map((metric) => (
+        {[...executiveItems, ...metrics].map((metric) => (
           <article key={metric.label} className="metric-card">
             <p className="metric-label">{metric.label}</p>
             <p className="metric-value">{metric.value}</p>
@@ -103,6 +132,47 @@ export function DashboardPage() {
               </div>
             ))}
           </dl>
+        </article>
+
+        <article className="panel-card full-width">
+          <h2>Top 10 Reels por curtidas</h2>
+          <div
+            className="table-wrap"
+            role="region"
+            aria-label="ranking de desempenho"
+          >
+            <table>
+              <thead>
+                <tr>
+                  <th>Reel</th>
+                  <th>Likes</th>
+                  <th>Reach</th>
+                  <th>Views</th>
+                  <th>ER %</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topPosts.map((post) => (
+                  <tr key={post.postId}>
+                    <td>
+                      <Link to={`/reels/${post.postId}`} title={post.postId}>
+                        {getReelTitle(post)}
+                      </Link>
+                    </td>
+                    <td>{post.likes}</td>
+                    <td>{post.reach}</td>
+                    <td>{post.views}</td>
+                    <td>{Number(post.engagementRate).toFixed(2)}</td>
+                  </tr>
+                ))}
+                {topPosts.length === 0 ? (
+                  <tr>
+                    <td colSpan={5}>Nenhuma metrica coletada ainda.</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
         </article>
 
         <article className="panel-card full-width">
