@@ -10,6 +10,7 @@ const {
   isCaptionFile,
   isVideoFile,
 } = require("../utils/fs.utils");
+const { query } = require("../lib/db");
 
 async function listMediaFiles(dirPath) {
   const entries = await fs.readdir(dirPath, { withFileTypes: true });
@@ -141,53 +142,111 @@ function buildDashboardQueueFromPending(pendingItems) {
   });
 }
 
-async function getDashboardSummary() {
-  const [pending, publishedCount, errorCount] = await Promise.all([
-    listPendingMedia(),
-    countVideosInDir(MEDIA_PUBLISHED_DIR),
-    countVideosInDir(MEDIA_ERROR_DIR),
+function toIsoString(value) {
+  if (!value) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  return new Date(value).toISOString();
+}
+
+function buildDashboardQueueFromPosts(rows) {
+  return rows.map((row) => ({
+    id: row.id,
+    accountName: row.accountName ?? "Conta nao vinculada",
+    videoName: row.videoName ?? "",
+    scheduledAt: toIsoString(row.scheduledAt),
+    status: row.status,
+  }));
+}
+
+async function getDashboardSummaryFromPosts() {
+  const [countersResult, queueResult] = await Promise.all([
+    query(`
+      SELECT
+        COUNT(*) FILTER (WHERE status = 'published')::int AS published,
+        COUNT(*) FILTER (WHERE status IN ('pending', 'scheduled'))::int AS pending,
+        COUNT(*) FILTER (WHERE status IN ('queued', 'processing'))::int AS processing,
+        COUNT(*) FILTER (WHERE status IN ('error', 'retrying'))::int AS errors,
+        COUNT(*) FILTER (
+          WHERE status IN (
+            'pending',
+            'scheduled',
+            'queued',
+            'processing',
+            'retrying'
+          )
+        )::int AS active_queue
+      FROM posts
+      WHERE deleted_at IS NULL
+    `),
+    query(`
+      SELECT
+        p.id::text AS id,
+        p.status::text AS status,
+        p.video_filename AS "videoName",
+        p.scheduled_at AS "scheduledAt",
+        p.updated_at AS "updatedAt",
+        ia.nome AS "accountName"
+      FROM posts p
+      LEFT JOIN instagram_accounts ia
+        ON ia.id = p.account_id
+      WHERE p.deleted_at IS NULL
+      ORDER BY p.created_at DESC
+      LIMIT 20
+    `),
   ]);
 
-  const queue = buildDashboardQueueFromPending(pending.items);
-  const scheduledCount = queue.filter(
-    (item) => item.status === "agendado",
-  ).length;
+  const counters = countersResult.rows[0] ?? {};
+  const publishedCount = Number(counters.published ?? 0);
+  const pendingCount = Number(counters.pending ?? 0);
+  const processingCount = Number(counters.processing ?? 0);
+  const errorCount = Number(counters.errors ?? 0);
+  const activeQueueCount = Number(counters.active_queue ?? 0);
 
   return {
     metrics: [
       {
         label: "Posts publicados",
         value: String(publishedCount),
-        trend: "Total em published",
+        trend: "Status published em posts",
         tone: "ok",
       },
       {
-        label: "Agendados",
-        value: String(scheduledCount),
-        trend: `${queue.length} na fila atual`,
-        tone: "warn",
+        label: "Pendentes",
+        value: String(pendingCount),
+        trend: "Status pending ou scheduled",
+        tone: pendingCount > 0 ? "warn" : "ok",
+      },
+      {
+        label: "Processando",
+        value: String(processingCount),
+        trend: "Status queued ou processing",
+        tone: processingCount > 0 ? "warn" : "ok",
       },
       {
         label: "Erros",
         value: String(errorCount),
-        trend: "Total em error",
+        trend: "Status error ou retrying",
         tone: errorCount > 0 ? "danger" : "ok",
       },
       {
-        label: "Engajamento medio",
-        value: "N/D",
-        trend: "Aguardando Insights API",
-        tone: "warn",
-      },
-      {
         label: "Fila ativa",
-        value: String(queue.length),
-        trend: "Pasta pending monitorada",
-        tone: queue.length > 0 ? "ok" : "warn",
+        value: String(activeQueueCount),
+        trend: "Pendentes, fila, processamento e retry",
+        tone: activeQueueCount > 0 ? "ok" : "warn",
       },
     ],
-    queue,
+    queue: buildDashboardQueueFromPosts(queueResult.rows),
   };
+}
+
+async function getDashboardSummary() {
+  return getDashboardSummaryFromPosts();
 }
 
 async function getFileOperationalCounts() {
@@ -211,5 +270,6 @@ module.exports = {
   movePendingItemToPublished,
   movePendingItemToError,
   getFileOperationalCounts,
+  getDashboardSummaryFromPosts,
   getDashboardSummary,
 };

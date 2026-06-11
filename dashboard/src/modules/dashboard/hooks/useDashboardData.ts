@@ -1,3 +1,4 @@
+// dashboard/src/modules/dashboard/hooks/useDashboardData.ts
 import { useEffect, useState } from "react";
 import type {
   DashboardOperationalOverview,
@@ -23,13 +24,11 @@ export function useDashboardData() {
   useEffect(() => {
     let isMounted = true;
 
-    Promise.all([
-      dashboardService.getSummary(),
-      dashboardService.getOperationalOverview(),
-    ])
-      .then(([summary, overview]) => {
+    dashboardService
+      .getSummary()
+      .then((summary) => {
         if (isMounted) {
-          setState({ summary, overview, isLoading: false, error: null });
+          setState({ summary, overview: null, isLoading: false, error: null });
         }
       })
       .catch(() => {

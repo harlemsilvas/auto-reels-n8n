@@ -11,8 +11,8 @@ export type QueueItem = {
   id: string;
   accountName: string;
   videoName: string;
-  scheduledAt: string;
-  status: "processando" | "agendado" | "aguardando" | "erro";
+  scheduledAt: string | null;
+  status: string;
 };
 
 export type DashboardSummary = {

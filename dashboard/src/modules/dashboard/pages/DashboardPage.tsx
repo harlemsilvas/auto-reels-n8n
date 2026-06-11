@@ -1,9 +1,5 @@
 import { useDashboardData } from "../hooks/useDashboardData";
-import type {
-  DashboardOperationalOverview,
-  Metric,
-  MetricTone,
-} from "../../../shared/types/dashboard";
+import type { MetricTone } from "../../../shared/types/dashboard";
 
 function toneClass(tone: MetricTone) {
   if (tone === "danger") return "tone-danger";
@@ -11,59 +7,33 @@ function toneClass(tone: MetricTone) {
   return "tone-ok";
 }
 
-function buildOperationalMetrics(
-  overview: DashboardOperationalOverview,
-): Metric[] {
-  const { posts, queue } = overview;
+function formatScheduledAt(scheduledAt: string | null) {
+  if (!scheduledAt) {
+    return "-";
+  }
 
-  return [
-    {
-      label: "Posts publicados",
-      value: String(posts.published),
-      trend: "Status atual no banco",
-      tone: "ok",
-    },
-    {
-      label: "Pendentes",
-      value: String(posts.pending + posts.scheduled),
-      trend: `${posts.queued} em fila para worker`,
-      tone: posts.pending + posts.scheduled > 0 ? "warn" : "ok",
-    },
-    {
-      label: "Processando",
-      value: String(posts.processing),
-      trend: `${queue.active} jobs ativos`,
-      tone: posts.processing > 0 ? "warn" : "ok",
-    },
-    {
-      label: "Erros",
-      value: String(posts.error),
-      trend: `${queue.failed} falhas na fila`,
-      tone: posts.error > 0 || queue.failed > 0 ? "danger" : "ok",
-    },
-    {
-      label: "Fila aguardando",
-      value: String(queue.waiting + queue.delayed),
-      trend: `Concluidos: ${queue.completed}`,
-      tone: queue.waiting + queue.delayed > 0 ? "warn" : "ok",
-    },
-  ];
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(scheduledAt));
 }
 
 export function DashboardPage() {
-  const { summary, overview, isLoading, error } = useDashboardData();
+  const { summary, isLoading, error } = useDashboardData();
 
   if (isLoading) {
     return <p>Carregando dashboard...</p>;
   }
 
-  if (error || !summary || !overview) {
+  if (error || !summary) {
     return (
       <p className="error-text">{error ?? "Falha ao carregar dashboard."}</p>
     );
   }
 
-  const metrics = buildOperationalMetrics(overview);
+  const metrics = summary.metrics;
 
   return (
     <>
@@ -124,7 +94,7 @@ export function DashboardPage() {
                   <tr key={item.id}>
                     <td>{item.accountName}</td>
                     <td>{item.videoName}</td>
-                    <td>{item.scheduledAt}</td>
+                    <td>{formatScheduledAt(item.scheduledAt)}</td>
                     <td>{item.status}</td>
                   </tr>
                 ))}
