@@ -1,14 +1,14 @@
 // dashboard/src/modules/dashboard/hooks/useDashboardData.ts
 import { useEffect, useState } from "react";
 import type {
-  DashboardOperationalOverview,
+  DashboardQueueStats,
   DashboardSummary,
 } from "../../../shared/types/dashboard";
 import { dashboardService } from "../services/dashboard.service";
 
 type State = {
   summary: DashboardSummary | null;
-  overview: DashboardOperationalOverview | null;
+  queueStats: DashboardQueueStats | null;
   isLoading: boolean;
   error: string | null;
 };
@@ -16,7 +16,7 @@ type State = {
 export function useDashboardData() {
   const [state, setState] = useState<State>({
     summary: null,
-    overview: null,
+    queueStats: null,
     isLoading: true,
     error: null,
   });
@@ -24,18 +24,20 @@ export function useDashboardData() {
   useEffect(() => {
     let isMounted = true;
 
-    dashboardService
-      .getSummary()
-      .then((summary) => {
+    Promise.all([
+      dashboardService.getSummary(),
+      dashboardService.getQueueStats(),
+    ])
+      .then(([summary, queueStats]) => {
         if (isMounted) {
-          setState({ summary, overview: null, isLoading: false, error: null });
+          setState({ summary, queueStats, isLoading: false, error: null });
         }
       })
       .catch(() => {
         if (isMounted) {
           setState({
             summary: null,
-            overview: null,
+            queueStats: null,
             isLoading: false,
             error: "Falha ao carregar dashboard.",
           });

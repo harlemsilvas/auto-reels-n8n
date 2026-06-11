@@ -21,19 +21,34 @@ function formatScheduledAt(scheduledAt: string | null) {
 }
 
 export function DashboardPage() {
-  const { summary, isLoading, error } = useDashboardData();
+  const { summary, queueStats, isLoading, error } = useDashboardData();
 
   if (isLoading) {
     return <p>Carregando dashboard...</p>;
   }
 
-  if (error || !summary) {
+  if (error || !summary || !queueStats) {
     return (
       <p className="error-text">{error ?? "Falha ao carregar dashboard."}</p>
     );
   }
 
   const metrics = summary.metrics;
+  const operationalItems = [
+    ["Publicados hoje", summary.counters.publishedToday],
+    ["Publicados semana", summary.counters.publishedWeek],
+    ["Pendentes", summary.counters.pending],
+    ["Scheduled", summary.counters.scheduled],
+    ["Retrying", summary.counters.retrying],
+    ["Erro", summary.counters.error],
+  ];
+  const bullMqItems = [
+    ["Waiting", queueStats.waiting],
+    ["Active", queueStats.active],
+    ["Failed", queueStats.failed],
+    ["Delayed", queueStats.delayed],
+    ["Completed", queueStats.completed],
+  ];
 
   return (
     <>
@@ -67,17 +82,30 @@ export function DashboardPage() {
 
       <section className="dashboard-grid">
         <article className="panel-card">
-          <h2>Gerenciamento</h2>
-          <ul className="simple-list">
-            <li>Contas Instagram</li>
-            <li>Videos</li>
-            <li>Legendas</li>
-            <li>Agendamentos</li>
-            <li>Status da publicacao</li>
-          </ul>
+          <h2>Resumo operacional</h2>
+          <dl className="stat-list">
+            {operationalItems.map(([label, value]) => (
+              <div key={label}>
+                <dt>{label}</dt>
+                <dd>{value}</dd>
+              </div>
+            ))}
+          </dl>
         </article>
 
         <article className="panel-card">
+          <h2>BullMQ</h2>
+          <dl className="stat-list">
+            {bullMqItems.map(([label, value]) => (
+              <div key={label}>
+                <dt>{label}</dt>
+                <dd>{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </article>
+
+        <article className="panel-card full-width">
           <h2>Fila de publicacao</h2>
           <div className="table-wrap" role="region" aria-label="fila atual">
             <table>
@@ -102,18 +130,10 @@ export function DashboardPage() {
             </table>
           </div>
         </article>
-
-        <article className="panel-card full-width">
-          <h2>Proximos blocos</h2>
-          <p>
-            Proximo passo tecnico: conectar este layout ao backend Node.js com
-            endpoints de contas, posts, agendamentos e telemetria de workers.
-          </p>
-        </article>
       </section>
 
       <footer className="footer-note">
-        MVP Dashboard pronto para integrar API.
+        Fonte operacional: posts, instagram_accounts, BullMQ e Redis.
       </footer>
     </>
   );

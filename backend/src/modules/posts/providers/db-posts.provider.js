@@ -282,8 +282,6 @@ async function listReadyPosts() {
   `;
 
   console.log("[READY SQL]");
-  //log inserido
-  console.log(JSON.stringify(items, null, 2));
 
   if (process.env.NODE_ENV !== "production") {
     console.log(sql);

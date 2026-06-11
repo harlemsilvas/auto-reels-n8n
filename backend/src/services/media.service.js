@@ -126,22 +126,6 @@ async function movePendingItemToError(baseName) {
   return movePendingItem(baseName, MEDIA_ERROR_DIR);
 }
 
-function buildDashboardQueueFromPending(pendingItems) {
-  return pendingItems.slice(0, 10).map((item) => {
-    const createdAt = new Date(item.createdAt);
-    const hh = String(createdAt.getHours()).padStart(2, "0");
-    const mm = String(createdAt.getMinutes()).padStart(2, "0");
-
-    return {
-      id: item.id,
-      accountName: "Conta padrao",
-      videoName: item.videoFile,
-      scheduledAt: `${hh}:${mm}`,
-      status: item.captionFile ? "agendado" : "aguardando",
-    };
-  });
-}
-
 function toIsoString(value) {
   if (!value) {
     return null;
@@ -169,18 +153,21 @@ async function getDashboardSummaryFromPosts() {
     query(`
       SELECT
         COUNT(*) FILTER (WHERE status = 'published')::int AS published,
-        COUNT(*) FILTER (WHERE status IN ('pending', 'scheduled'))::int AS pending,
-        COUNT(*) FILTER (WHERE status IN ('queued', 'processing'))::int AS processing,
-        COUNT(*) FILTER (WHERE status IN ('error', 'retrying'))::int AS errors,
         COUNT(*) FILTER (
-          WHERE status IN (
-            'pending',
-            'scheduled',
-            'queued',
-            'processing',
-            'retrying'
-          )
-        )::int AS active_queue
+          WHERE status = 'published'
+            AND published_at >= CURRENT_DATE
+        )::int AS "publishedToday",
+        COUNT(*) FILTER (
+          WHERE status = 'published'
+            AND published_at >= NOW() - INTERVAL '7 days'
+        )::int AS "publishedWeek",
+        COUNT(*) FILTER (WHERE status = 'pending')::int AS pending,
+        COUNT(*) FILTER (WHERE status = 'scheduled')::int AS scheduled,
+        COUNT(*) FILTER (WHERE status = 'queued')::int AS queued,
+        COUNT(*) FILTER (WHERE status = 'processing')::int AS processing,
+        COUNT(*) FILTER (WHERE status = 'retrying')::int AS retrying,
+        COUNT(*) FILTER (WHERE status = 'error')::int AS errors,
+        COUNT(*) FILTER (WHERE status = 'canceled')::int AS canceled
       FROM posts
       WHERE deleted_at IS NULL
     `),
@@ -196,17 +183,33 @@ async function getDashboardSummaryFromPosts() {
       LEFT JOIN instagram_accounts ia
         ON ia.id = p.account_id
       WHERE p.deleted_at IS NULL
-      ORDER BY p.created_at DESC
+      ORDER BY
+        CASE
+          WHEN p.status = 'processing' THEN 1
+          WHEN p.status = 'queued' THEN 2
+          WHEN p.status = 'scheduled' THEN 3
+          WHEN p.status = 'pending' THEN 4
+          WHEN p.status = 'retrying' THEN 5
+          ELSE 99
+        END,
+        COALESCE(p.scheduled_at, p.created_at)
       LIMIT 20
     `),
   ]);
 
   const counters = countersResult.rows[0] ?? {};
   const publishedCount = Number(counters.published ?? 0);
-  const pendingCount = Number(counters.pending ?? 0);
-  const processingCount = Number(counters.processing ?? 0);
+  const pendingCount =
+    Number(counters.pending ?? 0) + Number(counters.scheduled ?? 0);
+  const processingCount =
+    Number(counters.queued ?? 0) + Number(counters.processing ?? 0);
   const errorCount = Number(counters.errors ?? 0);
-  const activeQueueCount = Number(counters.active_queue ?? 0);
+  const activeQueueCount =
+    Number(counters.pending ?? 0) +
+    Number(counters.scheduled ?? 0) +
+    Number(counters.queued ?? 0) +
+    Number(counters.processing ?? 0) +
+    Number(counters.retrying ?? 0);
 
   return {
     metrics: [
@@ -242,6 +245,17 @@ async function getDashboardSummaryFromPosts() {
       },
     ],
     queue: buildDashboardQueueFromPosts(queueResult.rows),
+    counters: {
+      publishedToday: Number(counters.publishedToday ?? 0),
+      publishedWeek: Number(counters.publishedWeek ?? 0),
+      pending: Number(counters.pending ?? 0),
+      scheduled: Number(counters.scheduled ?? 0),
+      queued: Number(counters.queued ?? 0),
+      processing: Number(counters.processing ?? 0),
+      retrying: Number(counters.retrying ?? 0),
+      error: Number(counters.errors ?? 0),
+      canceled: Number(counters.canceled ?? 0),
+    },
   };
 }
 

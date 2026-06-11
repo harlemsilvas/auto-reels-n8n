@@ -198,6 +198,36 @@ h1 {
   color: var(--muted);
 }
 
+.stat-list {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+}
+
+.stat-list div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid var(--line);
+  padding: 0.35rem 0;
+}
+
+.stat-list div:last-child {
+  border-bottom: 0;
+}
+
+.stat-list dt {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.stat-list dd {
+  margin: 0;
+  font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+  font-weight: 700;
+}
+
 .table-wrap {
   overflow-x: auto;
 }

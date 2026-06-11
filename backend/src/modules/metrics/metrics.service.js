@@ -123,6 +123,7 @@ async function listPublishedPostsForCollection(filters = {}) {
     `
       SELECT
         p.id::text AS id,
+        p.workspace_id::text AS "workspaceId",
         p.account_id::text AS "accountId",
         p.meta_media_id AS "metaMediaId",
         ia.access_token AS "accessToken"
@@ -333,11 +334,12 @@ async function fetchMetaMetricsForPost(post) {
   };
 }
 
-async function insertMetrics(postId, snapshot) {
+async function insertMetrics(postId, workspaceId, snapshot) {
   await query(
     `
       INSERT INTO post_metrics (
         post_id,
+        workspace_id,
         views,
         likes,
         comments,
@@ -349,18 +351,20 @@ async function insertMetrics(postId, snapshot) {
       )
       VALUES (
         $1::uuid,
-        $2,
+        $2::uuid,
         $3,
         $4,
         $5,
         $6,
         $7,
         $8,
+        $9,
         NOW()
       )
     `,
     [
       postId,
+      workspaceId,
       snapshot.views,
       snapshot.likes,
       snapshot.comments,
@@ -372,13 +376,23 @@ async function insertMetrics(postId, snapshot) {
   );
 }
 
-async function appendCollectionEvent(postId, details) {
+async function appendCollectionEvent(workspaceId, postId, details) {
   await query(
     `
-      INSERT INTO post_events (post_id, event_type, details)
-      VALUES ($1::uuid, 'metrics_collected', $2::jsonb)
+      INSERT INTO post_events (
+        workspace_id,
+        post_id,
+        event_type,
+        details
+      )
+      VALUES (
+        $1::uuid,
+        $2::uuid,
+        'metrics_collected',
+        $3::jsonb
+      )
     `,
-    [postId, JSON.stringify(details)],
+    [workspaceId, postId, JSON.stringify(details)],
   );
 }
 
@@ -414,9 +428,12 @@ async function collectInsightsBatch(filters = {}) {
       }
 
       const snapshot = buildMetricsSnapshot(metricsInput);
-      await insertMetrics(post.id, snapshot);
+      if (!post.workspaceId) {
+        throw new Error(`workspaceId ausente para post ${post.id}`);
+      }
+      await insertMetrics(post.id, post.workspaceId, snapshot);
 
-      await appendCollectionEvent(post.id, {
+      await appendCollectionEvent(post.workspaceId, post.id, {
         source: "metrics.collector",
         sourceMode,
         sourceError,

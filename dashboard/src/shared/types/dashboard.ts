@@ -15,35 +15,29 @@ export type QueueItem = {
   status: string;
 };
 
-export type DashboardSummary = {
-  metrics: Metric[];
-  queue: QueueItem[];
-};
-
-export type OperationalPostsCounters = {
+export type DashboardCounters = {
+  publishedToday: number;
+  publishedWeek: number;
   pending: number;
   scheduled: number;
   queued: number;
   processing: number;
   retrying: number;
-  published: number;
   error: number;
   canceled: number;
-  total: number;
 };
 
-export type OperationalQueueCounters = {
+export type DashboardSummary = {
+  metrics: Metric[];
+  queue: QueueItem[];
+  counters: DashboardCounters;
+};
+
+export type DashboardQueueStats = {
   waiting: number;
   active: number;
   completed: number;
   failed: number;
   delayed: number;
   paused: number;
-};
-
-export type DashboardOperationalOverview = {
-  generatedAt: string;
-  source: "file" | "db";
-  posts: OperationalPostsCounters;
-  queue: OperationalQueueCounters;
 };
