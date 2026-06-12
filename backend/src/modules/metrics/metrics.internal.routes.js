@@ -29,8 +29,14 @@ router.post("/collect", async (req, res, next) => {
 
 router.get("/history", async (req, res, next) => {
   try {
-    const { postId, accountId, limit } = req.query;
-    const data = await getMetricsHistory({ postId, accountId, limit });
+    const { postId, accountId, limit, offset, groupByPost } = req.query;
+    const data = await getMetricsHistory({
+      postId,
+      accountId,
+      limit,
+      offset,
+      groupByPost: groupByPost === "true",
+    });
     res.json(data);
   } catch (error) {
     next(error);

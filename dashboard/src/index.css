@@ -294,6 +294,20 @@ h1 {
   overflow-x: auto;
 }
 
+.history-section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.65rem;
+}
+
+.history-section-header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
 table {
   border-collapse: collapse;
   width: 100%;
@@ -310,6 +324,112 @@ td {
 th {
   color: var(--muted);
   font-weight: 600;
+}
+
+.history-expand-button {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.history-post-cell {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.history-inline-note {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.history-expanded-row td {
+  padding: 0;
+  background: rgba(216, 238, 233, 0.28);
+}
+
+.history-expanded-panel {
+  padding: 0.85rem 0.9rem 1rem;
+}
+
+.history-expanded-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.8rem;
+}
+
+.history-expanded-toolbar strong {
+  margin-right: auto;
+  font-size: 0.92rem;
+}
+
+.history-expanded-toolbar label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.history-expanded-toolbar select {
+  min-width: 9rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 0.38rem 0.5rem;
+  font: inherit;
+}
+
+.history-subtable th,
+.history-subtable td {
+  background: transparent;
+}
+
+.history-empty-state {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.history-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.history-pagination-summary {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.history-pagination-actions {
+  display: inline-flex;
+  gap: 0.55rem;
+}
+
+.history-pagination-actions button {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 0.45rem 0.7rem;
+  font: inherit;
+  cursor: pointer;
+}
+
+.history-pagination-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .full-width {
@@ -467,6 +587,11 @@ th {
 
 .status-info::before {
   background: #06aed4;
+}
+
+.mono-text {
+  font-family: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  word-break: break-word;
 }
 
 .upload-grid {

@@ -14,6 +14,8 @@ export type PostEventItem = {
 export type PostEventsResponse = {
   items: PostEventItem[];
   total: number;
+  limit?: number;
+  offset?: number;
 };
 
 export type MetricItem = {
@@ -37,6 +39,15 @@ export type MetricsHistoryResponse = {
   source: string;
   items: MetricItem[];
   total: number;
+  limit?: number;
+  offset?: number;
+};
+
+export type HistoryListParams = {
+  limit?: number;
+  offset?: number;
+  postId?: string;
+  groupByPost?: boolean;
 };
 
 export type CollectMetricsResponse = {
@@ -81,20 +92,41 @@ export type ReelDetail = {
   events: Array<Omit<PostEventItem, "postId" | "videoFilename" | "caption">>;
 };
 
-function withLimit(path: string, limit: number) {
-  return buildApiUrl(`${path}?limit=${limit}`);
+function withParams(path: string, params: HistoryListParams = {}) {
+  const search = new URLSearchParams();
+
+  if (params.limit) {
+    search.set("limit", String(params.limit));
+  }
+
+  if (params.offset !== undefined) {
+    search.set("offset", String(params.offset));
+  }
+
+  if (params.postId) {
+    search.set("postId", params.postId);
+  }
+
+  if (params.groupByPost) {
+    search.set("groupByPost", "true");
+  }
+
+  const suffix = search.toString() ? `?${search.toString()}` : "";
+  return buildApiUrl(`${path}${suffix}`);
 }
 
 export const historyService = {
-  async getEvents(limit = 50): Promise<PostEventsResponse> {
+  async getEvents(params: HistoryListParams = {}): Promise<PostEventsResponse> {
     return getJson<PostEventsResponse>(
-      withLimit("/api/internal/posts/events", limit),
+      withParams("/api/internal/posts/events", params),
     );
   },
 
-  async getMetrics(limit = 50): Promise<MetricsHistoryResponse> {
+  async getMetrics(
+    params: HistoryListParams = {},
+  ): Promise<MetricsHistoryResponse> {
     return getJson<MetricsHistoryResponse>(
-      withLimit("/api/internal/metrics/history", limit),
+      withParams("/api/internal/metrics/history", params),
     );
   },
 

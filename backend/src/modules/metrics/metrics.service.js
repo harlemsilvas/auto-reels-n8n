@@ -101,6 +101,16 @@ function toPositiveInt(value, fallback) {
   return Math.trunc(n);
 }
 
+function toNonNegativeInt(value, fallback = 0) {
+  const n = Number(value);
+
+  if (!Number.isFinite(n) || n < 0) {
+    return fallback;
+  }
+
+  return Math.trunc(n);
+}
+
 async function listPublishedPostsForCollection(filters = {}) {
   const values = [];
   const where = ["p.deleted_at IS NULL", "p.status = 'published'"];
@@ -666,12 +676,15 @@ async function getMetricsHistory(filters = {}) {
       source: POSTS_DATA_SOURCE,
       items: [],
       total: 0,
+      limit: toPositiveInt(filters.limit, 100),
+      offset: toNonNegativeInt(filters.offset, 0),
     };
   }
 
   const values = [];
   const where = ["1 = 1"];
   let param = 1;
+  const groupByPost = filters.groupByPost === true;
 
   if (filters.postId) {
     where.push(`pm.post_id = $${param++}::uuid`);
@@ -684,38 +697,89 @@ async function getMetricsHistory(filters = {}) {
   }
 
   const limit = toPositiveInt(filters.limit, 100);
-  values.push(limit);
+  const offset = toNonNegativeInt(filters.offset, 0);
+  const countValues = [...values];
+  const offsetParam = param + 1;
+  values.push(limit, offset);
+
+  const totalResult = await query(
+    groupByPost
+      ? `
+          SELECT COUNT(DISTINCT pm.post_id)::int AS total
+          FROM post_metrics pm
+          INNER JOIN posts p ON p.id = pm.post_id
+          WHERE ${where.join(" AND ")}
+        `
+      : `
+          SELECT COUNT(*)::int AS total
+          FROM post_metrics pm
+          INNER JOIN posts p ON p.id = pm.post_id
+          WHERE ${where.join(" AND ")}
+        `,
+    countValues,
+  );
 
   const result = await query(
-    `
-      SELECT
-        pm.id,
-        pm.post_id::text AS "postId",
-        p.account_id::text AS "accountId",
-        p.meta_media_id AS "metaMediaId",
-        p.video_filename AS "videoFilename",
-        p.caption AS caption,
-        pm.views,
-        pm.likes,
-        pm.comments,
-        pm.shares,
-        pm.saved,
-        pm.reach,
-        pm.engagement_rate AS "engagementRate",
-        pm.fetched_at AS "fetchedAt"
-      FROM post_metrics pm
-      INNER JOIN posts p ON p.id = pm.post_id
-      WHERE ${where.join(" AND ")}
-      ORDER BY pm.fetched_at DESC, pm.id DESC
-      LIMIT $${param}
-    `,
+    groupByPost
+      ? `
+          SELECT *
+          FROM (
+            SELECT DISTINCT ON (pm.post_id)
+              pm.id,
+              pm.post_id::text AS "postId",
+              p.account_id::text AS "accountId",
+              p.meta_media_id AS "metaMediaId",
+              p.video_filename AS "videoFilename",
+              p.caption AS caption,
+              pm.views,
+              pm.likes,
+              pm.comments,
+              pm.shares,
+              pm.saved,
+              pm.reach,
+              pm.engagement_rate AS "engagementRate",
+              pm.fetched_at AS "fetchedAt"
+            FROM post_metrics pm
+            INNER JOIN posts p ON p.id = pm.post_id
+            WHERE ${where.join(" AND ")}
+            ORDER BY pm.post_id, pm.fetched_at DESC, pm.id DESC
+          ) grouped_metrics
+          ORDER BY "fetchedAt" DESC, id DESC
+          LIMIT $${param}
+          OFFSET $${offsetParam}
+        `
+      : `
+          SELECT
+            pm.id,
+            pm.post_id::text AS "postId",
+            p.account_id::text AS "accountId",
+            p.meta_media_id AS "metaMediaId",
+            p.video_filename AS "videoFilename",
+            p.caption AS caption,
+            pm.views,
+            pm.likes,
+            pm.comments,
+            pm.shares,
+            pm.saved,
+            pm.reach,
+            pm.engagement_rate AS "engagementRate",
+            pm.fetched_at AS "fetchedAt"
+          FROM post_metrics pm
+          INNER JOIN posts p ON p.id = pm.post_id
+          WHERE ${where.join(" AND ")}
+          ORDER BY pm.fetched_at DESC, pm.id DESC
+          LIMIT $${param}
+          OFFSET $${offsetParam}
+        `,
     values,
   );
 
   return {
     source: POSTS_DATA_SOURCE,
     items: result.rows,
-    total: result.rows.length,
+    total: Number(totalResult.rows[0]?.total ?? 0),
+    limit,
+    offset,
   };
 }
 

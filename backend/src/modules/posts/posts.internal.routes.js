@@ -42,12 +42,14 @@ router.get("/", async (req, res, next) => {
 
 router.get("/events", async (req, res, next) => {
   try {
-    const { limit, postId, eventType } = req.query;
+    const { limit, offset, postId, eventType, groupByPost } = req.query;
 
     const data = await getPostEvents({
       limit,
+      offset,
       postId,
       eventType,
+      groupByPost: groupByPost === "true",
     });
 
     res.json(data);

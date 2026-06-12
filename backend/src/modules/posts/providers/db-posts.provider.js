@@ -16,6 +16,16 @@ function toPositiveInt(value, fallback) {
   return Math.trunc(n);
 }
 
+function toNonNegativeInt(value, fallback = 0) {
+  const n = Number(value);
+
+  if (!Number.isFinite(n) || n < 0) {
+    return fallback;
+  }
+
+  return Math.trunc(n);
+}
+
 async function findDefaultActiveAccount(workspaceId = null) {
   const values = [];
   const where = ["deleted_at IS NULL", "ativo = true"];
@@ -387,6 +397,7 @@ async function listPostEvents(filters = {}) {
   const values = [];
   const where = ["1 = 1"];
   let param = 1;
+  const groupByPost = filters.groupByPost === true;
 
   if (filters.postId) {
     where.push(`pe.post_id = $${param++}::uuid`);
@@ -399,31 +410,78 @@ async function listPostEvents(filters = {}) {
   }
 
   const limit = toPositiveInt(filters.limit, 100);
-  values.push(limit);
+  const offset = toNonNegativeInt(filters.offset, 0);
+  const countValues = [...values];
+  const offsetParam = param + 1;
+  values.push(limit, offset);
+
+  const totalResult = await query(
+    groupByPost
+      ? `
+          SELECT COUNT(DISTINCT pe.post_id)::int AS total
+          FROM post_events pe
+          LEFT JOIN posts p
+            ON p.id = pe.post_id
+          WHERE ${where.join(" AND ")}
+        `
+      : `
+          SELECT COUNT(*)::int AS total
+          FROM post_events pe
+          LEFT JOIN posts p
+            ON p.id = pe.post_id
+          WHERE ${where.join(" AND ")}
+        `,
+    countValues,
+  );
 
   const result = await query(
-    `
-      SELECT
-        pe.id,
-        pe.post_id::text AS "postId",
-        p.video_filename AS "videoFilename",
-        p.caption AS caption,
-        pe.event_type AS "eventType",
-        pe.details,
-        pe.created_at AS "createdAt"
-      FROM post_events pe
-      LEFT JOIN posts p
-        ON p.id = pe.post_id
-      WHERE ${where.join(" AND ")}
-      ORDER BY pe.created_at DESC, pe.id DESC
-      LIMIT $${param}
-    `,
+    groupByPost
+      ? `
+          SELECT *
+          FROM (
+            SELECT DISTINCT ON (pe.post_id)
+              pe.id,
+              pe.post_id::text AS "postId",
+              p.video_filename AS "videoFilename",
+              p.caption AS caption,
+              pe.event_type AS "eventType",
+              pe.details,
+              pe.created_at AS "createdAt"
+            FROM post_events pe
+            LEFT JOIN posts p
+              ON p.id = pe.post_id
+            WHERE ${where.join(" AND ")}
+            ORDER BY pe.post_id, pe.created_at DESC, pe.id DESC
+          ) grouped_events
+          ORDER BY "createdAt" DESC, id DESC
+          LIMIT $${param}
+          OFFSET $${offsetParam}
+        `
+      : `
+          SELECT
+            pe.id,
+            pe.post_id::text AS "postId",
+            p.video_filename AS "videoFilename",
+            p.caption AS caption,
+            pe.event_type AS "eventType",
+            pe.details,
+            pe.created_at AS "createdAt"
+          FROM post_events pe
+          LEFT JOIN posts p
+            ON p.id = pe.post_id
+          WHERE ${where.join(" AND ")}
+          ORDER BY pe.created_at DESC, pe.id DESC
+          LIMIT $${param}
+          OFFSET $${offsetParam}
+        `,
     values,
   );
 
   return {
     items: result.rows,
-    total: result.rows.length,
+    total: Number(totalResult.rows[0]?.total ?? 0),
+    limit,
+    offset,
   };
 }
 
