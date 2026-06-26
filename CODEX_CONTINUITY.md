@@ -1215,3 +1215,119 @@ Arquivos gerados:
 6. Fazer backup/rotação do token Meta exposto durante os testes.
 7. Só depois avançar para publicação controlada dos demais tipos
    (`feed_image`, `feed_carousel`, `story_image`, `story_video`).
+
+## Publicação multi-tipo validada na VPS em 2026-06-26
+
+Depois da correção do n8n v4 e do backup do workflow, a publicação multi-tipo
+foi validada progressivamente na VPS.
+
+### Feed imagem manual via estratégia Meta
+
+Post testado:
+
+- id: `0babc122-e1e7-4fbe-bc35-cde8f06dc8c9`;
+- tipo: `feed_image`;
+- mídia: `promocional_potenza_scooter_capa_0ca7b9ba.png`;
+- execução: script Node manual chamando `publishPost(post)` e depois
+  `markPublished`.
+
+Resultado observado:
+
+- `status=published`;
+- `retry_count=0`;
+- `meta_container_id=18542130673078109`;
+- `meta_media_id=18147158956504336`;
+- `published_at=2026-06-26 16:17:11.523-03`.
+
+Conclusão: a estratégia Meta direta para `feed_image` funciona em produção.
+
+### Flag multi-tipo habilitada
+
+Após o teste manual de `feed_image`, a flag da VPS foi habilitada:
+
+```text
+MULTI_PUBLISH_ENABLED=true
+```
+
+Backend e worker foram reiniciados via PM2. A API passou a aceitar publicação
+multi-tipo pelo fluxo normal.
+
+### Feed imagem pelo fluxo normal
+
+Post testado:
+
+- id: `f587fd46-64b0-4004-a472-00d961806880`;
+- tipo: `feed_image`;
+- mídia: `promocional_potenza_gt_forza_capa_bbce0674.png`;
+- execução: endpoint `POST /api/internal/posts/:id/publish-now` com worker.
+
+Observação:
+
+- A primeira chamada retornou `already_exists` porque o job já existia como
+  `delayed`.
+- O job foi tratado e o post publicou pelo fluxo normal.
+
+Resultado observado:
+
+- `status=published`;
+- `retry_count=1`;
+- `error_message` vazio;
+- `meta_container_id=18542141116078109`;
+- `meta_media_id=17872339356683657`;
+- `published_at=2026-06-26 17:15:00.447-03`.
+
+Conclusão: `feed_image` também funciona pelo fluxo normal com worker e
+`MULTI_PUBLISH_ENABLED=true`.
+
+### Feed carrossel pelo fluxo normal
+
+Post testado:
+
+- id: `ebbd33cb-ad57-4d8d-aa4a-b42356321fe4`;
+- tipo: `feed_carousel`;
+- mídia:
+  - `promocional_fluo125_23194fab.png`;
+  - `promocional_nmax160_2de5a916.png`.
+
+Eventos observados:
+
+- primeira tentativa falhou com `MULTI_PUBLISH_DISABLED`, antes da flag estar
+  habilitada;
+- retry foi agendado;
+- segunda tentativa, já com a flag habilitada, publicou com sucesso.
+
+Resultado observado:
+
+- `status=published`;
+- `retry_count=1`;
+- `error_message` vazio;
+- `meta_container_id=18542141149078109`;
+- `meta_media_id=17873809869523368`;
+- `published_at=2026-06-26 17:15:10.299-03`;
+- evento `publisher_completed` registrado;
+- evento `published` registrado com `publishType=feed_carousel`.
+
+Conclusão: `feed_carousel` está funcionando pelo fluxo normal com worker e
+`MULTI_PUBLISH_ENABLED=true`.
+
+## Estado atual após validações multi-tipo
+
+Tipos já validados em produção:
+
+- `reel` via n8n v4;
+- `feed_image` via estratégia Meta direta e via fluxo normal;
+- `feed_carousel` via fluxo normal.
+
+Tipos ainda pendentes:
+
+- `story_image`;
+- `story_video`.
+
+Próximo passo recomendado:
+
+1. confirmar `curl -s https://api.hrmmotos.com.br/api/media/capabilities | jq`;
+2. criar um post de teste `story_image`;
+3. validar URL pública da mídia;
+4. publicar pelo fluxo normal;
+5. depois repetir com `story_video`;
+6. após validação, rotacionar token Meta exposto durante a sessão.
