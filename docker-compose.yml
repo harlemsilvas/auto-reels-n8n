@@ -4,7 +4,7 @@ services:
     container_name: socialbot_postgres
     restart: always
     ports:
-      - "55432:5432"
+      - "${POSTGRES_HOST_PORT:-55432}:5432"
     env_file:
       - .env
     volumes:

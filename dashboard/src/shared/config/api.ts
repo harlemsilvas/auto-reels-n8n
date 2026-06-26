@@ -1,10 +1,13 @@
-const DEFAULT_API_BASE_URL = "http://localhost:3101";
-
 export function getApiBaseUrl() {
-  return (import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_BASE_URL).replace(
-    /\/$/,
-    "",
-  );
+  const apiBaseUrl = String(import.meta.env.VITE_API_BASE_URL ?? "").trim();
+
+  if (!apiBaseUrl) {
+    throw new Error(
+      "VITE_API_BASE_URL nao configurada. Defina a URL da API no ambiente do dashboard.",
+    );
+  }
+
+  return apiBaseUrl.replace(/\/$/, "");
 }
 
 export function buildApiUrl(path: string) {

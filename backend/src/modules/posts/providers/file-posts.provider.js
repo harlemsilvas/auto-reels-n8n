@@ -22,6 +22,12 @@ async function createPostFromUpload(input) {
   };
 }
 
+async function createPostFromMediaUpload() {
+  const error = new Error("Upload multi-midia requer POSTS_DATA_SOURCE=db.");
+  error.status = 501;
+  throw error;
+}
+
 async function listReadyPosts() {
   const pending = await listPendingMedia();
 
@@ -57,6 +63,11 @@ async function listReadyPosts() {
     items,
     total: items.length,
   };
+}
+
+async function getPostForPublishing(id) {
+  const ready = await listReadyPosts();
+  return ready.items.find((item) => item.id === id) ?? null;
 }
 
 async function listPosts() {
@@ -168,7 +179,9 @@ async function addPostEvent(_workspaceId, _postId, _eventType, _details = {}) {
 
 module.exports = {
   createPostFromUpload,
+  createPostFromMediaUpload,
   listReadyPosts,
+  getPostForPublishing,
   listPosts,
   listPostEvents,
   markPostProcessing,

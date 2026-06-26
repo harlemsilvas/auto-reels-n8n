@@ -1,10 +1,13 @@
 import axios from "axios";
+import { getApiBaseUrl } from "../../../shared/config/api";
 
 import type {
   Conversation,
   Message,
   PaginatedResponse,
   SendMessagePayload,
+  SendTesterDmPayload,
+  TesterConversation,
 } from "../types/inbox.types";
 
 /**
@@ -13,9 +16,6 @@ import type {
  * ======================================
  */
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:3101";
-
 /**
  * ======================================
  * AXIOS INSTANCE
@@ -23,7 +23,7 @@ const API_BASE_URL =
  */
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: getApiBaseUrl(),
 
   headers: {
     "Content-Type": "application/json",
@@ -113,10 +113,26 @@ export async function sendInstagramMessage(
   return response.data;
 }
 
+export async function listTesterConversations() {
+  const response = await api.get<PaginatedResponse<TesterConversation>>(
+    "/api/internal/testers-dm/conversations",
+  );
+
+  return response.data;
+}
+
+export async function sendTesterDm(payload: SendTesterDmPayload) {
+  const response = await api.post("/api/internal/testers-dm/send", payload);
+
+  return response.data;
+}
+
 export default {
   listConversations,
   listMessages,
   sendMessage,
   markConversationAsRead,
   sendInstagramMessage,
+  listTesterConversations,
+  sendTesterDm,
 };

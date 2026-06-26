@@ -18,6 +18,7 @@ export const EVENT_LABELS: Record<string, { label: string; tone: Tone }> = {
   queue_skipped: { label: "Fila ignorada", tone: "warn" },
   processing_started: { label: "Processamento iniciado", tone: "info" },
   webhook_sent: { label: "Webhook enviado", tone: "info" },
+  publisher_completed: { label: "Publisher concluído", tone: "info" },
   published: { label: "Publicado", tone: "ok" },
   publish_error: { label: "Erro na publicacao", tone: "error" },
   retry_scheduled: { label: "Nova tentativa agendada", tone: "warn" },

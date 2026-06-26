@@ -14,6 +14,7 @@ import { ScheduleSlotsPage } from "../../modules/schedule/pages/ScheduleSlotsPag
 import { HistoryPage } from "../../modules/history/pages/HistoryPage";
 import { ReelDetailsPage } from "../../modules/history/pages/ReelDetailsPage";
 import { UploadPage } from "../../modules/upload/pages/UploadPage";
+import TestersDmPage from "../../modules/inbox/pages/TestersDmPage";
 
 const router = createBrowserRouter([
   {
@@ -35,6 +36,7 @@ const router = createBrowserRouter([
           { path: "/historico", element: <HistoryPage /> },
           { path: "/reels/:id", element: <ReelDetailsPage /> },
           { path: "/inbox", element: <InstagramInboxPage /> },
+          { path: "/inbox/testers-dm", element: <TestersDmPage /> },
         ],
       },
     ],

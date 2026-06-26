@@ -1,6 +1,7 @@
 // posts.internal.routes.js
 
 const express = require("express");
+const { MULTI_PUBLISH_ENABLED } = require("../../config/env");
 const {
   getReadyPosts,
   getPosts,
@@ -11,7 +12,10 @@ const {
   cancelSchedule,
   addEvent,
 } = require("./posts.service");
-const { enqueuePublishJob } = require("../scheduler/scheduler.queue");
+const {
+  enqueuePublishJob,
+  removePublishJob,
+} = require("../scheduler/scheduler.queue");
 
 const router = express.Router();
 
@@ -112,6 +116,14 @@ router.post("/:id/mark-error", async (req, res, next) => {
 
 router.post("/:id/cancel", async (req, res, next) => {
   try {
+    const queueResult = await removePublishJob(req.params.id);
+
+    if (queueResult.reason === "active") {
+      return res.status(409).json({
+        message: "Post esta sendo processado e nao pode ser cancelado agora.",
+      });
+    }
+
     const result = await cancelSchedule(req.params.id);
 
     if (!result.found) {
@@ -131,7 +143,10 @@ router.post("/:id/cancel", async (req, res, next) => {
      * );
      */
 
-    res.json(result.payload);
+    res.json({
+      ...result.payload,
+      queue: queueResult,
+    });
   } catch (error) {
     next(error);
   }
@@ -141,7 +156,11 @@ router.post("/:id/publish-now", async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const postsData = await getPosts({ postId: id, limit: 1 });
+    const postsData = await getPosts({
+      postId: id,
+      limit: 1,
+      includeCredentials: true,
+    });
     const post = postsData.items[0];
 
     if (!post) {
@@ -152,7 +171,21 @@ router.post("/:id/publish-now", async (req, res, next) => {
       return res.status(409).json({ message: "Post já publicado" });
     }
 
-    const enqueueResult = await enqueuePublishJob(post);
+    if (
+      (post.publishType ?? "reel") !== "reel" &&
+      !MULTI_PUBLISH_ENABLED
+    ) {
+      return res.status(409).json({
+        message:
+          "Publicacao multi-tipo desabilitada. Configure MULTI_PUBLISH_ENABLED=true.",
+      });
+    }
+
+    const enqueueResult = await enqueuePublishJob({
+      id: post.id,
+      workspaceId: post.workspaceId,
+      publishType: post.publishType,
+    });
 
     await addEvent(post.workspaceId, post.id, "manual_publish", {
       source: "user",

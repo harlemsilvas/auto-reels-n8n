@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { buildApiUrl } from "../../../shared/config/api";
 
 import type { Conversation, Message } from "../types/inbox.types";
 
@@ -15,15 +16,6 @@ interface Props {
 
   onConversationUpdate?: (conversationId: string, message: Message) => void;
 }
-
-/**
- * ======================================
- * API URL
- * ======================================
- */
-
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:3101";
 
 /**
  * ======================================
@@ -63,7 +55,7 @@ export function useRealtimeInbox({
      * Create SSE connection
      */
 
-    const eventSource = new EventSource(`${API_BASE_URL}/api/realtime/inbox`);
+    const eventSource = new EventSource(buildApiUrl("/api/realtime/inbox"));
 
     eventSourceRef.current = eventSource;
 

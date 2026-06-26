@@ -332,7 +332,11 @@ async function fetchMediaInsights(metaMediaId, token) {
           metricsMap[name] = normalizeInsightValue(raw);
         }
       });
-
+      console.log("[META INSIGHTS RAW]", {
+        metaMediaId,
+        metricSet,
+        json: JSON.stringify(json, null, 2),
+      });
       return metricsMap;
     } catch (_error) {
       // Tenta proximo conjunto de metricas.
@@ -510,7 +514,9 @@ async function getPostMetricsTimeline(postId, filters = {}) {
   let param = 2;
 
   if (filters.days) {
-    where.push(`pm.fetched_at >= NOW() - ($${param++}::int * INTERVAL '1 day')`);
+    where.push(
+      `pm.fetched_at >= NOW() - ($${param++}::int * INTERVAL '1 day')`,
+    );
     values.push(toPositiveInt(filters.days, 30));
   }
 
@@ -537,8 +543,8 @@ async function getPostMetricsTimeline(postId, filters = {}) {
 }
 
 async function getPostDetail(postId) {
-  const [postResult, metricsResult, eventsResult, timeline] =
-    await Promise.all([
+  const [postResult, metricsResult, eventsResult, timeline] = await Promise.all(
+    [
       query(
         `
           SELECT
@@ -592,7 +598,8 @@ async function getPostDetail(postId) {
         [postId],
       ),
       getPostMetricsTimeline(postId),
-    ]);
+    ],
+  );
 
   if (postResult.rowCount === 0) {
     const error = new Error("Reel nao encontrado.");

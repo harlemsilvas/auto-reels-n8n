@@ -140,7 +140,11 @@ router.post("/enqueue/:id", async (req, res, next) => {
 
     log("Post encontrado:", post.id);
 
-    const result = await enqueuePublishJob(post);
+    const result = await enqueuePublishJob({
+      id: post.id,
+      workspaceId: post.workspaceId,
+      publishType: post.publishType,
+    });
 
     log("Resultado enqueue:", result);
 

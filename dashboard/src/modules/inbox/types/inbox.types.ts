@@ -50,6 +50,24 @@ export interface Conversation {
   accountName?: string | null;
 }
 
+export interface TesterConversation {
+  id: string;
+
+  accountId: string;
+
+  instagramUserId: string;
+
+  instagramUsername?: string | null;
+
+  instagramName?: string | null;
+
+  lastMessageText?: string | null;
+
+  lastMessageAt?: string | null;
+
+  unreadCount?: number;
+}
+
 /**
  * ======================================
  * MESSAGE
@@ -99,6 +117,11 @@ export interface SendMessagePayload {
   accountId: string;
   recipientId: string;
   messageText: string;
+}
+
+export interface SendTesterDmPayload {
+  conversationId: string;
+  message: string;
 }
 
 /**

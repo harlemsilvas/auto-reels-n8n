@@ -34,7 +34,7 @@ function getPublishQueue() {
     publishQueue = new Queue(PUBLISH_QUEUE_NAME, {
       connection: getRedisConnection(),
       defaultJobOptions: {
-        attempts: 5,
+        attempts: 2,
         backoff: {
           type: "exponential",
           delay: 60_000,
@@ -46,6 +46,35 @@ function getPublishQueue() {
   }
 
   return publishQueue;
+}
+
+async function removePublishJob(postId) {
+  const queue = getPublishQueue();
+  const job = await queue.getJob(String(postId));
+
+  if (!job) {
+    return {
+      removed: false,
+      reason: "not_found",
+    };
+  }
+
+  const state = await job.getState();
+
+  if (state === "active") {
+    return {
+      removed: false,
+      reason: "active",
+      state,
+    };
+  }
+
+  await job.remove();
+
+  return {
+    removed: true,
+    state,
+  };
 }
 
 async function enqueuePublishJob(postPayload) {
@@ -150,6 +179,7 @@ module.exports = {
   getRedisConnection,
   getPublishQueue,
   enqueuePublishJob,
+  removePublishJob,
   getQueueStats,
   startDailyMaintenance,
 };

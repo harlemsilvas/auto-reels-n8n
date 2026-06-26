@@ -20,7 +20,11 @@ async function enqueueReadyPosts(source = "scheduler.enqueue-ready") {
     ready.items.map(async (item) => {
       log("Enfileirando post:", item.id);
 
-      const enqueueResult = await enqueuePublishJob(item);
+      const enqueueResult = await enqueuePublishJob({
+        id: item.id,
+        workspaceId: item.workspaceId,
+        publishType: item.publishType,
+      });
 
       if (enqueueResult.queued) {
         await markQueued(item.id);

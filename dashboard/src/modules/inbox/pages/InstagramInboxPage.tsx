@@ -27,6 +27,7 @@ export default function InstagramInboxPage() {
     conversations,
     selectedConversation,
     setSelectedConversation,
+    refresh: refreshConversations,
   } = useConversations();
 
   /**
@@ -81,6 +82,7 @@ export default function InstagramInboxPage() {
 
     onConversationUpdate(conversationId, message) {
       console.log("[Realtime] conversation updated", conversationId, message);
+      void refreshConversations();
     },
   });
 

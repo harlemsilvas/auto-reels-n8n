@@ -53,6 +53,18 @@ function formatRelativeFromNow(value: string | null, nowMs: number) {
   return `ha ${days} d`;
 }
 
+function getPublishTypeLabel(value: PostListItem["publishType"]) {
+  const labels: Record<PostListItem["publishType"], string> = {
+    reel: "Reel",
+    feed_image: "Feed imagem",
+    feed_carousel: "Carrossel",
+    story_image: "Story imagem",
+    story_video: "Story vídeo",
+  };
+
+  return labels[value] ?? value;
+}
+
 type ToastTone = "ok" | "warn" | "error";
 
 type ToastState = {
@@ -306,7 +318,7 @@ export function SchedulePage() {
                   latestPublished.publishedAt ?? latestPublished.updatedAt,
                 )}
               </span>
-              <span>Video: {latestPublished.videoFile ?? "-"}</span>
+              <span>Mídia: {latestPublished.mediaFile ?? "-"}</span>
             </>
           ) : (
             <span>Ainda sem post publicado no banco.</span>
@@ -356,8 +368,9 @@ export function SchedulePage() {
                 <tr>
                   <th>ID</th>
                   <th>Status</th>
+                  <th>Tipo</th>
                   <th>Agendado para</th>
-                  <th>Video</th>
+                  <th>Mídia</th>
                   <th>Retry</th>
                   <th>Atualizado</th>
                   <th>Erro</th>
@@ -375,9 +388,15 @@ export function SchedulePage() {
                         {getStatusLabel(post.status).label}
                       </span>
                     </td>
+                    <td>{getPublishTypeLabel(post.publishType)}</td>
                     <td>{formatDateTime(post.scheduledAt)}</td>
-                    <td>{post.videoFile ?? "-"}</td>
-                    <td>{post.retryCount}</td>
+                    <td>
+                      {post.mediaFile ?? "-"}
+                      {post.mediaItemsCount > 1
+                        ? ` (+${post.mediaItemsCount - 1})`
+                        : ""}
+                    </td>
+                    <td>{post.retryCount}/2</td>
                     <td>{formatDateTime(post.updatedAt)}</td>
                     <td>{post.errorMessage ?? "-"}</td>
                     <td>
@@ -409,8 +428,9 @@ export function SchedulePage() {
                           type="button"
                           onClick={() => void onCancelOne(post.id)}
                           disabled={
-                            post.status !== "pending" &&
-                            post.status !== "scheduled"
+                            post.status === "published" ||
+                            post.status === "canceled" ||
+                            post.status === "processing"
                           }
                         >
                           Excluir agendamento
@@ -421,7 +441,7 @@ export function SchedulePage() {
                 ))}
                 {sortedPosts.length === 0 ? (
                   <tr>
-                    <td colSpan={8}>Nenhum post encontrado para o filtro.</td>
+                    <td colSpan={9}>Nenhum post encontrado para o filtro.</td>
                   </tr>
                 ) : null}
               </tbody>

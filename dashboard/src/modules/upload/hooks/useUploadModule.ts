@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { uploadService } from "../services/upload.service";
 import type {
   PendingMediaItem,
+  UploadCapabilitiesResponse,
+  UploadPostInput,
   UploadVideoInput,
 } from "../../../shared/types/upload";
 
@@ -11,6 +13,7 @@ type UploadState = {
   isLoadingList: boolean;
   isUploading: boolean;
   error: string | null;
+  capabilities: UploadCapabilitiesResponse | null;
 };
 
 const INITIAL_PATH = "/home/socialbot/media/reels/pending";
@@ -22,7 +25,17 @@ export function useUploadModule() {
     isLoadingList: true,
     isUploading: false,
     error: null,
+    capabilities: null,
   });
+
+  const loadCapabilities = useCallback(async () => {
+    try {
+      const capabilities = await uploadService.getCapabilities();
+      setState((prev) => ({ ...prev, capabilities }));
+    } catch {
+      setState((prev) => ({ ...prev, capabilities: null }));
+    }
+  }, []);
 
   const loadPending = useCallback(async () => {
     setState((prev) => ({ ...prev, isLoadingList: true, error: null }));
@@ -66,13 +79,39 @@ export function useUploadModule() {
     [loadPending],
   );
 
+  const uploadPost = useCallback(
+    async (input: UploadPostInput) => {
+      setState((prev) => ({ ...prev, isUploading: true, error: null }));
+
+      try {
+        const response = await uploadService.uploadPost(input);
+        await loadPending();
+        setState((prev) => ({ ...prev, isUploading: false }));
+        return response;
+      } catch (uploadError) {
+        setState((prev) => ({
+          ...prev,
+          isUploading: false,
+          error:
+            uploadError instanceof Error
+              ? uploadError.message
+              : "Falha ao enviar publicacao para o backend.",
+        }));
+        return null;
+      }
+    },
+    [loadPending],
+  );
+
   useEffect(() => {
     void loadPending();
-  }, [loadPending]);
+    void loadCapabilities();
+  }, [loadCapabilities, loadPending]);
 
   return {
     ...state,
     loadPending,
     uploadVideo,
+    uploadPost,
   };
 }

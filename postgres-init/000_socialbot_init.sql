@@ -94,6 +94,8 @@ CREATE TABLE IF NOT EXISTS instagram_accounts (
 CREATE TABLE IF NOT EXISTS uploads (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
+    workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+
     original_filename TEXT NOT NULL,
     stored_filename TEXT NOT NULL,
 
@@ -128,11 +130,23 @@ CREATE TABLE IF NOT EXISTS posts (
 
     upload_id UUID REFERENCES uploads(id) ON DELETE SET NULL,
 
+    video_filename TEXT,
+
     caption TEXT,
 
     hashtags TEXT[],
 
     source_path TEXT NOT NULL DEFAULT '/home/socialbot/media/reels/pending',
+
+    media_size BIGINT,
+    media_file_path TEXT,
+    media_deleted_at TIMESTAMPTZ,
+
+    publish_type TEXT NOT NULL DEFAULT 'reel',
+    media_type TEXT,
+    carousel_children JSONB NOT NULL DEFAULT '[]'::jsonb,
+    cover_image_filename TEXT,
+    publish_options JSONB NOT NULL DEFAULT '{}'::jsonb,
 
     scheduled_at TIMESTAMPTZ,
 
@@ -163,6 +177,78 @@ CREATE TABLE IF NOT EXISTS posts (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     deleted_at TIMESTAMPTZ
+);
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conrelid = 'posts'::regclass
+      AND conname = 'posts_publish_type_check'
+  ) THEN
+    ALTER TABLE posts
+    ADD CONSTRAINT posts_publish_type_check
+    CHECK (
+      publish_type IN (
+        'reel',
+        'feed_image',
+        'feed_carousel',
+        'story_image',
+        'story_video'
+      )
+    );
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conrelid = 'posts'::regclass
+      AND conname = 'posts_carousel_children_array_check'
+  ) THEN
+    ALTER TABLE posts
+    ADD CONSTRAINT posts_carousel_children_array_check
+    CHECK (jsonb_typeof(carousel_children) = 'array');
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conrelid = 'posts'::regclass
+      AND conname = 'posts_publish_options_object_check'
+  ) THEN
+    ALTER TABLE posts
+    ADD CONSTRAINT posts_publish_options_object_check
+    CHECK (jsonb_typeof(publish_options) = 'object');
+  END IF;
+END $$;
+
+-- =========================================================
+-- POST MEDIA ITEMS
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS post_media_items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+    workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    sort_order INTEGER NOT NULL DEFAULT 0 CHECK (sort_order >= 0),
+    media_kind TEXT NOT NULL CHECK (media_kind IN ('image', 'video')),
+    stored_filename TEXT NOT NULL,
+    original_filename TEXT,
+    storage_path TEXT NOT NULL,
+    mime_type TEXT,
+    file_size BIGINT CHECK (file_size IS NULL OR file_size >= 0),
+    width INTEGER,
+    height INTEGER,
+    duration_seconds INTEGER,
+    is_carousel_item BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ,
+    CONSTRAINT post_media_items_dimensions_check CHECK (
+      (width IS NULL OR width > 0)
+      AND (height IS NULL OR height > 0)
+      AND (duration_seconds IS NULL OR duration_seconds >= 0)
+    )
 );
 
 -- =========================================================
@@ -250,6 +336,9 @@ ON instagram_accounts(token_expires_at);
 CREATE INDEX IF NOT EXISTS idx_uploads_storage_status
 ON uploads(storage_status);
 
+CREATE INDEX IF NOT EXISTS idx_uploads_workspace_id
+ON uploads(workspace_id);
+
 CREATE INDEX IF NOT EXISTS idx_posts_workspace_id
 ON posts(workspace_id);
 
@@ -273,6 +362,19 @@ ON posts(next_retry_at);
 
 CREATE INDEX IF NOT EXISTS idx_posts_created_at
 ON posts(created_at);
+
+CREATE INDEX IF NOT EXISTS idx_posts_publish_type
+ON posts(publish_type);
+
+CREATE INDEX IF NOT EXISTS idx_post_media_items_post_id
+ON post_media_items(post_id);
+
+CREATE INDEX IF NOT EXISTS idx_post_media_items_workspace_id
+ON post_media_items(workspace_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_post_media_items_post_sort_active
+ON post_media_items(post_id, sort_order)
+WHERE deleted_at IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_post_events_post_id
 ON post_events(post_id);
@@ -334,38 +436,3 @@ CREATE TRIGGER trg_schedule_time_slots_updated_at
 BEFORE UPDATE ON schedule_time_slots
 FOR EACH ROW
 EXECUTE FUNCTION set_updated_at();
-
-
-
-SELECT id, status, meta_media_id, meta_container_id, published_at FROM posts WHERE meta_media_id = '18138707932543694';
-
-                  id                  |  status   |   meta_media_id   | meta_container_id |        published_at
---------------------------------------+-----------+-------------------+-------------------+----------------------------
- ad4063a8-e24f-47a5-9675-58a291dc445d | published | 18138707932543694 |                   | 2026-06-10 10:38:09.507-03
-(1 row)
-
-(END)                  id                  |  status   |   meta_media_id   | meta_container_id |        published_at
---------------------------------------+-----------+-------------------+-------------------+----------------------------
- ad4063a8-e24f-47a5-9675-58a291dc445d | published | 18138707932543694 |                   | 2026-06-10 10:38:09.507-03
-(1 row)
-
-SELECT
-    id,
-    status,
-    meta_media_id,
-    meta_container_id,
-    published_at
-FROM posts
-WHERE meta_media_id = '18138707932543694';
-
-                  id                  |  status   |   meta_media_id   | meta_container_id |        published_at
---------------------------------------+-----------+-------------------+-------------------+----------------------------
- ad4063a8-e24f-47a5-9675-58a291dc445d | published | 18138707932543694 |                   | 2026-06-10 10:38:09.507-03
-(1 row)
-
-(END)--------------------------------------+-----------+-------------------+-------------------+----------------------------
- ad4063a8-e24f-47a5-9675-58a291dc445d | published | 18138707932543694 |                   | 2026-06-10 10:38:09.507-03
-(1 row)
-
-SELECT * FROM posts WHERE id = '1cc6bf92-3346-4574-ad73-fc4caff4b005';
- 1cc6bf92-3346-4574-ad73-fc4caff4b005 | 9420b1ba-a561-428b-835d-73e45d6349df |                | Pastilhas de Freio Brenta Brakes ! Uma ótima escolha para sua moto ! Acompanhe nossas promoções e solicite uma cotação conosco.. | /home/socialbot/media/reels/pending | 2026-06-09 19:30:00-03 | 2026-06-10 08:13:11.681-03 | published |                   | 17929739787320079 |               |           1 | 2026-06-09 19:04:50.888325-03 | 2026-06-10 08:13:11.696829-03 | a21203ce-21a1-4db4-9d93-46f5b547c2ee |            | 3b126ad0-d583-4169-8a70-68b0e368d282 | 2026-06-10 08:

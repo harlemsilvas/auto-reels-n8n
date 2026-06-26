@@ -9,6 +9,7 @@ const links = [
   { to: "/horarios", label: "Horarios" },
   { to: "/historico", label: "Historico" },
   { to: "/inbox", label: "Inbox" },
+  { to: "/inbox/testers-dm", label: "Testers DM" },
 ];
 
 export function AppLayout() {

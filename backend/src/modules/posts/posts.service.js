@@ -28,6 +28,25 @@ async function createFromUpload(input) {
   return getProvider().createPostFromUpload(input);
 }
 
+async function createFromMediaUpload(input) {
+  log("Criando post multi-midia", {
+    publishType: input.publishType,
+    files: input.files?.length ?? 0,
+  });
+
+  const provider = getProvider();
+
+  if (typeof provider.createPostFromMediaUpload !== "function") {
+    const error = new Error(
+      "Upload multi-midia requer POSTS_DATA_SOURCE=db.",
+    );
+    error.status = 501;
+    throw error;
+  }
+
+  return provider.createPostFromMediaUpload(input);
+}
+
 /**
  * ======================================
  * Ready Posts
@@ -61,6 +80,18 @@ async function getReadyPosts() {
     total: items.length,
     items,
   };
+}
+
+async function getPostForPublishing(id) {
+  log("Carregando post para publicacao:", id);
+
+  const provider = getProvider();
+
+  if (typeof provider.getPostForPublishing !== "function") {
+    throw new Error("Provider nao suporta carregamento para publicacao.");
+  }
+
+  return provider.getPostForPublishing(id);
 }
 
 /**
@@ -101,10 +132,10 @@ async function markPublished(id, payload = {}) {
   return getProvider().markPostPublished(id, payload);
 }
 
-async function markError(id, errorMessage) {
+async function markError(id, errorMessage, currentRetryCount = 0) {
   log("Mark error:", id);
 
-  return getProvider().markPostError(id, errorMessage);
+  return getProvider().markPostError(id, errorMessage, currentRetryCount);
 }
 
 async function cancelSchedule(id) {
@@ -131,7 +162,9 @@ async function addEvent(workspaceId, postId, eventType, details = {}) {
 
 module.exports = {
   createFromUpload,
+  createFromMediaUpload,
   getReadyPosts,
+  getPostForPublishing,
   getPosts,
   getPostEvents,
   markProcessing,

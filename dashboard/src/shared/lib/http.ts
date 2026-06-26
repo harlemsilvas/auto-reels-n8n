@@ -19,7 +19,16 @@ export async function postForm<T>(url: string, formData: FormData): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
+    let message = `HTTP ${response.status}`;
+
+    try {
+      const payload = (await response.json()) as { message?: string };
+      message = payload.message || message;
+    } catch {
+      // Mantem a mensagem HTTP quando a resposta nao for JSON.
+    }
+
+    throw new Error(message);
   }
 
   return (await response.json()) as T;

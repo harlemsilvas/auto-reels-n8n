@@ -8,8 +8,21 @@ const { query } = require("../../lib/db");
 async function recoverStuckPosts() {
   const result = await query(`
     UPDATE posts
-       SET status             = 'retrying',
-           next_retry_at      = NOW(),
+       SET status             = CASE
+                                  WHEN retry_count >= 1 THEN 'error'
+                                  ELSE 'retrying'
+                                END,
+           next_retry_at      = CASE
+                                  WHEN retry_count >= 1 THEN NULL
+                                  ELSE NOW()
+                                END,
+           retry_count        = retry_count + 1,
+           error_message      = CASE
+                                  WHEN retry_count >= 1
+                                    THEN 'Processamento interrompido apos duas tentativas.'
+                                  ELSE 'Processamento interrompido; nova tentativa agendada.'
+                                END,
+           processing_finished_at = NOW(),
            updated_at         = NOW()
      WHERE status             = 'processing'
        AND processing_started_at < NOW() - INTERVAL '10 minutes'
@@ -19,7 +32,7 @@ async function recoverStuckPosts() {
 
   if (recovered > 0) {
     console.warn(
-      `[recoverStuckPosts] ${recovered} post(s) órfão(s) revertido(s) para 'retrying'.`,
+      `[recoverStuckPosts] ${recovered} post(s) órfão(s) recuperado(s).`,
     );
   } else {
     console.log("[recoverStuckPosts] Nenhum post órfão encontrado.");

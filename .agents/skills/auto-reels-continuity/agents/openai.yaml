@@ -1,0 +1,5 @@
+interface:
+  display_name: "Auto Reels Continuity"
+  short_description: "Retoma o desenvolvimento do SocialBot com seguranca"
+  default_prompt: "Use $auto-reels-continuity para retomar o desenvolvimento do SocialBot a partir do contexto atual."
+

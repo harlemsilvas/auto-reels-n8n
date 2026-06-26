@@ -59,7 +59,7 @@ async function saveOutboundMessage({
   messageText,
   response,
 }) {
-  await repository.saveMessage({
+  return repository.saveMessage({
     conversationId,
 
     metaMessageId: response?.message_id || response?.messageId || null,
@@ -128,7 +128,7 @@ async function sendTextMessage({ accountId, recipientId, messageText }) {
    * Save outbound
    */
 
-  await saveOutboundMessage({
+  const savedMessage = await saveOutboundMessage({
     conversationId: conversation.id,
     recipientId,
     accountInstagramId: account.instagramId,
@@ -140,7 +140,7 @@ async function sendTextMessage({ accountId, recipientId, messageText }) {
 
   log("======================================");
 
-  return response;
+  return savedMessage;
 }
 
 /**
@@ -169,7 +169,7 @@ async function sendImageMessage({ accountId, recipientId, imageUrl }) {
     imageUrl,
   });
 
-  await saveOutboundMessage({
+  const savedMessage = await saveOutboundMessage({
     conversationId: conversation.id,
     recipientId,
     accountInstagramId: account.instagramId,
@@ -177,7 +177,7 @@ async function sendImageMessage({ accountId, recipientId, imageUrl }) {
     response,
   });
 
-  return response;
+  return savedMessage;
 }
 
 /**
@@ -212,7 +212,7 @@ async function sendQuickReplies({
     replies,
   });
 
-  await saveOutboundMessage({
+  const savedMessage = await saveOutboundMessage({
     conversationId: conversation.id,
     recipientId,
     accountInstagramId: account.instagramId,
@@ -220,7 +220,7 @@ async function sendQuickReplies({
     response,
   });
 
-  return response;
+  return savedMessage;
 }
 
 module.exports = {

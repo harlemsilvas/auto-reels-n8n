@@ -36,6 +36,11 @@ export type PostListItem = {
   retryCount: number;
   metaMediaId: string | null;
   accountId: string | null;
+  workspaceId: string | null;
+  publishType: "reel" | "feed_image" | "feed_carousel" | "story_image" | "story_video";
+  mediaType: "image" | "video" | "carousel" | null;
+  mediaFile: string | null;
+  mediaItemsCount: number;
   videoFile: string | null;
 };
 

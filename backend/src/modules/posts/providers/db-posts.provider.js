@@ -1,9 +1,10 @@
 // db-posts.provider.js
-const { query } = require("../../../lib/db");
+const { getPool, query } = require("../../../lib/db");
 const {
   META_GRAPH_API_VERSION,
   META_FALLBACK_TOKEN,
   MEDIA_PUBLIC_BASE_URL,
+  MULTI_PUBLISH_ENABLED,
 } = require("../../../config/env");
 
 function toPositiveInt(value, fallback) {
@@ -26,7 +27,7 @@ function toNonNegativeInt(value, fallback = 0) {
   return Math.trunc(n);
 }
 
-async function findDefaultActiveAccount(workspaceId = null) {
+async function findDefaultActiveAccount(workspaceId = null, executeQuery = query) {
   const values = [];
   const where = ["deleted_at IS NULL", "ativo = true"];
 
@@ -35,7 +36,7 @@ async function findDefaultActiveAccount(workspaceId = null) {
     where.push(`workspace_id = $${values.length}::uuid`);
   }
 
-  const result = await query(
+  const result = await executeQuery(
     `
       SELECT
         id::text AS id,
@@ -75,20 +76,6 @@ async function createPostFromUpload(input) {
     fileSize: input.fileSize,
   });
 
-  const account = await findDefaultActiveAccount(requestedWorkspaceId);
-
-  console.log("[ACTIVE ACCOUNT]", account);
-
-  if (!account) {
-    const error = new Error(
-      "Nenhuma conta ativa cadastrada para vincular o post.",
-    );
-
-    error.status = 400;
-
-    throw error;
-  }
-
   let scheduleAt = null;
   let hasFutureSchedule = false;
 
@@ -109,115 +96,396 @@ async function createPostFromUpload(input) {
     initialStatus,
   });
 
-  const workspaceId = requestedWorkspaceId || account.workspaceId;
+  const mimeType = input.mimeType || "video/mp4";
+  const client = await getPool().connect();
 
-  console.log("[WORKSPACE]", {
-    requestedWorkspaceId,
-    resolvedWorkspaceId: workspaceId,
-  });
+  try {
+    await client.query("BEGIN");
 
-  console.log("[INSERT UPLOAD START]");
+    const executeQuery = client.query.bind(client);
+    const account = await findDefaultActiveAccount(
+      requestedWorkspaceId,
+      executeQuery,
+    );
 
-  const uploadResult = await query(
-    `
-      INSERT INTO uploads (
-        workspace_id,
-        original_filename,
-        stored_filename,
-        mime_type,
-        file_size,
-        storage_path,
-        storage_status,
-        created_at,
-        updated_at
-      )
-      VALUES (
-        $1::uuid,
-        $2,
-        $3,
-        $4,
-        $5,
-        $6,
-        'local',
-        NOW(),
-        NOW()
-      )
-      RETURNING id::text AS id
-    `,
-    [
-      workspaceId,
-      input.originalFileName,
-      input.storedFileName,
-      "video/mp4",
-      input.fileSize ?? null,
-      input.storagePath,
-    ],
-  );
+    console.log("[ACTIVE ACCOUNT]", account);
 
-  console.log("[UPLOAD CREATED]");
-  console.log(uploadResult.rows[0]);
+    if (!account) {
+      const error = new Error(
+        "Nenhuma conta ativa cadastrada para vincular o post.",
+      );
 
-  const uploadId = uploadResult.rows[0].id;
+      error.status = 400;
 
-  console.log("[INSERT POST START]");
+      throw error;
+    }
 
-  const postResult = await query(
-    `
-      INSERT INTO posts (
-        workspace_id,
-        account_id,
-        upload_id,
-        caption,
-        source_path,
-        video_filename,
-        media_size,
-        scheduled_at,
-        status,
-        created_at,
-        updated_at
-    )
-    VALUES (
-      $1::uuid,
-      $2::uuid,
-      $3::uuid,
-      $4,
-      $5,
-      $6,
-      $7,
-      $8::timestamptz,
-      $9,
-      NOW(),
-      NOW()
-  )
-  RETURNING
-    id::text AS id,
-    status::text AS status,
-    scheduled_at AS "scheduledAt"
-    `,
-    [
-      workspaceId,
-      account.id,
-      uploadId,
-      input.captionText ?? null,
-      input.storagePath,
+    const workspaceId = requestedWorkspaceId || account.workspaceId;
 
-      input.storedFileName ?? null,
-      input.fileSize ?? null,
+    console.log("[WORKSPACE]", {
+      requestedWorkspaceId,
+      resolvedWorkspaceId: workspaceId,
+    });
 
-      hasFutureSchedule ? scheduleAt.toISOString() : null,
-      initialStatus,
-    ],
-  );
+    console.log("[INSERT UPLOAD START]");
 
-  console.log("[POST CREATED]");
-  console.log(postResult.rows[0]);
+    const uploadResult = await executeQuery(
+      `
+        INSERT INTO uploads (
+          workspace_id,
+          original_filename,
+          stored_filename,
+          mime_type,
+          file_size,
+          storage_path,
+          storage_status,
+          created_at,
+          updated_at
+        )
+        VALUES (
+          $1::uuid,
+          $2,
+          $3,
+          $4,
+          $5,
+          $6,
+          'local',
+          NOW(),
+          NOW()
+        )
+        RETURNING id::text AS id
+      `,
+      [
+        workspaceId,
+        input.originalFileName,
+        input.storedFileName,
+        mimeType,
+        input.fileSize ?? null,
+        input.storagePath,
+      ],
+    );
 
-  console.log("======================================");
+    console.log("[UPLOAD CREATED]");
+    console.log(uploadResult.rows[0]);
 
-  return {
-    found: true,
-    payload: postResult.rows[0],
+    const uploadId = uploadResult.rows[0].id;
+
+    console.log("[INSERT POST START]");
+
+    const postResult = await executeQuery(
+      `
+        INSERT INTO posts (
+          workspace_id,
+          account_id,
+          upload_id,
+          caption,
+          source_path,
+          video_filename,
+          media_size,
+          publish_type,
+          media_type,
+          scheduled_at,
+          status,
+          created_at,
+          updated_at
+        )
+        VALUES (
+          $1::uuid,
+          $2::uuid,
+          $3::uuid,
+          $4,
+          $5,
+          $6,
+          $7,
+          'reel',
+          'video',
+          $8::timestamptz,
+          $9,
+          NOW(),
+          NOW()
+        )
+        RETURNING
+          id::text AS id,
+          status::text AS status,
+          publish_type AS "publishType",
+          scheduled_at AS "scheduledAt"
+      `,
+      [
+        workspaceId,
+        account.id,
+        uploadId,
+        input.captionText ?? null,
+        input.storagePath,
+        input.storedFileName ?? null,
+        input.fileSize ?? null,
+        hasFutureSchedule ? scheduleAt.toISOString() : null,
+        initialStatus,
+      ],
+    );
+
+    const post = postResult.rows[0];
+
+    console.log("[POST CREATED]");
+    console.log(post);
+    console.log("[INSERT POST MEDIA ITEM START]");
+
+    await executeQuery(
+      `
+        INSERT INTO post_media_items (
+          post_id,
+          workspace_id,
+          sort_order,
+          media_kind,
+          stored_filename,
+          original_filename,
+          storage_path,
+          mime_type,
+          file_size,
+          is_carousel_item,
+          created_at
+        )
+        VALUES (
+          $1::uuid,
+          $2::uuid,
+          0,
+          'video',
+          $3,
+          $4,
+          $5,
+          $6,
+          $7,
+          FALSE,
+          NOW()
+        )
+      `,
+      [
+        post.id,
+        workspaceId,
+        input.storedFileName,
+        input.originalFileName,
+        input.storagePath,
+        mimeType,
+        input.fileSize ?? null,
+      ],
+    );
+
+    await client.query("COMMIT");
+
+    console.log("[CREATE POST FROM UPLOAD COMMITTED]");
+    console.log("======================================");
+
+    return {
+      found: true,
+      payload: post,
+    };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("[CREATE POST FROM UPLOAD ROLLBACK]", error.message);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+async function createPostFromMediaUpload(input) {
+  const rawWorkspace = String(input.workspaceId ?? "").trim();
+  const requestedWorkspaceId =
+    rawWorkspace === "" || rawWorkspace === "null" ? null : rawWorkspace;
+
+  const scheduleAt = input.scheduleAt ? new Date(input.scheduleAt) : null;
+  const hasFutureSchedule =
+    scheduleAt && !Number.isNaN(scheduleAt.getTime())
+      ? scheduleAt.getTime() > Date.now()
+      : false;
+  const initialStatus = hasFutureSchedule ? "scheduled" : "pending";
+  const files = Array.isArray(input.files) ? input.files : [];
+  const primaryFile = files[0];
+  const mediaTypeByPublishType = {
+    reel: "video",
+    feed_image: "image",
+    feed_carousel: "carousel",
+    story_image: "image",
+    story_video: "video",
   };
+
+  const client = await getPool().connect();
+
+  try {
+    await client.query("BEGIN");
+    const executeQuery = client.query.bind(client);
+    const account = await findDefaultActiveAccount(
+      requestedWorkspaceId,
+      executeQuery,
+    );
+
+    if (!account) {
+      const error = new Error(
+        "Nenhuma conta ativa cadastrada para vincular o post.",
+      );
+      error.status = 400;
+      throw error;
+    }
+
+    const workspaceId = requestedWorkspaceId || account.workspaceId;
+    const uploads = [];
+
+    for (const file of files) {
+      const uploadResult = await executeQuery(
+        `
+          INSERT INTO uploads (
+            workspace_id,
+            original_filename,
+            stored_filename,
+            mime_type,
+            file_size,
+            storage_path,
+            storage_status,
+            created_at,
+            updated_at
+          )
+          VALUES (
+            $1::uuid,
+            $2,
+            $3,
+            $4,
+            $5,
+            $6,
+            'local',
+            NOW(),
+            NOW()
+          )
+          RETURNING id::text AS id
+        `,
+        [
+          workspaceId,
+          file.originalFileName,
+          file.storedFileName,
+          file.mimeType,
+          file.fileSize ?? null,
+          file.storagePath,
+        ],
+      );
+
+      uploads.push(uploadResult.rows[0]);
+    }
+
+    const isLegacyReel = input.publishType === "reel";
+    const postResult = await executeQuery(
+      `
+        INSERT INTO posts (
+          workspace_id,
+          account_id,
+          upload_id,
+          caption,
+          source_path,
+          video_filename,
+          media_size,
+          publish_type,
+          media_type,
+          scheduled_at,
+          status,
+          created_at,
+          updated_at
+        )
+        VALUES (
+          $1::uuid,
+          $2::uuid,
+          $3::uuid,
+          $4,
+          $5,
+          $6,
+          $7,
+          $8,
+          $9,
+          $10::timestamptz,
+          $11,
+          NOW(),
+          NOW()
+        )
+        RETURNING
+          id::text AS id,
+          status::text AS status,
+          publish_type AS "publishType",
+          media_type AS "mediaType",
+          scheduled_at AS "scheduledAt"
+      `,
+      [
+        workspaceId,
+        account.id,
+        uploads[0].id,
+        input.captionText || null,
+        primaryFile.storagePath,
+        isLegacyReel ? primaryFile.storedFileName : null,
+        isLegacyReel ? (primaryFile.fileSize ?? null) : null,
+        input.publishType,
+        mediaTypeByPublishType[input.publishType],
+        hasFutureSchedule ? scheduleAt.toISOString() : null,
+        initialStatus,
+      ],
+    );
+
+    const post = postResult.rows[0];
+
+    for (const [index, file] of files.entries()) {
+      await executeQuery(
+        `
+          INSERT INTO post_media_items (
+            post_id,
+            workspace_id,
+            sort_order,
+            media_kind,
+            stored_filename,
+            original_filename,
+            storage_path,
+            mime_type,
+            file_size,
+            is_carousel_item,
+            created_at
+          )
+          VALUES (
+            $1::uuid,
+            $2::uuid,
+            $3,
+            $4,
+            $5,
+            $6,
+            $7,
+            $8,
+            $9,
+            $10,
+            NOW()
+          )
+        `,
+        [
+          post.id,
+          workspaceId,
+          index,
+          file.mediaKind,
+          file.storedFileName,
+          file.originalFileName,
+          file.storagePath,
+          file.mimeType,
+          file.fileSize ?? null,
+          input.publishType === "feed_carousel",
+        ],
+      );
+    }
+
+    await client.query("COMMIT");
+
+    return {
+      found: true,
+      payload: {
+        ...post,
+        mediaItems: files.length,
+      },
+    };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 async function listReadyPosts() {
@@ -236,37 +504,32 @@ async function listReadyPosts() {
       p.created_at AS "createdAt",
       p.updated_at AS "updatedAt",
       p.retry_count AS "retryCount",
-      p.meta_media_id AS "metaMediaId",
-
-      p.account_id::text AS "accountId",
       p.workspace_id::text AS "workspaceId",
-
-      ia.instagram_id AS "igAccountId",
-
-      COALESCE(
-        ia.access_token,
-        $1
-      ) AS "metaToken",
-
-      u.id::text AS "uploadId",
-      u.storage_path AS "storagePath",
-
-      p.video_filename AS "videoFile",
-      p.media_size AS "mediaSize",
-      p.media_deleted_at AS "mediaDeletedAt",
-      p.source_path AS "sourcePath"  
+      COALESCE(p.publish_type, 'reel') AS "publishType",
+      p.video_filename AS "videoFile"
 
     FROM posts p
 
-    LEFT JOIN uploads u
-      ON u.id = p.upload_id
-
-    LEFT JOIN instagram_accounts ia
-      ON ia.id = p.account_id
-
-    
     WHERE p.deleted_at IS NULL
-    AND COALESCE(p.video_filename, '') <> ''
+    AND (
+      COALESCE(p.publish_type, 'reel') = 'reel'
+      OR $1::boolean = TRUE
+    )
+    AND (
+      (
+        COALESCE(p.publish_type, 'reel') = 'reel'
+        AND COALESCE(p.video_filename, '') <> ''
+      )
+      OR (
+        COALESCE(p.publish_type, 'reel') <> 'reel'
+        AND EXISTS (
+          SELECT 1
+          FROM post_media_items pmi
+          WHERE pmi.post_id = p.id
+            AND pmi.deleted_at IS NULL
+        )
+      )
+    )
 
       AND (
         p.status = 'pending'
@@ -297,7 +560,7 @@ async function listReadyPosts() {
     console.log(sql);
   }
 
-  const result = await query(sql, [META_FALLBACK_TOKEN ?? null]);
+  const result = await query(sql, [MULTI_PUBLISH_ENABLED]);
 
   console.log("[DB READY POSTS] TOTAL:", result.rows.length);
 
@@ -308,10 +571,6 @@ async function listReadyPosts() {
   const items = result.rows.map((row) => ({
     ...row,
     captionText: row.caption,
-    metaGraphVersion: META_GRAPH_API_VERSION,
-    mediaPublicUrl: row.videoFile
-      ? `${MEDIA_PUBLIC_BASE_URL}/pending/${row.videoFile}`
-      : null,
   }));
 
   items.forEach((item) => {
@@ -321,7 +580,7 @@ async function listReadyPosts() {
       status: item.status,
       scheduledAt: item.scheduledAt,
       videoFile: item.videoFile,
-      igAccountId: item.igAccountId,
+      publishType: item.publishType,
     });
   });
 
@@ -330,6 +589,73 @@ async function listReadyPosts() {
   return {
     total: items.length,
     items,
+  };
+}
+
+async function getPostForPublishing(id) {
+  const postResult = await query(
+    `
+      SELECT
+        p.id::text AS id,
+        p.status::text AS status,
+        p.caption,
+        p.scheduled_at AS "scheduledAt",
+        p.retry_count AS "retryCount",
+        p.account_id::text AS "accountId",
+        p.workspace_id::text AS "workspaceId",
+        COALESCE(p.publish_type, 'reel') AS "publishType",
+        p.media_type AS "mediaType",
+        p.publish_options AS "publishOptions",
+        p.carousel_children AS "carouselChildren",
+        p.video_filename AS "videoFile",
+        p.source_path AS "sourcePath",
+        ia.instagram_id AS "igAccountId",
+        COALESCE(ia.access_token, $2) AS "metaToken"
+      FROM posts p
+      LEFT JOIN instagram_accounts ia
+        ON ia.id = p.account_id
+      WHERE p.id = $1::uuid
+        AND p.deleted_at IS NULL
+      LIMIT 1
+    `,
+    [id, META_FALLBACK_TOKEN ?? null],
+  );
+
+  if (postResult.rowCount === 0) {
+    return null;
+  }
+
+  const mediaResult = await query(
+    `
+      SELECT
+        id::text AS id,
+        sort_order AS "sortOrder",
+        media_kind AS "mediaKind",
+        stored_filename AS "storedFilename",
+        original_filename AS "originalFilename",
+        storage_path AS "storagePath",
+        mime_type AS "mimeType",
+        file_size AS "fileSize",
+        width,
+        height,
+        duration_seconds AS "durationSeconds",
+        is_carousel_item AS "isCarouselItem"
+      FROM post_media_items
+      WHERE post_id = $1::uuid
+        AND deleted_at IS NULL
+      ORDER BY sort_order ASC, created_at ASC
+    `,
+    [id],
+  );
+
+  return {
+    ...postResult.rows[0],
+    mediaItems: mediaResult.rows,
+    mediaPublicBaseUrl: MEDIA_PUBLIC_BASE_URL,
+    metaGraphVersion: META_GRAPH_API_VERSION,
+    mediaPublicUrl: postResult.rows[0].videoFile
+      ? `${MEDIA_PUBLIC_BASE_URL}/pending/${postResult.rows[0].videoFile}`
+      : null,
   };
 }
 
@@ -351,6 +677,10 @@ async function listPosts(filters = {}) {
   const limit = toPositiveInt(filters.limit, 50);
   values.push(limit);
 
+  const credentialsSelect = filters.includeCredentials
+    ? `ia.access_token AS "metaToken",`
+    : "";
+
   const result = await query(
     `
       SELECT
@@ -365,9 +695,14 @@ async function listPosts(filters = {}) {
         p.retry_count AS "retryCount",
         p.meta_media_id AS "metaMediaId",
         p.account_id::text AS "accountId",
+        p.workspace_id::text AS "workspaceId",
         ia.instagram_id AS "igAccountId",
-        ia.access_token AS "metaToken",
+        ${credentialsSelect}
+        p.publish_type AS "publishType",
+        p.media_type AS "mediaType",
+        COALESCE(p.video_filename, primary_media.stored_filename) AS "mediaFile",
         p.video_filename AS "videoFile",
+        COALESCE(media_summary.item_count, 0)::integer AS "mediaItemsCount",
         p.media_size AS "mediaSize",
         p.media_deleted_at AS "mediaDeletedAt",
         p.source_path AS "sourcePath"
@@ -376,6 +711,20 @@ async function listPosts(filters = {}) {
           ON u.id = p.upload_id
         LEFT JOIN instagram_accounts ia
           ON ia.id = p.account_id
+        LEFT JOIN LATERAL (
+          SELECT pmi.stored_filename
+          FROM post_media_items pmi
+          WHERE pmi.post_id = p.id
+            AND pmi.deleted_at IS NULL
+          ORDER BY pmi.sort_order ASC
+          LIMIT 1
+        ) primary_media ON TRUE
+        LEFT JOIN LATERAL (
+          SELECT COUNT(*) AS item_count
+          FROM post_media_items pmi
+          WHERE pmi.post_id = p.id
+            AND pmi.deleted_at IS NULL
+        ) media_summary ON TRUE
       WHERE ${where.join(" AND ")}
       ORDER BY
         CASE WHEN p.scheduled_at IS NULL THEN 1 ELSE 0 END,
@@ -525,6 +874,16 @@ async function updateStatus(id, status, extra = {}) {
     values.push(extra.meta_container_id);
   }
 
+  if (Object.prototype.hasOwnProperty.call(extra, "publish_options")) {
+    fields.push(`publish_options = $${nextIndex++}::jsonb`);
+    values.push(JSON.stringify(extra.publish_options ?? {}));
+  }
+
+  if (Object.prototype.hasOwnProperty.call(extra, "carousel_children")) {
+    fields.push(`carousel_children = $${nextIndex++}::jsonb`);
+    values.push(JSON.stringify(extra.carousel_children ?? []));
+  }
+
   if (Object.prototype.hasOwnProperty.call(extra, "scheduled_at")) {
     fields.push(`scheduled_at = $${nextIndex++}`);
     values.push(extra.scheduled_at);
@@ -587,6 +946,9 @@ async function markPostPublished(id, payload = {}) {
     error_message: null,
     meta_media_id: payload.metaMediaId ?? null,
     meta_container_id: payload.metaContainerId ?? null,
+    publish_options: payload.publishOptions ?? {},
+    carousel_children:
+      payload.publishOptions?.carouselChildren ?? [],
   });
 }
 
@@ -594,22 +956,58 @@ async function markPostError(id, errorMessage, currentRetryCount = 0) {
   const now = new Date();
   const nextRetryCount = currentRetryCount + 1;
 
-  const shouldFailPermanently = nextRetryCount >= 5;
+  const shouldFailPermanently = nextRetryCount >= 2;
 
   return updateStatus(id, shouldFailPermanently ? "error" : "retrying", {
     processing_finished_at: now,
     error_message: errorMessage,
     last_retry_at: now,
-    next_retry_at: new Date(now.getTime() + 60_000),
+    next_retry_at: shouldFailPermanently
+      ? null
+      : new Date(now.getTime() + 60_000),
     retry_count: nextRetryCount,
   });
 }
 
 async function cancelPostSchedule(id) {
-  return updateStatus(id, "canceled", {
-    scheduled_at: null,
-    error_message: "Cancelado pelo usuario.",
-  });
+  const result = await query(
+    `
+      UPDATE posts
+      SET
+        status = 'canceled',
+        scheduled_at = NULL,
+        next_retry_at = NULL,
+        processing_finished_at = NOW(),
+        error_message = 'Cancelado pelo usuario.',
+        updated_at = NOW()
+      WHERE id = $1::uuid
+        AND deleted_at IS NULL
+        AND status::text IN (
+          'pending',
+          'scheduled',
+          'queued',
+          'retrying',
+          'error'
+        )
+      RETURNING id::text AS id, status::text AS status
+    `,
+    [id],
+  );
+
+  if (result.rowCount === 0) {
+    return {
+      found: false,
+      payload: {
+        message:
+          "Post nao encontrado ou status atual nao permite cancelamento.",
+      },
+    };
+  }
+
+  return {
+    found: true,
+    payload: result.rows[0],
+  };
 }
 
 async function addPostEvent(workspaceId, postId, eventType, details = {}) {
@@ -636,7 +1034,9 @@ async function addPostEvent(workspaceId, postId, eventType, details = {}) {
 
 module.exports = {
   createPostFromUpload,
+  createPostFromMediaUpload,
   listReadyPosts,
+  getPostForPublishing,
   listPosts,
   listPostEvents,
   markPostProcessing,

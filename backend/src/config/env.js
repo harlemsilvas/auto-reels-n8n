@@ -133,6 +133,10 @@ const PUBLISH_QUEUE_NAME =
 
 const N8N_PUBLISH_WEBHOOK = process.env.N8N_PUBLISH_WEBHOOK ?? "";
 
+const MULTI_PUBLISH_ENABLED =
+  String(process.env.MULTI_PUBLISH_ENABLED ?? "false").toLowerCase() ===
+  "true";
+
 const AUTO_ENQUEUE_READY_ENABLED =
   String(process.env.AUTO_ENQUEUE_READY_ENABLED ?? "true").toLowerCase() ===
   "true";
@@ -187,6 +191,7 @@ module.exports = {
 
   PUBLISH_QUEUE_NAME,
   N8N_PUBLISH_WEBHOOK,
+  MULTI_PUBLISH_ENABLED,
   AUTO_ENQUEUE_READY_ENABLED,
   AUTO_ENQUEUE_READY_INTERVAL_MS,
 

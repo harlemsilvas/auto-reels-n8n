@@ -16,6 +16,7 @@ const instagramSendInternalRoutes = require("./modules/instagram/instagram-send.
 
 const instagramConversationsRoutes = require("./modules/conversations/instagram-conversations.routes");
 const instagramSendMessageRoutes = require("./modules/inbox/instagram-send-message.routes");
+const testersDmRoutes = require("./modules/inbox/testers-dm.routes");
 
 const realtimeRoutes = require("./modules/realtime/realtime.routes");
 
@@ -115,6 +116,7 @@ app.use("/api/internal/metrics", internalMetricsRoutes);
 app.use("/api/metrics", internalMetricsRoutes);
 
 app.use("/api/internal/messages", instagramSendMessageRoutes);
+app.use("/api/internal/testers-dm", testersDmRoutes);
 
 app.use("/api/internal/media", mediaInternalRoutes);
 

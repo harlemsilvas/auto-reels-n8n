@@ -272,7 +272,7 @@ async function processOAuthCallback(code) {
       facebookUser,
       page: validPage,
       instagramAccount,
-      token: accessToken,
+      token: validPage.access_token,
       expiresIn,
     });
     log("ACCOUNT SAVED:", {

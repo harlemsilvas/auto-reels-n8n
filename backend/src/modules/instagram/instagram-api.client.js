@@ -35,12 +35,21 @@ async function sendApiRequest({ accessToken, payload }) {
 
     return response.data;
   } catch (error) {
-    console.error(
-      "[INSTAGRAM API ERROR]",
-      error?.response?.data || error.message,
-    );
+    const responseData = error?.response?.data;
+    const responseStatus = Number(error?.response?.status ?? 500);
+    const metaMessage =
+      responseData?.error?.message ||
+      responseData?.message ||
+      error?.message ||
+      "Falha ao enviar mensagem para a Meta.";
 
-    throw error;
+    console.error("[INSTAGRAM API ERROR]", responseData || error.message);
+
+    const normalizedError = new Error(metaMessage);
+    normalizedError.status = responseStatus;
+    normalizedError.details = responseData;
+
+    throw normalizedError;
   }
 }
 
