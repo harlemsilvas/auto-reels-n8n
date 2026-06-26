@@ -966,3 +966,252 @@ Ambiente VPS:
   como comandos Linux/Ubuntu, sem adaptações de Windows/WSL.
 - Não levar ajustes locais de Windows/WSL para a VPS, especialmente portas,
   caminhos `/mnt/c/...`, ngrok ou workarounds do Docker Desktop.
+
+## Deploy VPS iniciado em 2026-06-26
+
+Repositório:
+
+- Commit enviado ao GitHub: `7d84372 feat: suporte multi-tipo de posts instagram`.
+- Na VPS, o usuário executou `git pull origin main` em
+  `/home/socialbot/apps/auto-reels-n8n`.
+- O pull fez fast-forward de `ed8f9bc` para `7d84372` com sucesso.
+
+Dashboard na VPS:
+
+- O deploy do dashboard não deve ser feito manualmente copiando `dashboard/dist`
+  por comandos avulsos.
+- Usar o script existente:
+
+```bash
+cd /home/socialbot/apps/auto-reels-n8n/scripts
+sudo ./deploy_frontend_hostinger.sh
+```
+
+O script:
+
+- entra em `/home/socialbot/apps/auto-reels-n8n/dashboard`;
+- executa `npm ci`;
+- executa `npm run build`;
+- publica `dashboard/dist/` em `/var/www/dashboard.hrmmotos.com.br`;
+- ajusta owner para `www-data:www-data`;
+- valida e recarrega Nginx;
+- testa `https://dashboard.hrmmotos.com.br`.
+
+Validação já observada na VPS:
+
+```bash
+curl -s https://api.hrmmotos.com.br/api/media/capabilities | jq
+```
+
+Resultado observado:
+
+- `uploadPostEnabled=true`;
+- `multiPublishEnabled=false`;
+- `reel.publishEnabled=true` com publisher `n8n`;
+- `feed_image`, `feed_carousel`, `story_image` e `story_video` com upload
+  habilitado, mas publicação desabilitada;
+- isso confirma que a flag segura permanece desligada na VPS.
+
+Ainda falta confirmar nesta sessão:
+
+1. backup do banco da VPS antes da migration;
+2. aplicação da migration `backend/sql/006-mult-posts-phase-1-2.sql`;
+3. execução do script `backend/sql/006-mult-posts-phase-1-2-verify.sql`;
+4. `npm ci` no backend;
+5. restart dos processos PM2 da API/worker;
+6. execução do script de deploy do dashboard;
+7. teste final de upload/agendamento sem habilitar multi-publicação.
+
+## Deploy VPS confirmado em 2026-06-26
+
+O usuário confirmou que todos os passos pendentes do deploy foram executados com
+sucesso na VPS:
+
+- backup do banco antes da migration;
+- aplicação da migration `backend/sql/006-mult-posts-phase-1-2.sql`;
+- execução do verificador `backend/sql/006-mult-posts-phase-1-2-verify.sql`;
+- instalação/atualização de dependências do backend;
+- restart dos processos PM2 da API/worker;
+- execução do deploy do dashboard via
+  `scripts/deploy_frontend_hostinger.sh`;
+- validação de que a API responde
+  `https://api.hrmmotos.com.br/api/media/capabilities`.
+
+Estado seguro confirmado:
+
+- `multiPublishEnabled=false` na VPS;
+- Reels permanecem com publicação habilitada via n8n;
+- Feed Imagem, Feed Carrossel, Story Imagem e Story Vídeo estão com upload
+  habilitado, mas publicação desabilitada pela feature flag;
+- não habilitar `MULTI_PUBLISH_ENABLED=true` em produção sem teste controlado e
+  autorização explícita.
+
+Próxima etapa recomendada:
+
+1. testar no dashboard da VPS a criação/agendamento de um post multi-tipo sem
+   publicar;
+2. validar que o post aparece corretamente na agenda com tipo/mídia/quantidade;
+3. validar no banco que `posts` e `post_media_items` foram gravados;
+4. testar um Reel real pela VPS para confirmar que o fluxo legado n8n segue
+   intacto;
+5. somente depois planejar habilitação controlada de publicação multi-tipo.
+
+## Validação VPS após uploads em 2026-06-26
+
+O usuário criou na VPS um Reel e posts multi-tipo pelo dashboard.
+
+Validações públicas realizadas pela API:
+
+- `https://api.hrmmotos.com.br/api/media/capabilities` retornou:
+  - `uploadPostEnabled=true`;
+  - `multiPublishEnabled=false`;
+  - Reel com publicação habilitada via `n8n`;
+  - Feed Imagem, Feed Carrossel, Story Imagem e Story Vídeo com upload
+    habilitado, mas publicação desabilitada.
+- `https://api.hrmmotos.com.br/api/internal/posts?limit=10` mostrou novos posts:
+  - `0babc122-e1e7-4fbe-bc35-cde8f06dc8c9`: `feed_image`, `mediaType=image`,
+    `status=scheduled`, `mediaItemsCount=1`, agendado para
+    `2026-06-27T11:00:00.000Z`;
+  - `ebbd33cb-ad57-4d8d-aa4a-b42356321fe4`: `feed_carousel`,
+    `mediaType=carousel`, `status=scheduled`, `mediaItemsCount=2`, agendado
+    para `2026-06-26T15:00:00.000Z`;
+  - `ded7ce3f-95e2-4dff-a0eb-be1a0c6bc6d7`: `reel`, `mediaType=video`,
+    `status=pending`, `scheduledAt=null`, `mediaItemsCount=1`.
+- `https://api.hrmmotos.com.br/api/internal/posts/ready` retornou apenas o Reel
+  `ded7ce3f-95e2-4dff-a0eb-be1a0c6bc6d7`, porque está `pending` sem
+  `scheduledAt`.
+- `https://api.hrmmotos.com.br/api/internal/scheduler/stats` retornou fila vazia:
+  `waiting=0`, `active=0`, `completed=0`, `failed=0`, `delayed=0`, `paused=0`.
+
+Validação pública das mídias:
+
+- `https://midia.hrmmotos.com.br/reels/pending/promocional_potenza_scooter_capa_0ca7b9ba.png`
+  respondeu `200 OK`;
+- `https://midia.hrmmotos.com.br/reels/pending/promocional_fluo125_23194fab.png`
+  respondeu `200 OK`;
+- `https://midia.hrmmotos.com.br/reels/pending/165gt_potenzagtforza_ninja_0b79ae54.mp4`
+  respondeu `200 OK`.
+
+Conclusão:
+
+- Upload/agendamento multi-tipo está funcionando na VPS.
+- As mídias estão acessíveis publicamente pelo domínio de mídia.
+- A feature flag está protegendo a publicação multi-tipo como esperado.
+- Atenção: o Reel novo ficou `pending` sem agendamento; ele aparece como
+  `ready`, mas ainda não foi enfileirado. Se a intenção for publicar/agendar,
+  escolher explicitamente agendar ou publicar agora.
+
+## Incidente n8n VPS em 2026-06-26
+
+Ao tentar publicar o Reel
+`ded7ce3f-95e2-4dff-a0eb-be1a0c6bc6d7`, o backend registrou:
+
+```json
+{
+  "jobId": "ded7ce3f-95e2-4dff-a0eb-be1a0c6bc6d7",
+  "source": "worker",
+  "attempt": 2,
+  "message": "Webhook n8n retornou 2xx, mas corpo JSON invalido.",
+  "maxAttempts": 2
+}
+```
+
+Interpretação:
+
+- A VPS provavelmente ainda está com o workflow n8n antigo ou incompleto.
+- O webhook respondeu HTTP 2xx, mas não respondeu JSON válido para o worker.
+- Não reenfileirar/publicar novamente sem antes verificar a execução no n8n ou
+  no Instagram, porque uma resposta 2xx inválida pode significar que o workflow
+  continuou executando e talvez tenha publicado.
+
+Correção necessária na VPS:
+
+- Atualizar o workflow n8n de Reels para usar `responseMode=responseNode`.
+- Garantir que o caminho de sucesso termine em `Respond to Webhook` com JSON:
+  `{ ok: true, postId, publishId, creationId, status: "published" }`.
+- Garantir que o caminho de erro termine em `Respond to Webhook` com JSON e
+  status HTTP 500.
+- O nó `Prepare Payload` deve preferir `mediaPublicUrl` recebido do backend e
+  usar fallback com `/pending` sem duplicar o caminho.
+
+## Correção n8n v4 confirmada em 2026-06-26
+
+Workflow ativo validado na VPS:
+
+- nome: `Instagram Reels Webhook Publisher v4`;
+- workflow id: `t8bjbHSAOk7vDiJS`;
+- webhook path: `socialbot-publish-v4`;
+- URL interna usada pelo backend:
+  `http://localhost:5678/webhook/socialbot-publish-v4`.
+
+Problemas corrigidos no workflow n8n:
+
+- O webhook antigo `socialbot-publish` não estava registrado ou respondia JSON
+  inválido para o worker.
+- O workflow importado inicialmente retornava sucesso sem `publishId`, inclusive
+  para payload vazio.
+- Os nós IF (`Payload OK?`, `Container OK?`, `Published OK?`) estavam com
+  condição visual corrompida, comparando textos como
+  `value1: {{ $json.hasError }}` em vez do valor real.
+- Foi necessário corrigir `workflow_entity` e `workflow_history`, porque o n8n
+  2.20 pode executar versão publicada/cacheada diferente da edição visível.
+
+Validações finais:
+
+- Payload vazio para `/webhook/socialbot-publish-v4` agora retorna erro em
+  `stage="prepare_payload"` e não segue para a Meta.
+- O Reel `ded7ce3f-95e2-4dff-a0eb-be1a0c6bc6d7` foi resetado,
+  reenfileirado e publicado com sucesso.
+- Estado final observado no banco:
+  - `status=published`;
+  - `retry_count=0`;
+  - `meta_container_id=18542120197078109`;
+  - `meta_media_id=18117408442862097`;
+  - `published_at=2026-06-26 15:28:32.588-03`.
+- O usuário confirmou que o post apareceu corretamente no Instagram.
+
+Decisões:
+
+- Manter o webhook v4 como endpoint de produção para Reels.
+- Não reativar o webhook antigo `socialbot-publish`.
+- Rotacionar o token Meta depois da estabilização, porque um token real apareceu
+  em logs/conversa durante o diagnóstico.
+
+Script adicionado para backup do workflow n8n:
+
+- `scripts/backup_n8n_workflow_json.sh`
+
+Uso recomendado na VPS:
+
+```bash
+cd /home/socialbot/apps/auto-reels-n8n
+chmod +x scripts/backup_n8n_workflow_json.sh
+./scripts/backup_n8n_workflow_json.sh
+```
+
+O script salva por padrão em:
+
+```text
+/home/socialbot/backups/n8n-workflows/<timestamp>_<workflow_id>/
+```
+
+Arquivos gerados:
+
+- `workflow_entity.json`;
+- `workflow_history.jsonl`;
+- `webhook_entity.json`;
+- `manifest.txt`.
+
+## Checklist pós-publicação antes de avançar multi-tipo
+
+1. Executar o backup do workflow n8n v4 na VPS.
+2. Confirmar que `N8N_PUBLISH_WEBHOOK` aponta para
+   `http://localhost:5678/webhook/socialbot-publish-v4`.
+3. Confirmar que o workflow antigo `socialbot-publish` está desativado,
+   arquivado ou removido.
+4. Confirmar que a feature flag de publicação multi-tipo continua desligada:
+   `MULTI_PUBLISH_ENABLED=false`.
+5. Conferir `https://api.hrmmotos.com.br/api/media/capabilities`.
+6. Fazer backup/rotação do token Meta exposto durante os testes.
+7. Só depois avançar para publicação controlada dos demais tipos
+   (`feed_image`, `feed_carousel`, `story_image`, `story_video`).
