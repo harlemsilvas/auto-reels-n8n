@@ -141,8 +141,21 @@ const AUTO_ENQUEUE_READY_ENABLED =
   String(process.env.AUTO_ENQUEUE_READY_ENABLED ?? "true").toLowerCase() ===
   "true";
 
-const AUTO_ENQUEUE_READY_INTERVAL_MS = Number(
-  process.env.AUTO_ENQUEUE_READY_INTERVAL_MS ?? 900000,
+const AUTO_ENQUEUE_READY_DEFAULT_INTERVAL_MS = 60000;
+const AUTO_ENQUEUE_READY_MIN_INTERVAL_MS = 10000;
+
+function parseAutoEnqueueReadyInterval(value) {
+  const parsed = Number(value ?? AUTO_ENQUEUE_READY_DEFAULT_INTERVAL_MS);
+
+  if (!Number.isFinite(parsed) || parsed < AUTO_ENQUEUE_READY_MIN_INTERVAL_MS) {
+    return AUTO_ENQUEUE_READY_DEFAULT_INTERVAL_MS;
+  }
+
+  return Math.floor(parsed);
+}
+
+const AUTO_ENQUEUE_READY_INTERVAL_MS = parseAutoEnqueueReadyInterval(
+  process.env.AUTO_ENQUEUE_READY_INTERVAL_MS,
 );
 
 /**

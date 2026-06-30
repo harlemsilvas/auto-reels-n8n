@@ -1318,16 +1318,175 @@ Tipos já validados em produção:
 - `feed_image` via estratégia Meta direta e via fluxo normal;
 - `feed_carousel` via fluxo normal.
 
-Tipos ainda pendentes:
-
-- `story_image`;
-- `story_video`.
+Todos os cinco tipos estão validados em produção. Ver validações de Stories
+registradas abaixo.
 
 Próximo passo recomendado:
 
-1. confirmar `curl -s https://api.hrmmotos.com.br/api/media/capabilities | jq`;
-2. criar um post de teste `story_image`;
-3. validar URL pública da mídia;
-4. publicar pelo fluxo normal;
-5. depois repetir com `story_video`;
-6. após validação, rotacionar token Meta exposto durante a sessão.
+1. aplicar e validar a redução do intervalo do scheduler na VPS;
+2. rotacionar o token Meta exposto durante a sessão;
+3. iniciar o desenho da autenticação, usuários e auditoria.
+
+## Story imagem validado na VPS em 2026-06-27
+
+Post testado pelo fluxo normal de agendamento e worker:
+
+- id: `00f82fd3-8ba6-4ab2-bedf-8f42ba034593`;
+- tipo: `story_image`;
+- mídia: `promocional_xmax250_a97105d1.png`;
+- agendado para `2026-06-27 10:30:00-03`;
+- URL pública da mídia respondeu HTTP 200 com `image/png`;
+- `MULTI_PUBLISH_ENABLED=true` e publicação de Stories habilitada pela API.
+
+Resultado observado:
+
+- `status=published`;
+- `retry_count=0`;
+- `error_message` vazio;
+- `meta_media_id=17894636838490634`;
+- `published_at=2026-06-27 10:44:03.029-03`.
+
+Conclusão: `story_image` funciona em produção pelo fluxo normal. O coletor de
+posts prontos usa polling com intervalo padrão de 15 minutos
+(`AUTO_ENQUEUE_READY_INTERVAL_MS=900000`), por isso a publicação ocorreu cerca
+de 14 minutos após o horário agendado. Isso não foi uma falha da Meta nem do
+worker, mas deve ser melhorado posteriormente para reduzir a imprecisão dos
+agendamentos. Não alterar o intervalo da VPS sem revisar carga e configuração
+real.
+
+## Story vídeo validado na VPS em 2026-06-27
+
+Post testado pelo fluxo normal de agendamento e worker:
+
+- id: `8b7350cd-d993-4f14-bb41-f71fd77a2c2e`;
+- tipo: `story_video`;
+- mídia: `video_ptz174gt_360gp_3fda23f9.mp4`;
+- MIME: `video/mp4`;
+- tamanho: `8041322` bytes;
+- URL pública da mídia respondeu HTTP 200;
+- horário corrigido, com autorização do usuário, de 17:00 para
+  `2026-06-27 15:00:00-03` por uma atualização transacional e restrita ao post.
+
+Resultado observado:
+
+- enfileirado automaticamente pelo coletor às `15:13:49-03`;
+- `status=published`;
+- `retry_count=0`;
+- `error_message` vazio;
+- `meta_container_id=18542397442078109`;
+- `meta_media_id=17935749714294072`;
+- `published_at=2026-06-27 15:14:26.114-03`;
+- eventos `queued`, `processing_started`, `publisher_completed` e `published`
+  registrados com `publishType=story_video`.
+
+Conclusão: `story_video` funciona em produção pelo fluxo normal. A publicação
+teve aproximadamente 14 minutos de atraso pelo mesmo polling de 15 minutos do
+coletor já observado em `story_image`.
+
+## Marco: publicação multi-tipo concluída
+
+Tipos validados em produção:
+
+- `reel` via n8n v4;
+- `feed_image` via Meta;
+- `feed_carousel` via Meta;
+- `story_image` via Meta;
+- `story_video` via Meta.
+
+O próximo desenvolvimento técnico recomendado é reduzir a imprecisão do
+scheduler sem alterar o fluxo de Reels. Depois, seguir o roadmap programado de
+autenticação segura, usuários, autoria/auditoria e postagem sem data.
+
+## Precisão do scheduler preparada localmente em 2026-06-30
+
+Foi preparada uma alteração local para reduzir a janela máxima do coletor de
+posts prontos de 15 minutos para aproximadamente 1 minuto:
+
+- `AUTO_ENQUEUE_READY_INTERVAL_MS` passa a usar `60000` como padrão;
+- valores inválidos ou menores que `10000` ms voltam com segurança para o
+  padrão de `60000` ms;
+- `backend/.env.example` documenta a ativação, o intervalo recomendado e o
+  limite mínimo;
+- o fluxo de Reels, o n8n, o worker, a consulta de posts prontos e as regras de
+  retry não foram alterados.
+
+Validações locais no WSL:
+
+- `node --check backend/src/config/env.js` aprovado;
+- intervalo explícito de `60000` ms aprovado;
+- valor inválido e valor abaixo do mínimo retornaram ao padrão de `60000` ms.
+
+Estado da VPS inspecionado antes do deploy:
+
+- `.env` possui `AUTO_ENQUEUE_READY_ENABLED=true`;
+- `.env` possui `AUTO_ENQUEUE_READY_INTERVAL_MS=900000`;
+- portanto, atualizar somente o código não mudará o intervalo da VPS;
+- após commit/push/pull, alterar apenas essa variável para `60000` e reiniciar
+  somente `socialbot-backend` com atualização do ambiente;
+- não reiniciar n8n, PostgreSQL, Redis ou o worker por causa desta mudança.
+
+Esta alteração ainda não foi aplicada na VPS.
+
+## Desenvolvimento programado após a validação multi-tipo
+
+Os itens abaixo foram solicitados em 2026-06-26 e estão apenas planejados. Não
+foram implementados nem aplicados na VPS.
+
+### Postagem sem data agendada
+
+Ao criar uma postagem sem `scheduled_at`:
+
+- manter e exibir a data e a hora de criação (`created_at`);
+- permitir informar e persistir um nome/título para identificar a postagem;
+- inserir a postagem automaticamente na fila de publicação;
+- registrar em eventos quando ela foi criada e quando entrou na fila;
+- impedir enfileiramento duplicado e preservar o limite atual de duas
+  tentativas;
+- definir claramente no dashboard que ausência de data significa “publicar
+  assim que possível”, antes de ativar esse comportamento em produção.
+
+Antes da implementação, revisar o comportamento atual de posts `pending` sem
+agendamento, pois eles já podem ser considerados prontos pelo scheduler. A
+mudança deve ser aditiva e não pode alterar o fluxo de Reels ou republicar posts
+antigos.
+
+### Autenticação e gestão de usuários do Admin
+
+Substituir o acesso padrão do Admin por autenticação própria mais segura:
+
+- cadastro e administração de usuários;
+- senhas armazenadas somente com hash forte, nunca em texto puro;
+- sessão segura, expiração, logout e proteção contra tentativas abusivas;
+- papéis e permissões, começando por `admin` e `operator`;
+- desativação de usuário sem apagar seu histórico;
+- recuperação ou redefinição de senha por fluxo seguro;
+- proteção das rotas do dashboard e das APIs administrativas;
+- manter segredos e chaves fora do frontend e do repositório.
+
+Antes de escolher biblioteca ou provedor, revisar a arquitetura atual do Admin,
+as rotas expostas e o proxy da VPS. Fazer rollout com migration transacional,
+usuário administrador inicial criado de forma segura e plano de retorno.
+
+### Autoria e auditoria das postagens
+
+Depois da gestão de usuários:
+
+- relacionar a postagem ao usuário que a criou (`created_by_user_id`);
+- registrar também quem alterou, agendou, enfileirou, cancelou ou solicitou
+  publicação imediata;
+- incluir o identificador do usuário nos eventos de auditoria;
+- exibir criador, data/hora de criação e nome da postagem no Admin;
+- preservar registros históricos mesmo quando um usuário for desativado;
+- não fazer backfill atribuindo usuários fictícios sem uma regra aprovada.
+
+### Ordem sugerida
+
+1. reduzir a imprecisão do scheduler, preservando o fluxo de Reels;
+2. mapear autenticação, autorização e rotas administrativas atuais;
+3. projetar tabelas/migrations de usuários, sessões e auditoria;
+4. implementar autenticação e autorização no backend;
+5. criar cadastro e administração de usuários no dashboard;
+6. adicionar nome e autoria às postagens;
+7. implementar enfileiramento automático de posts sem data;
+8. testar localmente e liberar na VPS por etapas, sem alterar portas ou
+   infraestrutura operacional.
