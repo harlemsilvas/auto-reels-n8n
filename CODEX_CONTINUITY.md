@@ -1425,7 +1425,54 @@ Estado da VPS inspecionado antes do deploy:
   somente `socialbot-backend` com atualização do ambiente;
 - não reiniciar n8n, PostgreSQL, Redis ou o worker por causa desta mudança.
 
-Esta alteração ainda não foi aplicada na VPS.
+O bloco acima descreve o estado anterior ao deploy; a validação aplicada na VPS
+está registrada a seguir.
+
+## Validação do scheduler de 1 minuto na VPS em 2026-06-30
+
+Após commit, atualização e restart do backend, foi criado o post de teste:
+
+- id: `dc3ef798-6a4a-41f3-819a-1762b4bb2d33`;
+- tipo real: `feed_image`;
+- agendado para `2026-06-30 19:30:00-03`;
+- mídia `arte_final_potenza_9b6ef638.png`, pública e acessível por HTTP 200.
+
+Resultado do scheduler:
+
+- o coletor registrou ticks a cada 60 segundos;
+- o post foi enfileirado às `19:30:55-03`;
+- o desvio do agendamento caiu de aproximadamente 14 minutos para 55 segundos;
+- a mudança de precisão está validada sem alteração no fluxo de Reels.
+
+Observação de configuração:
+
+- o processo PM2 executou efetivamente com intervalo de 60 segundos;
+- o arquivo `.env` da VPS ainda mostrava
+  `AUTO_ENQUEUE_READY_INTERVAL_MS=900000` durante a inspeção;
+- alinhar o arquivo para `60000` antes de um próximo restart/reboot para evitar
+  retorno acidental ao intervalo antigo.
+
+Incidente separado durante a publicação:
+
+- as duas tentativas de `feed_image` falharam na criação do container Meta com
+  `META_GRAPH_API_ERROR` e mensagem `Timeout`;
+- `creationId`, `meta_container_id` e `meta_media_id` permaneceram nulos;
+- o post terminou em `status=error`, `retry_count=2`;
+- não houve chamada confirmada de `media_publish`;
+- conectividade posterior estava normal: Graph API respondeu em cerca de
+  0,21 s e a mídia pública em cerca de 0,20 s;
+- não reenfileirar sem antes confirmar visualmente que a publicação não apareceu
+  no Instagram e, de preferência, melhorar o registro dos detalhes do erro Meta.
+
+Melhoria de diagnóstico preparada localmente após o incidente:
+
+- erros normalizados da Meta agora preservam `transportCode`;
+- eventos `publish_error` passam a registrar `httpStatus`, `operation`,
+  `metaCode`, `metaSubcode` e `transportCode`;
+- publicação, tentativas e decisão de retry permanecem inalteradas;
+- sintaxe dos arquivos alterados e normalização simulada de timeout foram
+  validadas no WSL;
+- esta melhoria de diagnóstico ainda precisa de commit/deploy.
 
 ## Desenvolvimento programado após a validação multi-tipo
 

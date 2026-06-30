@@ -21,6 +21,7 @@ function normalizeGraphError(error, operation) {
   normalizedError.operation = operation;
   normalizedError.metaCode = graphError?.code ?? null;
   normalizedError.metaSubcode = graphError?.error_subcode ?? null;
+  normalizedError.transportCode = error?.code ?? null;
   normalizedError.details = responseData ?? null;
 
   return normalizedError;
