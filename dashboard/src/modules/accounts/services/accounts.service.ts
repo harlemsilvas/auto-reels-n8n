@@ -19,10 +19,13 @@ type ListResponse = {
 };
 
 async function requestJson<T>(url: string, init: RequestInit): Promise<T> {
+  const csrfToken = sessionStorage.getItem("socialbot.admin.csrf");
   const response = await fetch(url, {
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
+      ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
     },
     ...init,
   });

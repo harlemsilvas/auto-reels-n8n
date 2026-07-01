@@ -55,7 +55,9 @@ export function useRealtimeInbox({
      * Create SSE connection
      */
 
-    const eventSource = new EventSource(buildApiUrl("/api/realtime/inbox"));
+    const eventSource = new EventSource(buildApiUrl("/api/realtime/inbox"), {
+      withCredentials: true,
+    });
 
     eventSourceRef.current = eventSource;
 

@@ -17,11 +17,22 @@ const instagramSendInternalRoutes = require("./modules/instagram/instagram-send.
 const instagramConversationsRoutes = require("./modules/conversations/instagram-conversations.routes");
 const instagramSendMessageRoutes = require("./modules/inbox/instagram-send-message.routes");
 const testersDmRoutes = require("./modules/inbox/testers-dm.routes");
+const usersRoutes = require("./modules/users/users.routes");
 
 const realtimeRoutes = require("./modules/realtime/realtime.routes");
 
 const metaOAuthRoutes = require("./modules/auth/meta-oauth.routes");
-const { getAllowedOrigins } = require("./config/env");
+const adminAuthRoutes = require("./modules/auth/admin-auth.routes");
+const {
+  ADMIN_AUTH_ENABLED,
+  getAllowedOrigins,
+} = require("./config/env");
+const {
+  requireAdminSession,
+  requireCsrf,
+  requirePasswordChanged,
+  requireRole,
+} = require("./modules/auth/admin-auth.middleware");
 
 const mediaInternalRoutes = require("./modules/media/media.internal.routes");
 
@@ -37,6 +48,7 @@ if (allowedOrigins === "*") {
   app.use(
     cors({
       origin: allowedOrigins,
+      credentials: true,
     }),
   );
 }
@@ -45,7 +57,39 @@ app.use(express.json());
 
 app.use("/api/webhooks/instagram", instagramMessagesRoutes);
 
+app.use("/api/auth", adminAuthRoutes);
 app.use("/api/auth/meta", metaOAuthRoutes);
+
+app.get("/api/health", (_req, res) => {
+  res.json({ ok: true });
+});
+
+app.use((req, res, next) => {
+  if (!ADMIN_AUTH_ENABLED) {
+    return next();
+  }
+
+  return requireAdminSession(req, res, next);
+});
+
+app.use((req, res, next) => {
+  if (
+    !ADMIN_AUTH_ENABLED ||
+    ["GET", "HEAD", "OPTIONS"].includes(req.method)
+  ) {
+    return next();
+  }
+
+  return requireCsrf(req, res, next);
+});
+
+app.use((req, res, next) => {
+  if (!ADMIN_AUTH_ENABLED) {
+    return next();
+  }
+
+  return requirePasswordChanged(req, res, next);
+});
 
 app.use("/api/internal/instagram", instagramSendInternalRoutes);
 
@@ -100,15 +144,16 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get("/api/health", (_req, res) => {
-  res.json({ ok: true });
-});
-
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/history", historyRoutes);
 app.use("/api/media", mediaRoutes);
 
-app.use("/api/internal/accounts", internalAccountsRoutes);
+app.use(
+  "/api/internal/accounts",
+  ...(ADMIN_AUTH_ENABLED ? [requireRole("admin")] : []),
+  internalAccountsRoutes,
+);
+app.use("/api/internal/users", usersRoutes);
 app.use("/api/internal/posts", internalPostsRoutes);
 app.use("/api/internal/scheduler", internalSchedulerRoutes);
 app.use("/api/internal/queue", internalQueueRoutes);

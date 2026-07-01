@@ -9,7 +9,10 @@ function log(...args) {
   console.log(`[SCHEDULER ${new Date().toISOString()}]`, ...args);
 }
 
-async function enqueueReadyPosts(source = "scheduler.enqueue-ready") {
+async function enqueueReadyPosts(
+  source = "scheduler.enqueue-ready",
+  actorUserId = null,
+) {
   log("Buscando posts prontos para fila");
 
   const ready = await getReadyPosts();
@@ -32,7 +35,7 @@ async function enqueueReadyPosts(source = "scheduler.enqueue-ready") {
         await addEvent(item.workspaceId, item.id, "queued", {
           source,
           jobId: enqueueResult.jobId,
-        });
+        }, actorUserId);
 
         log("Post enfileirado:", item.id);
       } else {
@@ -40,7 +43,7 @@ async function enqueueReadyPosts(source = "scheduler.enqueue-ready") {
           source,
           reason: enqueueResult.reason,
           jobId: enqueueResult.jobId,
-        });
+        }, actorUserId);
 
         log("Post ignorado:", item.id, enqueueResult.reason);
       }

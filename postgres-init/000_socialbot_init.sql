@@ -118,6 +118,92 @@ CREATE TABLE IF NOT EXISTS uploads (
 );
 
 -- =========================================================
+-- SOCIALBOT ADMIN USERS / SESSIONS / AUDIT
+-- Prefixo evita conflito com as tabelas internas do n8n.
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS socialbot_users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    username TEXT NOT NULL,
+    email TEXT,
+    display_name TEXT NOT NULL,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'operator',
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    force_password_change BOOLEAN NOT NULL DEFAULT TRUE,
+    failed_login_attempts INTEGER NOT NULL DEFAULT 0,
+    locked_until TIMESTAMPTZ,
+    password_changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    last_login_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at TIMESTAMPTZ,
+    CONSTRAINT socialbot_users_role_check
+      CHECK (role IN ('admin', 'operator')),
+    CONSTRAINT socialbot_users_failed_login_attempts_check
+      CHECK (failed_login_attempts >= 0)
+);
+
+CREATE TABLE IF NOT EXISTS socialbot_user_workspaces (
+    user_id UUID NOT NULL REFERENCES socialbot_users(id) ON DELETE CASCADE,
+    workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    role TEXT NOT NULL DEFAULT 'operator',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, workspace_id),
+    CONSTRAINT socialbot_user_workspaces_role_check
+      CHECK (role IN ('admin', 'operator'))
+);
+
+CREATE TABLE IF NOT EXISTS socialbot_sessions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES socialbot_users(id) ON DELETE CASCADE,
+    token_hash BYTEA NOT NULL,
+    csrf_token_hash BYTEA NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    revoked_at TIMESTAMPTZ,
+    ip_address INET,
+    user_agent TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT socialbot_sessions_expiration_check
+      CHECK (expires_at > created_at)
+);
+
+CREATE TABLE IF NOT EXISTS socialbot_audit_log (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES socialbot_users(id) ON DELETE SET NULL,
+    workspace_id UUID REFERENCES workspaces(id) ON DELETE SET NULL,
+    action TEXT NOT NULL,
+    entity_type TEXT,
+    entity_id TEXT,
+    details JSONB NOT NULL DEFAULT '{}'::jsonb,
+    ip_address INET,
+    user_agent TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT socialbot_audit_log_details_object_check
+      CHECK (jsonb_typeof(details) = 'object')
+);
+
+CREATE TABLE IF NOT EXISTS socialbot_oauth_states (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id UUID NOT NULL
+      REFERENCES socialbot_sessions(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL
+      REFERENCES socialbot_users(id) ON DELETE CASCADE,
+    provider TEXT NOT NULL DEFAULT 'meta',
+    state_hash BYTEA NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    consumed_at TIMESTAMPTZ,
+    ip_address INET,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT socialbot_oauth_states_provider_check
+      CHECK (provider IN ('meta')),
+    CONSTRAINT socialbot_oauth_states_expiration_check
+      CHECK (expires_at > created_at)
+);
+
+-- =========================================================
 -- POSTS
 -- =========================================================
 
@@ -129,6 +215,8 @@ CREATE TABLE IF NOT EXISTS posts (
     account_id UUID NOT NULL REFERENCES instagram_accounts(id) ON DELETE CASCADE,
 
     upload_id UUID REFERENCES uploads(id) ON DELETE SET NULL,
+
+    created_by_user_id UUID REFERENCES socialbot_users(id) ON DELETE SET NULL,
 
     video_filename TEXT,
 
@@ -258,7 +346,11 @@ CREATE TABLE IF NOT EXISTS post_media_items (
 CREATE TABLE IF NOT EXISTS post_events (
     id BIGSERIAL PRIMARY KEY,
 
+    workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+
     post_id UUID NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+
+    actor_user_id UUID REFERENCES socialbot_users(id) ON DELETE SET NULL,
 
     event_type TEXT NOT NULL,
 
@@ -366,6 +458,10 @@ ON posts(created_at);
 CREATE INDEX IF NOT EXISTS idx_posts_publish_type
 ON posts(publish_type);
 
+CREATE INDEX IF NOT EXISTS idx_posts_created_by_user
+ON posts(created_by_user_id)
+WHERE created_by_user_id IS NOT NULL;
+
 CREATE INDEX IF NOT EXISTS idx_post_media_items_post_id
 ON post_media_items(post_id);
 
@@ -381,6 +477,55 @@ ON post_events(post_id);
 
 CREATE INDEX IF NOT EXISTS idx_post_events_event_type
 ON post_events(event_type);
+
+CREATE INDEX IF NOT EXISTS idx_post_events_actor_user
+ON post_events(actor_user_id)
+WHERE actor_user_id IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_socialbot_users_username_active
+ON socialbot_users(LOWER(username))
+WHERE deleted_at IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_socialbot_users_email_active
+ON socialbot_users(LOWER(email))
+WHERE email IS NOT NULL AND deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_socialbot_users_active
+ON socialbot_users(active)
+WHERE deleted_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_socialbot_user_workspaces_workspace
+ON socialbot_user_workspaces(workspace_id);
+
+CREATE INDEX IF NOT EXISTS idx_socialbot_sessions_user_active
+ON socialbot_sessions(user_id, expires_at)
+WHERE revoked_at IS NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_socialbot_sessions_token_hash
+ON socialbot_sessions(token_hash);
+
+CREATE INDEX IF NOT EXISTS idx_socialbot_sessions_expiration
+ON socialbot_sessions(expires_at)
+WHERE revoked_at IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_socialbot_audit_log_user_created
+ON socialbot_audit_log(user_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_socialbot_audit_log_workspace_created
+ON socialbot_audit_log(workspace_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_socialbot_audit_log_entity
+ON socialbot_audit_log(entity_type, entity_id, created_at DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_socialbot_oauth_states_hash
+ON socialbot_oauth_states(state_hash);
+
+CREATE INDEX IF NOT EXISTS idx_socialbot_oauth_states_session
+ON socialbot_oauth_states(session_id, expires_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_socialbot_oauth_states_active
+ON socialbot_oauth_states(expires_at)
+WHERE consumed_at IS NULL;
 
 CREATE INDEX IF NOT EXISTS idx_post_metrics_post_id
 ON post_metrics(post_id);
@@ -402,6 +547,21 @@ DROP TRIGGER IF EXISTS trg_workspaces_updated_at ON workspaces;
 
 CREATE TRIGGER trg_workspaces_updated_at
 BEFORE UPDATE ON workspaces
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_socialbot_users_updated_at ON socialbot_users;
+
+CREATE TRIGGER trg_socialbot_users_updated_at
+BEFORE UPDATE ON socialbot_users
+FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_socialbot_user_workspaces_updated_at
+ON socialbot_user_workspaces;
+
+CREATE TRIGGER trg_socialbot_user_workspaces_updated_at
+BEFORE UPDATE ON socialbot_user_workspaces
 FOR EACH ROW
 EXECUTE FUNCTION set_updated_at();
 

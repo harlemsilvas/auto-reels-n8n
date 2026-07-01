@@ -1,4 +1,10 @@
 const express = require("express");
+const { ADMIN_AUTH_ENABLED } = require("../../config/env");
+const {
+  requireAdminSession,
+  requirePasswordChanged,
+  requireRole,
+} = require("./admin-auth.middleware");
 
 const {
   redirectToMetaLogin,
@@ -6,6 +12,9 @@ const {
 } = require("./meta-oauth.controller");
 
 const router = express.Router();
+const adminOnly = ADMIN_AUTH_ENABLED
+  ? [requireAdminSession, requirePasswordChanged, requireRole("admin")]
+  : [];
 
 /**
  * ======================================
@@ -13,7 +22,7 @@ const router = express.Router();
  * ======================================
  */
 
-router.get("/login", redirectToMetaLogin);
+router.get("/login", ...adminOnly, redirectToMetaLogin);
 
 /**
  * ======================================
@@ -21,6 +30,6 @@ router.get("/login", redirectToMetaLogin);
  * ======================================
  */
 
-router.get("/callback", handleMetaCallback);
+router.get("/callback", ...adminOnly, handleMetaCallback);
 
 module.exports = router;

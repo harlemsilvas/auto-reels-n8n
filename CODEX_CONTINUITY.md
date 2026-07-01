@@ -1472,7 +1472,287 @@ Melhoria de diagnóstico preparada localmente após o incidente:
 - publicação, tentativas e decisão de retry permanecem inalteradas;
 - sintaxe dos arquivos alterados e normalização simulada de timeout foram
   validadas no WSL;
-- esta melhoria de diagnóstico ainda precisa de commit/deploy.
+- a melhoria foi posteriormente commitada, implantada e carregada após restart
+  do `socialbot-worker`.
+
+### Reenfileiramento controlado concluído
+
+Após confirmar o commit na VPS, o worker foi reiniciado para carregar a melhoria
+de diagnóstico e o post `dc3ef798-6a4a-41f3-819a-1762b4bb2d33` foi
+reenfileirado uma única vez pelo endpoint `publish-now`.
+
+Resultado:
+
+- execução manual iniciou às `2026-06-30 19:47:47-03`;
+- publicação concluída às `19:48:00.580-03` na primeira tentativa do novo job;
+- `status=published` e `error_message` vazio;
+- `meta_container_id=18543303460078109`;
+- `meta_media_id=17920851198381280`;
+- eventos `manual_publish`, `processing_started`, `publisher_completed` e
+  `published` registrados corretamente;
+- o timeout anterior foi transitório.
+
+Débito observado: `retry_count` permaneceu em `2` depois do sucesso manual,
+porque representa as falhas do job anterior. Avaliar se a interface deve exibir
+histórico total de falhas ou tentativas do ciclo atual; não alterar sem definir
+essa semântica.
+
+## Fundação de autenticação e usuários preparada em 2026-06-30
+
+O login anterior foi confirmado como puramente local no React, com credencial
+fixa e flag no `localStorage`. O backend não protegia as rotas administrativas.
+
+Arquitetura criada localmente:
+
+- documento `docs/0007-auth-users.md`;
+- migration `backend/sql/007-auth-users-foundation.sql`;
+- verificador `backend/sql/007-auth-users-foundation-verify.sql`;
+- tabelas `socialbot_users`, `socialbot_user_workspaces`,
+  `socialbot_sessions` e `socialbot_audit_log`;
+- colunas opcionais `posts.created_by_user_id` e
+  `post_events.actor_user_id`;
+- prefixo `socialbot_` escolhido para não colidir com a tabela `user` do n8n;
+- schema `postgres-init/000_socialbot_init.sql` alinhado.
+
+Backend preparado:
+
+- hash de senha com `crypto.scrypt`, salt aleatório e comparação constante;
+- token de sessão e CSRF aleatórios, persistidos somente como SHA-256;
+- cookie `HttpOnly`, `SameSite=Lax` e `Secure` em produção;
+- sessão com expiração, revogação e atualização de atividade;
+- limite de falhas e bloqueio temporário por usuário;
+- auditoria de login/logout;
+- endpoints `/api/auth/status`, `/login`, `/me`, `/csrf` e `/logout`;
+- middleware condicional de sessão, CSRF e papel;
+- script `npm run create-admin` exige senha via variável temporária;
+- `ADMIN_AUTH_ENABLED=false` permanece como default seguro de rollout.
+
+Dashboard preparado:
+
+- campos de login não trazem mais credencial preenchida;
+- sessão real restaurada pelo backend quando a flag estiver ativa;
+- cookies são enviados com `credentials=include`;
+- operações de escrita enviam `X-CSRF-Token`;
+- SSE usa `withCredentials`;
+- fallback legado só funciona quando o backend responde explicitamente que a
+  autenticação nova está desativada; falha de rede é fail-closed.
+
+Validações:
+
+- sintaxe de todos os arquivos backend alterados;
+- hash correto, senha incorreta, hash inválido e senha curta;
+- carregamento do Express sem conexão antecipada ao banco;
+- build completo do dashboard aprovado;
+- ESLint aprovado em todos os arquivos alterados desta etapa;
+- migration aplicada duas vezes em banco temporário isolado na VPS;
+- bootstrap limpo, constraints, índices e verificador aprovados;
+- banco temporário e arquivos em `/tmp` removidos ao final;
+- banco real `n8n` ainda não recebeu a migration.
+
+Não ativar `ADMIN_AUTH_ENABLED=true` ainda. Pendências obrigatórias:
+
+1. implementar troca obrigatória de senha;
+2. criar endpoints e interface de gestão de usuários;
+3. proteger OAuth Meta com sessão administrativa e `state` validado;
+4. separar autenticação de serviço para integrações internas;
+5. aplicar migration, criar admin inicial e testar no domínio real;
+6. somente então remover definitivamente o fallback `admin/123456`.
+
+### Gestão de usuários e troca de senha concluídas localmente
+
+Continuação implementada em 2026-07-01:
+
+- endpoint autenticado para troca da própria senha;
+- validação da senha atual e mínimo de 12 caracteres para a nova;
+- revogação de todas as sessões depois da troca;
+- bloqueio backend de qualquer API administrativa enquanto
+  `force_password_change=true`;
+- API `/api/internal/users` restrita ao papel `admin`;
+- listagem, criação, edição, ativação/desativação e redefinição de senha;
+- proteção contra o admin atual desativar ou rebaixar a si mesmo;
+- senha redefinida volta a ser temporária e revoga sessões existentes;
+- auditoria de criação, atualização, reset e troca de senha;
+- tela `/change-password` e redirecionamento obrigatório;
+- tela `/usuarios`, menu exclusivo para administradores e formulário de senha
+  temporária.
+
+Validações realizadas:
+
+- sintaxe dos arquivos backend alterados;
+- ESLint aprovado em todos os arquivos frontend do escopo;
+- build de produção do dashboard aprovado;
+- migration/schema já haviam sido validados em banco temporário isolado.
+
+Teste local de banco não executado nesta retomada porque o Docker Desktop estava
+desligado e a distribuição WSL não tinha acesso ao daemon. Próximo passo:
+
+1. iniciar Docker Desktop com integração WSL;
+2. aplicar e verificar a migration `007` somente no banco local;
+3. criar admin local com senha temporária via variável de ambiente;
+4. ligar `ADMIN_AUTH_ENABLED=true` apenas localmente;
+5. testar login, troca obrigatória, CRUD de usuários, CSRF e logout;
+6. manter a flag da VPS desligada.
+
+### Autenticação local validada pelo usuário em 2026-07-01
+
+O usuário confirmou no ambiente local:
+
+- migration aplicada;
+- primeiro administrador criado pelo script seguro;
+- login com senha temporária aprovado;
+- redirecionamento para troca obrigatória aprovado;
+- alteração da senha aprovada;
+- novo acesso ao painel aprovado.
+
+Próxima fase recomendada:
+
+1. validar a tela `/usuarios`, criação de operador e alteração de papel;
+2. definir e aplicar uma matriz de permissões para `admin` e `operator`;
+3. proteger o OAuth Meta com sessão administrativa e parâmetro `state`;
+4. adicionar autenticação própria para integrações de serviço;
+5. gravar `created_by_user_id` e `actor_user_id` nas ações de postagem;
+6. somente depois preparar rollout controlado na VPS.
+
+### Feature de permissões granulares registrada em 2026-07-01
+
+Foi criado `docs/features/001-permissoes-granulares.md` para evoluir os papéis
+fixos para capacidades verificadas pelo backend. O template inicial de operador
+de conteúdo poderá criar e agendar postagens, mas não terá acesso a métricas,
+respostas do Inbox, contas, tokens ou usuários por padrão.
+
+A implementação foi deliberadamente adiada até definir regras como posts
+próprios versus posts do workspace e permissão de publicação imediata. No estado
+local atual, a proteção básica já impede `operator` de acessar Contas e Usuários
+no backend e no dashboard.
+
+### OAuth Meta protegido localmente em 2026-07-01
+
+Foi preparada a migration `backend/sql/008-meta-oauth-state.sql`, seu verificador
+e o alinhamento do schema inicial. Quando `ADMIN_AUTH_ENABLED=true`, o início e o
+callback do OAuth Meta agora exigem sessão administrativa e senha definitiva.
+
+O fluxo gera um `state` aleatório vinculado à sessão e ao usuário, armazena
+somente seu SHA-256, expira em dez minutos e o consome atomicamente uma única
+vez. A conexão bem-sucedida gera auditoria `accounts.meta_connected`.
+
+Validações locais realizadas:
+
+- migration `008` aplicada duas vezes sem erro no PostgreSQL local;
+- verificador da migration aprovado;
+- URL de autorização confirmou a presença de `state`;
+- primeiro consumo do `state` foi aceito e o segundo foi recusado;
+- sintaxe do backend, ESLint do escopo e build do dashboard aprovados;
+- nenhuma conexão externa com a Meta foi iniciada;
+- nenhuma alteração desta fase foi aplicada na VPS.
+
+Próximo passo recomendado: reiniciar o backend local, confirmar que um operador
+recebe acesso negado em Contas/Usuários e que um administrador consegue iniciar
+o OAuth Meta. Depois, implementar autoria de postagens e atores dos eventos,
+mantendo a autenticação de serviço como bloqueio obrigatório antes do rollout na
+VPS.
+
+### Autoria de postagens e eventos preparada localmente em 2026-07-01
+
+Foi conectada a sessão autenticada às colunas já criadas pela migration `007`:
+
+- uploads por `/api/media/upload` e `/api/media/upload-post` gravam
+  `posts.created_by_user_id`;
+- a criação grava um evento `created` com o mesmo usuário dentro da transação do
+  post, uploads e itens de mídia;
+- enfileiramento individual ou coletivo solicitado pela interface, publicação
+  imediata e cancelamento gravam `post_events.actor_user_id`;
+- eventos do coletor, worker e demais processos automáticos permanecem com ator
+  nulo e continuam identificados por `details.source`;
+- cancelamento e seu evento agora são atômicos no banco;
+- consultas de posts e eventos retornam ID, username e nome de exibição;
+- Agendamentos mostra “Criado por” e os detalhes do Histórico mostram
+  “Responsável”; registros antigos aparecem como “Sistema/legado”.
+
+Compatibilidade preservada:
+
+- com `ADMIN_AUTH_ENABLED=false`, novas autorias ficam nulas;
+- posts e eventos antigos não receberam backfill fictício;
+- worker, n8n, política de tentativas e publicação de Reels não foram alterados;
+- schema inicial recebeu `post_events.workspace_id`, já existente no banco real
+  por migration anterior, para manter instalações limpas coerentes.
+
+Validações locais:
+
+- `node --check` aprovado em todos os arquivos backend alterados;
+- consultas reais de posts e eventos aprovadas no PostgreSQL local;
+- teste de autoria e ator com usuário `admin` aprovado dentro de transação com
+  `ROLLBACK`;
+- build de produção do dashboard aprovado;
+- ESLint dos tipos/serviços alterados aprovado;
+- o lint completo das duas páginas ainda aponta regras preexistentes de
+  `setState` em `useEffect`, sem relação com esta alteração;
+- nenhuma postagem foi criada, cancelada ou publicada pelo teste;
+- nada foi aplicado na VPS.
+
+Próximo passo recomendado: reiniciar backend e dashboard locais, criar uma
+postagem de teste autenticada e confirmar criador/evento na interface. Depois,
+adicionar autenticação de serviço para rotas chamadas por integrações antes de
+preparar o rollout da autenticação na VPS.
+
+#### Teste real local de autoria concluído
+
+Post `d95ac58a-3845-4a61-a8b8-c4192f1f4bfe`, carrossel com três mídias:
+
+- criado autenticado como `admin` e exibido como “Administrador” em
+  Agendamentos;
+- evento `created` gravado com `actor_user_id` do administrador;
+- cancelamento gravado com evento `canceled` e o mesmo administrador como ator;
+- status final `canceled`, `retry_count=0` e nenhum job restante no Redis;
+- a tentativa de “Enfileirar” antes do horário agendado não encontrou o post na
+  lista de prontos e, corretamente, não criou evento nem executou o worker;
+- portanto, a URL local/ngrok não foi usada por esse post e não houve tentativa
+  de publicação externa.
+
+Conclusão: criação e cancelamento com autoria estão validados localmente. A tela
+resumida do Histórico ainda não mostra a coluna de responsável, embora a API e o
+banco já retornem o ator; os detalhes do histórico possuem essa exibição.
+
+## Deploy de autenticação preparado em 2026-07-01
+
+Inspeção somente leitura da VPS:
+
+- branch `main`, commit observado `77fab77`;
+- `socialbot-backend` e `socialbot-worker` online no PM2;
+- containers `socialbot_postgres`, `socialbot_redis` e `socialbot_n8n` ativos;
+- nenhuma tabela `socialbot_*` existente ainda;
+- variáveis `ADMIN_AUTH_*` ausentes no `backend/.env`;
+- CORS, callback Meta e frontend já apontam para os domínios operacionais;
+- Node `v20.20.2`, npm `11.17.0` e disco com espaço suficiente;
+- worktree da VPS possui apenas mudanças de modo executável em cinco scripts e
+  um arquivo vazio não rastreado `scripts/sql/005-atualizacao.sql`; preservar.
+
+Materiais criados:
+
+- `scripts/prepare_auth_vps.sh`: backup validado do PostgreSQL seguido das
+  migrations/verificadores `007` e `008`; não edita `.env`, não reinicia PM2 e
+  recusa executar se a autenticação já estiver ativa;
+- `docs/0008-auth-vps-deploy.md`: sequência completa de commit, pull seguro,
+  migrations, backend com flag desligada, criação do admin, frontend, ativação,
+  testes e retorno por feature flag.
+
+Decisão de rollout:
+
+1. publicar o código;
+2. fazer backup e migrations com `ADMIN_AUTH_ENABLED=false`;
+3. reiniciar backend e validar compatibilidade ainda sem autenticação;
+4. criar admin temporário;
+5. publicar dashboard;
+6. ativar autenticação e testar login/troca de senha;
+7. retornar apenas a flag para `false` se houver falha funcional.
+
+Nenhuma alteração foi aplicada na VPS durante a preparação.
+
+### Informativo da sessão programado
+
+Melhoria solicitada para uma etapa posterior: exibir próximo ao botão “Sair” o
+nome do usuário autenticado e seu papel, usando os dados já disponíveis no
+contexto de autenticação. O componente deve usar o username como fallback e ser
+responsivo. Esta melhoria foi apenas registrada; ainda não foi implementada.
 
 ## Desenvolvimento programado após a validação multi-tipo
 

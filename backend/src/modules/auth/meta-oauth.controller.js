@@ -1,9 +1,13 @@
 const {
   buildOAuthUrl,
+  consumeOAuthState,
+  createOAuthState,
   processOAuthCallback,
   buildSuccessRedirect,
   buildErrorRedirect,
 } = require("./meta-oauth.service");
+const { ADMIN_AUTH_ENABLED } = require("../../config/env");
+const authRepository = require("./admin-auth.repository");
 
 /**
  * ======================================
@@ -17,10 +21,10 @@ async function redirectToMetaLogin(req, res, next) {
     console.log("[META LOGIN START]");
     console.log("IP:", req.ip);
 
-    const oauthUrl = buildOAuthUrl();
-
-    console.log("[META OAUTH URL]");
-    console.log(oauthUrl);
+    const state = ADMIN_AUTH_ENABLED
+      ? await createOAuthState(req.auth, req.ip)
+      : null;
+    const oauthUrl = buildOAuthUrl(state);
 
     console.log("======================================");
 
@@ -41,7 +45,14 @@ async function handleMetaCallback(req, res, next) {
     console.log("======================================");
     console.log("[META CALLBACK]");
 
-    const { code, error, error_reason } = req.query;
+    const { code, error, error_reason, state } = req.query;
+
+    if (
+      ADMIN_AUTH_ENABLED &&
+      !(await consumeOAuthState(state, req.auth))
+    ) {
+      return res.redirect(buildErrorRedirect("invalid_oauth_state"));
+    }
 
     /**
      * User canceled login
@@ -68,6 +79,21 @@ async function handleMetaCallback(req, res, next) {
      */
 
     const result = await processOAuthCallback(code);
+
+    if (ADMIN_AUTH_ENABLED) {
+      await authRepository.insertAuditLog({
+        userId: req.auth.userId,
+        action: "accounts.meta_connected",
+        entityType: "instagram_account",
+        entityId: result?.account?.id ?? null,
+        details: {
+          instagramId: result?.instagramAccount?.id ?? null,
+        },
+        ipAddress: req.ip || null,
+        userAgent:
+          String(req.get("user-agent") ?? "").slice(0, 1000) || null,
+      });
+    }
 
     console.log("[META CALLBACK SUCCESS]");
     console.log({

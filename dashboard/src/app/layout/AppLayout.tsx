@@ -4,7 +4,6 @@ import { useAuth } from "../../modules/auth/context/AuthContext";
 const links = [
   { to: "/dashboard", label: "Dashboard" },
   { to: "/uploads", label: "Uploads" },
-  { to: "/contas", label: "Contas" },
   { to: "/agendamentos", label: "Agendamentos" },
   { to: "/horarios", label: "Horarios" },
   { to: "/historico", label: "Historico" },
@@ -13,19 +12,27 @@ const links = [
 ];
 
 export function AppLayout() {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  const visibleLinks =
+    user?.role === "admin"
+      ? [
+          ...links,
+          { to: "/contas", label: "Contas" },
+          { to: "/usuarios", label: "Usuários" },
+        ]
+      : links;
 
   return (
     <main className="dashboard-shell">
       <header className="topbar">
-        <strong>SocialBot Admin</strong>
+        <strong>SocialBot Admin{user ? ` — ${user.displayName}` : ""}</strong>
         <button type="button" className="link-button" onClick={logout}>
           Sair
         </button>
       </header>
 
       <nav className="tabs" aria-label="navegacao principal">
-        {links.map((link) => (
+        {visibleLinks.map((link) => (
           <NavLink
             key={link.to}
             to={link.to}

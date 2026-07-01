@@ -6,8 +6,8 @@ export function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("123456");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -29,7 +29,7 @@ export function LoginPage() {
         <p className="eyebrow">SocialBot</p>
         <h1>Acesso Admin</h1>
         <p className="hero-copy">
-          Login inicial simples para proteger o painel administrativo.
+          Entre com seu usuário e senha para acessar o painel administrativo.
         </p>
 
         <form onSubmit={handleSubmit} className="login-form">

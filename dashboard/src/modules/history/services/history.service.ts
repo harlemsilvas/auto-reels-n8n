@@ -7,6 +7,9 @@ export type PostEventItem = {
   videoFilename: string | null;
   caption: string | null;
   eventType: string;
+  actorUserId: string | null;
+  actorUsername: string | null;
+  actorDisplayName: string | null;
   details: Record<string, unknown>;
   createdAt: string;
 };

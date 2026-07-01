@@ -138,10 +138,10 @@ async function markError(id, errorMessage, currentRetryCount = 0) {
   return getProvider().markPostError(id, errorMessage, currentRetryCount);
 }
 
-async function cancelSchedule(id) {
+async function cancelSchedule(id, actorUserId = null) {
   log("Cancel schedule:", id);
 
-  return getProvider().cancelPostSchedule(id);
+  return getProvider().cancelPostSchedule(id, actorUserId);
 }
 
 /**
@@ -150,14 +150,26 @@ async function cancelSchedule(id) {
  * ======================================
  */
 
-async function addEvent(workspaceId, postId, eventType, details = {}) {
+async function addEvent(
+  workspaceId,
+  postId,
+  eventType,
+  details = {},
+  actorUserId = null,
+) {
   log("Add event:", {
     workspaceId,
     postId,
     eventType,
   });
 
-  return getProvider().addPostEvent(workspaceId, postId, eventType, details);
+  return getProvider().addPostEvent(
+    workspaceId,
+    postId,
+    eventType,
+    details,
+    actorUserId,
+  );
 }
 
 module.exports = {

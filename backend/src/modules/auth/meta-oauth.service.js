@@ -1,4 +1,5 @@
 const axios = require("axios");
+const { createHash, randomBytes } = require("node:crypto");
 
 const {
   META_APP_ID,
@@ -9,6 +10,7 @@ const {
 } = require("../../config/env");
 
 const { upsertAccount } = require("../accounts/accounts.service");
+const { query } = require("../../lib/db");
 
 const GRAPH_BASE_URL = `https://graph.facebook.com/${META_GRAPH_API_VERSION}`;
 
@@ -22,7 +24,7 @@ function log(...args) {
  * ======================================
  */
 
-function buildOAuthUrl() {
+function buildOAuthUrl(state) {
   const scopes = [
     "instagram_basic",
     "instagram_content_publish",
@@ -41,7 +43,68 @@ function buildOAuthUrl() {
     scope: scopes.join(","),
   });
 
+  if (state) {
+    params.set("state", state);
+  }
+
   return `https://www.facebook.com/${META_GRAPH_API_VERSION}/dialog/oauth?${params.toString()}`;
+}
+
+function hashOAuthState(state) {
+  return createHash("sha256").update(String(state)).digest();
+}
+
+async function createOAuthState(session, ipAddress) {
+  const state = randomBytes(32).toString("base64url");
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+  await query(
+    `
+      DELETE FROM socialbot_oauth_states
+      WHERE session_id = $1::uuid
+        AND (consumed_at IS NOT NULL OR expires_at <= NOW())
+    `,
+    [session.sessionId],
+  );
+
+  await query(
+    `
+      INSERT INTO socialbot_oauth_states (
+        session_id, user_id, provider, state_hash, expires_at, ip_address
+      )
+      VALUES ($1::uuid, $2::uuid, 'meta', $3, $4::timestamptz, $5::inet)
+    `,
+    [
+      session.sessionId,
+      session.userId,
+      hashOAuthState(state),
+      expiresAt,
+      ipAddress || null,
+    ],
+  );
+
+  return state;
+}
+
+async function consumeOAuthState(state, session) {
+  if (!state) return false;
+
+  const result = await query(
+    `
+      UPDATE socialbot_oauth_states
+      SET consumed_at = NOW()
+      WHERE state_hash = $1
+        AND session_id = $2::uuid
+        AND user_id = $3::uuid
+        AND provider = 'meta'
+        AND consumed_at IS NULL
+        AND expires_at > NOW()
+      RETURNING id
+    `,
+    [hashOAuthState(state), session.sessionId, session.userId],
+  );
+
+  return result.rowCount === 1;
 }
 
 /**
@@ -320,6 +383,8 @@ function buildErrorRedirect(message) {
 
 module.exports = {
   buildOAuthUrl,
+  consumeOAuthState,
+  createOAuthState,
   exchangeCodeForToken,
   exchangeForLongLivedToken,
   getFacebookUser,

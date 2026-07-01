@@ -190,6 +190,7 @@ router.post("/upload", upload.single("video"), async (req, res, next) => {
       captionText,
       scheduleAt: scheduleAt ? scheduleAt.toISOString() : null,
       workspaceId,
+      createdByUserId: req.auth?.userId ?? null,
     });
 
     res.status(201).json({
@@ -228,6 +229,7 @@ router.post("/upload-post", receivePostFiles, async (req, res, next) => {
       captionText,
       scheduleAt: scheduleAt ? scheduleAt.toISOString() : null,
       workspaceId: workspaceIdRaw || null,
+      createdByUserId: req.auth?.userId ?? null,
       files: files.map((file, index) => ({
         originalFileName: file.originalname,
         storedFileName: file.filename,

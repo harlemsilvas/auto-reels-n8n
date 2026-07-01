@@ -41,6 +41,28 @@ const META_FALLBACK_TOKEN = process.env.META_FALLBACK_TOKEN ?? "";
 
 const API_PORT = Number(process.env.API_PORT ?? 3101);
 
+const ADMIN_AUTH_ENABLED =
+  String(process.env.ADMIN_AUTH_ENABLED ?? "false").toLowerCase() === "true";
+const ADMIN_AUTH_COOKIE_NAME =
+  process.env.ADMIN_AUTH_COOKIE_NAME ?? "socialbot_session";
+const ADMIN_AUTH_SESSION_TTL_HOURS = Math.max(
+  1,
+  Number(process.env.ADMIN_AUTH_SESSION_TTL_HOURS ?? 12) || 12,
+);
+const ADMIN_AUTH_MAX_FAILED_ATTEMPTS = Math.max(
+  3,
+  Number(process.env.ADMIN_AUTH_MAX_FAILED_ATTEMPTS ?? 5) || 5,
+);
+const ADMIN_AUTH_LOCK_MINUTES = Math.max(
+  1,
+  Number(process.env.ADMIN_AUTH_LOCK_MINUTES ?? 15) || 15,
+);
+const ADMIN_AUTH_COOKIE_SECURE =
+  String(
+    process.env.ADMIN_AUTH_COOKIE_SECURE ??
+      (process.env.NODE_ENV === "production" ? "true" : "false"),
+  ).toLowerCase() === "true";
+
 /**
  * ======================================
  * MEDIA
@@ -179,6 +201,12 @@ const INSIGHTS_BATCH_SIZE = Number(process.env.INSIGHTS_BATCH_SIZE ?? 50);
 
 module.exports = {
   API_PORT,
+  ADMIN_AUTH_ENABLED,
+  ADMIN_AUTH_COOKIE_NAME,
+  ADMIN_AUTH_SESSION_TTL_HOURS,
+  ADMIN_AUTH_MAX_FAILED_ATTEMPTS,
+  ADMIN_AUTH_LOCK_MINUTES,
+  ADMIN_AUTH_COOKIE_SECURE,
 
   MEDIA_ROOT,
   MEDIA_PENDING_DIR,

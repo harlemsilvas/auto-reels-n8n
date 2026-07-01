@@ -369,6 +369,7 @@ export function SchedulePage() {
                   <th>ID</th>
                   <th>Status</th>
                   <th>Tipo</th>
+                  <th>Criado por</th>
                   <th>Agendado para</th>
                   <th>Mídia</th>
                   <th>Retry</th>
@@ -389,6 +390,11 @@ export function SchedulePage() {
                       </span>
                     </td>
                     <td>{getPublishTypeLabel(post.publishType)}</td>
+                    <td>
+                      {post.createdByDisplayName ??
+                        post.createdByUsername ??
+                        "Sistema/legado"}
+                    </td>
                     <td>{formatDateTime(post.scheduledAt)}</td>
                     <td>
                       {post.mediaFile ?? "-"}

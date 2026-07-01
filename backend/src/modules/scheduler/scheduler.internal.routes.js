@@ -93,9 +93,12 @@ router.delete("/slots/:id", async (req, res, next) => {
  * ======================================
  */
 
-router.post("/enqueue-ready", async (_req, res, next) => {
+router.post("/enqueue-ready", async (req, res, next) => {
   try {
-    const result = await enqueueReadyPosts("scheduler.enqueue-ready");
+    const result = await enqueueReadyPosts(
+      "scheduler.enqueue-ready",
+      req.auth?.userId ?? null,
+    );
     res.json(result);
   } catch (error) {
     next(error);
@@ -154,7 +157,7 @@ router.post("/enqueue/:id", async (req, res, next) => {
       await addEvent(post.workspaceId, post.id, "queued", {
         source: "scheduler.enqueue",
         jobId: result.jobId,
-      });
+      }, req.auth?.userId ?? null);
 
       log("Post marcado como queued:", post.id);
     } else {
@@ -162,7 +165,7 @@ router.post("/enqueue/:id", async (req, res, next) => {
         source: "scheduler.enqueue",
         reason: result.reason,
         jobId: result.jobId,
-      });
+      }, req.auth?.userId ?? null);
 
       log("Post ignorado:", post.id);
     }

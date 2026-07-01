@@ -1,10 +1,14 @@
 import {
   createContext,
   useContext,
-  useMemo,
+  useEffect,
   useState,
   type ReactNode,
 } from "react";
+import {
+  authService,
+  type AuthUser,
+} from "../services/auth.service";
 
 type LoginInput = {
   username: string;
@@ -12,49 +16,119 @@ type LoginInput = {
 };
 
 type AuthContextValue = {
+  authEnabled: boolean | null;
+  isLoading: boolean;
   isAuthenticated: boolean;
+  user: AuthUser | null;
   login: (input: LoginInput) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
 };
 
-const AUTH_STORAGE_KEY = "socialbot.admin.auth";
+const LEGACY_AUTH_STORAGE_KEY = "socialbot.admin.auth";
+const CSRF_STORAGE_KEY = "socialbot.admin.csrf";
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return localStorage.getItem(AUTH_STORAGE_KEY) === "1";
-  });
+  const [authEnabled, setAuthEnabled] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [legacyAuthenticated, setLegacyAuthenticated] = useState(false);
 
-  async function login(input: LoginInput): Promise<boolean> {
-    const isValid = input.username === "admin" && input.password === "123456";
+  useEffect(() => {
+    let active = true;
 
-    if (isValid) {
-      localStorage.setItem(AUTH_STORAGE_KEY, "1");
-      setIsAuthenticated(true);
-      return true;
+    async function restoreSession() {
+      try {
+        const status = await authService.getStatus();
+
+        if (!active) return;
+        setAuthEnabled(status.enabled);
+
+        if (!status.enabled) {
+          setLegacyAuthenticated(
+            localStorage.getItem(LEGACY_AUTH_STORAGE_KEY) === "1",
+          );
+          return;
+        }
+
+        localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY);
+        const [me, csrf] = await Promise.all([
+          authService.getMe(),
+          authService.getCsrf(),
+        ]);
+
+        if (!active) return;
+        sessionStorage.setItem(CSRF_STORAGE_KEY, csrf.csrfToken);
+        setUser(me.user);
+      } catch {
+        if (active) {
+          sessionStorage.removeItem(CSRF_STORAGE_KEY);
+          setUser(null);
+        }
+      } finally {
+        if (active) setIsLoading(false);
+      }
     }
 
-    return false;
+    restoreSession();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  async function login(input: LoginInput): Promise<boolean> {
+    if (authEnabled === false) {
+      const valid = input.username === "admin" && input.password === "123456";
+      if (valid) {
+        localStorage.setItem(LEGACY_AUTH_STORAGE_KEY, "1");
+        setLegacyAuthenticated(true);
+      }
+      return valid;
+    }
+
+    if (authEnabled === null) {
+      return false;
+    }
+
+    try {
+      const result = await authService.login(input);
+      sessionStorage.setItem(CSRF_STORAGE_KEY, result.csrfToken);
+      setUser(result.user);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
-  function logout() {
-    localStorage.removeItem(AUTH_STORAGE_KEY);
-    setIsAuthenticated(false);
+  async function logout() {
+    if (authEnabled) {
+      await authService
+        .logout(sessionStorage.getItem(CSRF_STORAGE_KEY))
+        .catch(() => null);
+    }
+
+    localStorage.removeItem(LEGACY_AUTH_STORAGE_KEY);
+    sessionStorage.removeItem(CSRF_STORAGE_KEY);
+    setLegacyAuthenticated(false);
+    setUser(null);
   }
 
-  const value = useMemo(
-    () => ({
-      isAuthenticated,
-      login,
-      logout,
-    }),
-    [isAuthenticated],
-  );
+  const isAuthenticated =
+    authEnabled === false ? legacyAuthenticated : !!user;
+  const value = {
+    authEnabled,
+    isLoading,
+    isAuthenticated,
+    user,
+    login,
+    logout,
+  };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const context = useContext(AuthContext);
 

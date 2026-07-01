@@ -186,6 +186,7 @@ async function createPostFromUpload(input) {
           media_type,
           scheduled_at,
           status,
+          created_by_user_id,
           created_at,
           updated_at
         )
@@ -201,6 +202,7 @@ async function createPostFromUpload(input) {
           'video',
           $8::timestamptz,
           $9,
+          $10::uuid,
           NOW(),
           NOW()
         )
@@ -220,10 +222,30 @@ async function createPostFromUpload(input) {
         input.fileSize ?? null,
         hasFutureSchedule ? scheduleAt.toISOString() : null,
         initialStatus,
+        input.createdByUserId ?? null,
       ],
     );
 
     const post = postResult.rows[0];
+
+    await executeQuery(
+      `
+        INSERT INTO post_events (
+          workspace_id,
+          post_id,
+          actor_user_id,
+          event_type,
+          details
+        )
+        VALUES ($1::uuid, $2::uuid, $3::uuid, 'created', $4::jsonb)
+      `,
+      [
+        workspaceId,
+        post.id,
+        input.createdByUserId ?? null,
+        JSON.stringify({ source: "media.upload", publishType: "reel" }),
+      ],
+    );
 
     console.log("[POST CREATED]");
     console.log(post);
@@ -384,6 +406,7 @@ async function createPostFromMediaUpload(input) {
           media_type,
           scheduled_at,
           status,
+          created_by_user_id,
           created_at,
           updated_at
         )
@@ -399,6 +422,7 @@ async function createPostFromMediaUpload(input) {
           $9,
           $10::timestamptz,
           $11,
+          $12::uuid,
           NOW(),
           NOW()
         )
@@ -421,10 +445,34 @@ async function createPostFromMediaUpload(input) {
         mediaTypeByPublishType[input.publishType],
         hasFutureSchedule ? scheduleAt.toISOString() : null,
         initialStatus,
+        input.createdByUserId ?? null,
       ],
     );
 
     const post = postResult.rows[0];
+
+    await executeQuery(
+      `
+        INSERT INTO post_events (
+          workspace_id,
+          post_id,
+          actor_user_id,
+          event_type,
+          details
+        )
+        VALUES ($1::uuid, $2::uuid, $3::uuid, 'created', $4::jsonb)
+      `,
+      [
+        workspaceId,
+        post.id,
+        input.createdByUserId ?? null,
+        JSON.stringify({
+          source: "media.upload-post",
+          publishType: input.publishType,
+          mediaItems: files.length,
+        }),
+      ],
+    );
 
     for (const [index, file] of files.entries()) {
       await executeQuery(
@@ -691,6 +739,9 @@ async function listPosts(filters = {}) {
         p.scheduled_at AS "scheduledAt",
         p.published_at AS "publishedAt",
         p.created_at AS "createdAt",
+        p.created_by_user_id::text AS "createdByUserId",
+        creator.username AS "createdByUsername",
+        creator.display_name AS "createdByDisplayName",
         p.updated_at AS "updatedAt",
         p.retry_count AS "retryCount",
         p.meta_media_id AS "metaMediaId",
@@ -711,6 +762,8 @@ async function listPosts(filters = {}) {
           ON u.id = p.upload_id
         LEFT JOIN instagram_accounts ia
           ON ia.id = p.account_id
+        LEFT JOIN socialbot_users creator
+          ON creator.id = p.created_by_user_id
         LEFT JOIN LATERAL (
           SELECT pmi.stored_filename
           FROM post_media_items pmi
@@ -794,11 +847,16 @@ async function listPostEvents(filters = {}) {
               p.video_filename AS "videoFilename",
               p.caption AS caption,
               pe.event_type AS "eventType",
+              pe.actor_user_id::text AS "actorUserId",
+              actor.username AS "actorUsername",
+              actor.display_name AS "actorDisplayName",
               pe.details,
               pe.created_at AS "createdAt"
             FROM post_events pe
             LEFT JOIN posts p
               ON p.id = pe.post_id
+            LEFT JOIN socialbot_users actor
+              ON actor.id = pe.actor_user_id
             WHERE ${where.join(" AND ")}
             ORDER BY pe.post_id, pe.created_at DESC, pe.id DESC
           ) grouped_events
@@ -813,11 +871,16 @@ async function listPostEvents(filters = {}) {
             p.video_filename AS "videoFilename",
             p.caption AS caption,
             pe.event_type AS "eventType",
+            pe.actor_user_id::text AS "actorUserId",
+            actor.username AS "actorUsername",
+            actor.display_name AS "actorDisplayName",
             pe.details,
             pe.created_at AS "createdAt"
           FROM post_events pe
           LEFT JOIN posts p
             ON p.id = pe.post_id
+          LEFT JOIN socialbot_users actor
+            ON actor.id = pe.actor_user_id
           WHERE ${where.join(" AND ")}
           ORDER BY pe.created_at DESC, pe.id DESC
           LIMIT $${param}
@@ -969,8 +1032,12 @@ async function markPostError(id, errorMessage, currentRetryCount = 0) {
   });
 }
 
-async function cancelPostSchedule(id) {
-  const result = await query(
+async function cancelPostSchedule(id, actorUserId = null) {
+  const client = await getPool().connect();
+
+  try {
+    await client.query("BEGIN");
+    const result = await client.query(
     `
       UPDATE posts
       SET
@@ -989,44 +1056,80 @@ async function cancelPostSchedule(id) {
           'retrying',
           'error'
         )
-      RETURNING id::text AS id, status::text AS status
+      RETURNING
+        id::text AS id,
+        workspace_id::text AS "workspaceId",
+        status::text AS status
     `,
-    [id],
-  );
+      [id],
+    );
 
-  if (result.rowCount === 0) {
-    return {
-      found: false,
-      payload: {
-        message:
-          "Post nao encontrado ou status atual nao permite cancelamento.",
-      },
-    };
+    if (result.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return {
+        found: false,
+        payload: {
+          message:
+            "Post nao encontrado ou status atual nao permite cancelamento.",
+        },
+      };
+    }
+
+    const post = result.rows[0];
+    await client.query(
+      `
+        INSERT INTO post_events (
+          workspace_id,
+          post_id,
+          actor_user_id,
+          event_type,
+          details
+        )
+        VALUES ($1::uuid, $2::uuid, $3::uuid, 'canceled', $4::jsonb)
+      `,
+      [
+        post.workspaceId,
+        post.id,
+        actorUserId,
+        JSON.stringify({ source: "posts.internal.cancel" }),
+      ],
+    );
+    await client.query("COMMIT");
+
+    return { found: true, payload: post };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
   }
-
-  return {
-    found: true,
-    payload: result.rows[0],
-  };
 }
 
-async function addPostEvent(workspaceId, postId, eventType, details = {}) {
+async function addPostEvent(
+  workspaceId,
+  postId,
+  eventType,
+  details = {},
+  actorUserId = null,
+) {
   await query(
     `
       INSERT INTO post_events (
         workspace_id,
         post_id,
+        actor_user_id,
         event_type,
         details
       )
       VALUES (
         $1::uuid,
         $2::uuid,
-        $3,
-        $4::jsonb
+        $3::uuid,
+        $4,
+        $5::jsonb
       )
     `,
-    [workspaceId, postId, eventType, JSON.stringify(details)],
+    [workspaceId, postId, actorUserId, eventType, JSON.stringify(details)],
   );
 
   return true;

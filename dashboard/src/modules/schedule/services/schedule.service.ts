@@ -32,6 +32,9 @@ export type PostListItem = {
   scheduledAt: string | null;
   publishedAt: string | null;
   createdAt: string;
+  createdByUserId: string | null;
+  createdByUsername: string | null;
+  createdByDisplayName: string | null;
   updatedAt: string;
   retryCount: number;
   metaMediaId: string | null;
@@ -158,9 +161,17 @@ export const scheduleService = {
   },
 
   async deleteSlot(slotId: number): Promise<{ success: boolean }> {
+    const csrfToken = sessionStorage.getItem("socialbot.admin.csrf");
     const response = await fetch(
       buildApiUrl(`/api/internal/scheduler/slots/${slotId}`),
-      { method: "DELETE", headers: { Accept: "application/json" } },
+      {
+        method: "DELETE",
+        credentials: "include",
+        headers: {
+          Accept: "application/json",
+          ...(csrfToken ? { "X-CSRF-Token": csrfToken } : {}),
+        },
+      },
     );
 
     if (!response.ok) {

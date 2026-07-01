@@ -124,24 +124,14 @@ router.post("/:id/cancel", async (req, res, next) => {
       });
     }
 
-    const result = await cancelSchedule(req.params.id);
+    const result = await cancelSchedule(
+      req.params.id,
+      req.auth?.userId ?? null,
+    );
 
     if (!result.found) {
       return res.status(404).json(result.payload);
     }
-
-    /**
-     * Evento removido temporariamente.
-     * Após implementarmos getPostById()
-     * podemos restaurar:
-     *
-     * await addEvent(
-     *   workspaceId,
-     *   postId,
-     *   "canceled",
-     *   { source: "posts.internal.cancel" }
-     * );
-     */
 
     res.json({
       ...result.payload,
@@ -191,7 +181,7 @@ router.post("/:id/publish-now", async (req, res, next) => {
       source: "user",
       queued: enqueueResult.queued,
       reason: enqueueResult.reason ?? null,
-    });
+    }, req.auth?.userId ?? null);
 
     return res.json({ success: true, ...enqueueResult });
   } catch (error) {
