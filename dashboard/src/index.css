@@ -50,6 +50,31 @@ body {
   margin-bottom: 0.9rem;
 }
 
+.session-summary {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.session-user {
+  display: grid;
+  justify-items: end;
+  line-height: 1.15;
+}
+
+.session-user strong {
+  max-width: 18rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-user span {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
 .tabs {
   display: flex;
   gap: 0.45rem;
@@ -954,6 +979,20 @@ th {
     align-items: flex-start;
     flex-direction: column;
     gap: 0.45rem;
+  }
+
+  .session-summary {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .session-user {
+    justify-items: start;
+    min-width: 0;
+  }
+
+  .session-user strong {
+    max-width: 68vw;
   }
 
   .upload-preview-grid,

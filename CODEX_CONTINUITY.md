@@ -1747,12 +1747,61 @@ Decisão de rollout:
 
 Nenhuma alteração foi aplicada na VPS durante a preparação.
 
-### Informativo da sessão programado
+## Autenticação implantada e validada na VPS em 2026-07-01
 
-Melhoria solicitada para uma etapa posterior: exibir próximo ao botão “Sair” o
-nome do usuário autenticado e seu papel, usando os dados já disponíveis no
-contexto de autenticação. O componente deve usar o username como fallback e ser
-responsivo. Esta melhoria foi apenas registrada; ainda não foi implementada.
+O usuário executou o checklist de deploy e confirmou o funcionamento do painel.
+Uma verificação posterior somente leitura confirmou:
+
+- commit implantado na VPS: `2bbf4cf`;
+- `socialbot-backend` online no PM2;
+- `socialbot-worker` online e sem restart causado por esta validação;
+- `GET https://api.hrmmotos.com.br/api/health` retornou `{"ok":true}`;
+- `GET https://api.hrmmotos.com.br/api/auth/status` retornou
+  `{"enabled":true}`;
+- tabelas presentes: `socialbot_users`, `socialbot_user_workspaces`,
+  `socialbot_sessions`, `socialbot_audit_log` e `socialbot_oauth_states`;
+- migrations `007` e `008` estão, portanto, materializadas na VPS;
+- autenticação administrativa está ativa em produção.
+
+O usuário também informou que os testes funcionais na VPS ficaram operacionais.
+Não houve alteração remota durante a verificação do Codex.
+
+Próximos desenvolvimentos programados:
+
+1. informativo do usuário e papel junto ao botão “Sair”;
+2. autenticação própria para integrações de serviço;
+3. matriz granular de permissões do operador;
+4. nome da postagem e comportamento explícito para postagem sem agendamento.
+
+## Informativo do usuário implementado localmente em 2026-07-02
+
+O cabeçalho do dashboard agora apresenta, ao lado do botão “Sair”:
+
+- nome de exibição do usuário;
+- username como fallback;
+- papel traduzido como “Administrador” ou “Operador”;
+- truncamento seguro para nomes longos;
+- layout responsivo em telas menores.
+
+Os dados vêm do contexto de autenticação já restaurado por `/api/auth/me`; não
+foi criada consulta adicional nem armazenamento paralelo. ESLint do componente
+e build de produção do dashboard foram aprovados. A alteração ainda não foi
+implantada na VPS.
+
+### Análise inicial de autenticação de serviço
+
+O mapeamento local encontrou uso externo de rotas `/api/internal` apenas em
+scripts manuais de validação, principalmente `scripts/validar_publicacao_real.sh`.
+Dashboard, coletor e worker usam sessão humana ou chamadas internas ao processo.
+
+Decisão: não criar agora uma chave de serviço com acesso amplo a todas as rotas
+internas. Antes da implementação, identificar um consumidor real, limitar rotas
+e métodos necessários, usar hash/rotação da credencial e registrar auditoria
+separada de usuários humanos.
+
+Próximo passo recomendado: validar visualmente o novo cabeçalho e então evoluir
+o modelo de permissões do operador ou implementar nome da postagem e semântica
+explícita para posts sem data.
 
 ## Desenvolvimento programado após a validação multi-tipo
 

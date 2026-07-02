@@ -120,9 +120,9 @@ backend, não apenas pela visibilidade do menu.
 Esta etapa depende da migration `007` e está validada apenas localmente. Não foi
 aplicada nem ativada na VPS.
 
-## Melhoria de interface programada
+## Informativo da sessão implementado
 
-Exibir junto ao botão “Sair” um resumo da sessão atual com:
+O cabeçalho exibe junto ao botão “Sair” um resumo da sessão atual com:
 
 - nome de exibição, usando o username como fallback;
 - papel atual (`Administrador` ou `Operador`);
@@ -130,6 +130,8 @@ Exibir junto ao botão “Sair” um resumo da sessão atual com:
   menores;
 - dados vindos do contexto autenticado e de `/api/auth/me`, sem nova consulta
   sensível ou armazenamento paralelo no navegador.
+
+Lint do componente e build de produção do dashboard foram aprovados.
 
 ## Gestão de usuários implementada
 

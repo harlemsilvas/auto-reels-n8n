@@ -13,6 +13,8 @@ const links = [
 
 export function AppLayout() {
   const { logout, user } = useAuth();
+  const userName = user?.displayName?.trim() || user?.username || null;
+  const roleLabel = user?.role === "admin" ? "Administrador" : "Operador";
   const visibleLinks =
     user?.role === "admin"
       ? [
@@ -25,10 +27,18 @@ export function AppLayout() {
   return (
     <main className="dashboard-shell">
       <header className="topbar">
-        <strong>SocialBot Admin{user ? ` — ${user.displayName}` : ""}</strong>
-        <button type="button" className="link-button" onClick={logout}>
-          Sair
-        </button>
+        <strong>SocialBot Admin</strong>
+        <div className="session-summary">
+          {userName ? (
+            <div className="session-user" aria-label="usuário conectado">
+              <strong title={user?.username}>{userName}</strong>
+              <span>{roleLabel}</span>
+            </div>
+          ) : null}
+          <button type="button" className="link-button" onClick={logout}>
+            Sair
+          </button>
+        </div>
       </header>
 
       <nav className="tabs" aria-label="navegacao principal">
