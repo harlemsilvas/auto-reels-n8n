@@ -7,7 +7,8 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "worker": "node src/worker.js",
-    "create-admin": "node scripts/create-admin-user.js"
+    "create-admin": "node scripts/create-admin-user.js",
+    "test:operator-permissions": "node scripts/test-operator-permissions.js"
   },
   "keywords": [
     "socialbot",

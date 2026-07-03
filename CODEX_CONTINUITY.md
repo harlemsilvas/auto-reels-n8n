@@ -1803,6 +1803,74 @@ Próximo passo recomendado: validar visualmente o novo cabeçalho e então evolu
 o modelo de permissões do operador ou implementar nome da postagem e semântica
 explícita para posts sem data.
 
+## Matriz inicial de permissões do operador implementada em 2026-07-02
+
+Foi criado `backend/src/modules/auth/permissions.service.js` com capacidades
+versionadas por papel. `publicUser()` agora inclui `permissions`, portanto login
+e `/api/auth/me` entregam ao dashboard a mesma matriz usada pelo backend.
+
+Operador atualmente pode:
+
+- visualizar, criar, agendar, publicar imediatamente e cancelar posts;
+- visualizar conversas e mensagens do Inbox.
+
+Operador não pode:
+
+- acessar Dashboard, Histórico, timelines ou endpoints de métricas;
+- acessar `/api/internal/posts/events`, que poderia revelar métricas por eventos;
+- responder mensagens pelas rotas atual, interna ou legada;
+- acessar Testers DM;
+- alterar horários globais;
+- gerenciar contas ou usuários.
+
+Proteções técnicas:
+
+- middleware `requirePermission()` no backend, com HTTP 403 e código
+  `PERMISSION_DENIED`;
+- compatibilidade preservada quando `ADMIN_AUTH_ENABLED=false`;
+- `PermissionRoute` no frontend;
+- menu filtrado por capacidade;
+- Inbox permanece legível para operador, mas exibe aviso no lugar do compositor;
+- fallback de rollout permite admin de backend anterior, sem liberar operador.
+
+Validações locais:
+
+- `node --check` aprovado nos arquivos backend alterados;
+- matriz testada: operador aceito em `posts.create` e negado em `metrics.view`
+  e `inbox.reply`; admin aceito em `metrics.view`;
+- ESLint aprovado nos novos componentes e arquivos do escopo;
+- build de produção do dashboard aprovado;
+- o lint isolado da página antiga do Inbox ainda aponta o débito preexistente de
+  `setState` dentro de `useEffect`;
+- nenhuma migration foi necessária;
+- nada foi aplicado na VPS nesta fase.
+
+Próximo teste: criar ou usar um operador local e confirmar menu reduzido, Inbox
+somente leitura e respostas 403 nas APIs. Depois, preparar commit e rollout do
+backend antes do dashboard para que `permissions` já esteja disponível.
+
+### Testes funcionais do operador aprovados em 2026-07-03
+
+O usuário executou os testes finais no ambiente local e confirmou que todos
+passaram. A validação cobriu o comportamento esperado do perfil operador após a
+matriz inicial de capacidades.
+
+Também foi criado `backend/scripts/test-operator-permissions.js`, disponível por
+`npm run test:operator-permissions`. O teste:
+
+- usa o primeiro operador local ativo;
+- cria uma sessão temporária sem conhecer ou alterar a senha;
+- confirma acesso à listagem de posts;
+- confirma `403 PERMISSION_DENIED` para métricas, eventos de histórico,
+  respostas do Inbox, Testers DM, horários globais, contas e usuários;
+- remove a sessão temporária em `finally`.
+
+Estado: fase validada localmente e pronta para commit/deploy. Nenhuma alteração
+desta fase foi aplicada na VPS ainda.
+
+Próxima evolução recomendada: adicionar nome/título à postagem e tornar
+explícito que uma postagem sem data entra na fila assim que possível.
+
 ## Desenvolvimento programado após a validação multi-tipo
 
 Os itens abaixo foram solicitados em 2026-06-26 e estão apenas planejados. Não

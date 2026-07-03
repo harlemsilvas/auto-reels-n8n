@@ -2,8 +2,9 @@ const express = require("express");
 const {
   requireAdminSession,
   requireCsrf,
-  requireRole,
+  requirePermission,
 } = require("../auth/admin-auth.middleware");
+const { PERMISSIONS } = require("../auth/permissions.service");
 const {
   createUser,
   listUsers,
@@ -13,7 +14,10 @@ const {
 
 const router = express.Router();
 
-router.use(requireAdminSession, requireRole("admin"));
+router.use(
+  requireAdminSession,
+  requirePermission(PERMISSIONS.USERS_MANAGE),
+);
 
 router.get("/", async (_req, res, next) => {
   try {

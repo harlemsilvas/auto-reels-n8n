@@ -2,27 +2,32 @@ import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../../modules/auth/context/AuthContext";
 
 const links = [
-  { to: "/dashboard", label: "Dashboard" },
-  { to: "/uploads", label: "Uploads" },
-  { to: "/agendamentos", label: "Agendamentos" },
-  { to: "/horarios", label: "Horarios" },
-  { to: "/historico", label: "Historico" },
-  { to: "/inbox", label: "Inbox" },
-  { to: "/inbox/testers-dm", label: "Testers DM" },
+  { to: "/dashboard", label: "Dashboard", permission: "metrics.view" },
+  { to: "/uploads", label: "Uploads", permission: "posts.create" },
+  { to: "/agendamentos", label: "Agendamentos", permission: "posts.view" },
+  {
+    to: "/horarios",
+    label: "Horarios",
+    permission: "schedule_slots.manage",
+  },
+  { to: "/historico", label: "Historico", permission: "metrics.view" },
+  { to: "/inbox", label: "Inbox", permission: "inbox.view" },
+  {
+    to: "/inbox/testers-dm",
+    label: "Testers DM",
+    permission: "inbox.manage_testers",
+  },
 ];
 
 export function AppLayout() {
-  const { logout, user } = useAuth();
+  const { can, logout, user } = useAuth();
   const userName = user?.displayName?.trim() || user?.username || null;
   const roleLabel = user?.role === "admin" ? "Administrador" : "Operador";
-  const visibleLinks =
-    user?.role === "admin"
-      ? [
-          ...links,
-          { to: "/contas", label: "Contas" },
-          { to: "/usuarios", label: "Usuários" },
-        ]
-      : links;
+  const visibleLinks = [
+    ...links,
+    { to: "/contas", label: "Contas", permission: "accounts.manage" },
+    { to: "/usuarios", label: "Usuários", permission: "users.manage" },
+  ].filter((link) => can(link.permission));
 
   return (
     <main className="dashboard-shell">

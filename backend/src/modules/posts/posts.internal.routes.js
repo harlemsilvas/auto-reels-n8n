@@ -16,6 +16,8 @@ const {
   enqueuePublishJob,
   removePublishJob,
 } = require("../scheduler/scheduler.queue");
+const { requirePermission } = require("../auth/admin-auth.middleware");
+const { PERMISSIONS } = require("../auth/permissions.service");
 
 const router = express.Router();
 
@@ -44,7 +46,10 @@ router.get("/", async (req, res, next) => {
   }
 });
 
-router.get("/events", async (req, res, next) => {
+router.get(
+  "/events",
+  requirePermission(PERMISSIONS.METRICS_VIEW),
+  async (req, res, next) => {
   try {
     const { limit, offset, postId, eventType, groupByPost } = req.query;
 
@@ -60,7 +65,8 @@ router.get("/events", async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-});
+  },
+);
 
 router.post("/:id/mark-processing", async (req, res, next) => {
   try {

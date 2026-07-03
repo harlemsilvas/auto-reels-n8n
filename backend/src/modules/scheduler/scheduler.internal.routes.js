@@ -9,6 +9,8 @@ const {
 
 const { enqueuePublishJob, getQueueStats } = require("./scheduler.queue");
 const { enqueueReadyPosts } = require("./enqueue-ready.service");
+const { requirePermission } = require("../auth/admin-auth.middleware");
+const { PERMISSIONS } = require("../auth/permissions.service");
 
 const {
   listSlots,
@@ -45,7 +47,10 @@ router.get("/stats", async (_req, res, next) => {
  * ======================================
  */
 
-router.get("/slots", async (req, res, next) => {
+router.get(
+  "/slots",
+  requirePermission(PERMISSIONS.SCHEDULE_SLOTS_MANAGE),
+  async (req, res, next) => {
   try {
     const onlyEnabled = String(req.query?.onlyEnabled ?? "false") === "true";
 
@@ -55,9 +60,13 @@ router.get("/slots", async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-});
+  },
+);
 
-router.post("/slots", async (req, res, next) => {
+router.post(
+  "/slots",
+  requirePermission(PERMISSIONS.SCHEDULE_SLOTS_MANAGE),
+  async (req, res, next) => {
   try {
     const slot = await createSlot(req.body ?? {});
 
@@ -65,9 +74,13 @@ router.post("/slots", async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-});
+  },
+);
 
-router.patch("/slots/:id", async (req, res, next) => {
+router.patch(
+  "/slots/:id",
+  requirePermission(PERMISSIONS.SCHEDULE_SLOTS_MANAGE),
+  async (req, res, next) => {
   try {
     const slot = await updateSlot(req.params.id, req.body ?? {});
 
@@ -75,9 +88,13 @@ router.patch("/slots/:id", async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-});
+  },
+);
 
-router.delete("/slots/:id", async (req, res, next) => {
+router.delete(
+  "/slots/:id",
+  requirePermission(PERMISSIONS.SCHEDULE_SLOTS_MANAGE),
+  async (req, res, next) => {
   try {
     const result = await deleteSlot(req.params.id);
 
@@ -85,7 +102,8 @@ router.delete("/slots/:id", async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-});
+  },
+);
 
 /**
  * ======================================

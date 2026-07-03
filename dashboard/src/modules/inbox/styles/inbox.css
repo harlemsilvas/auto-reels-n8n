@@ -121,3 +121,11 @@
     width: 100%;
   }
 }
+.inbox-readonly-notice {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  color: #52525b;
+  background: #f4f4f5;
+  font-size: 0.875rem;
+  text-align: center;
+}

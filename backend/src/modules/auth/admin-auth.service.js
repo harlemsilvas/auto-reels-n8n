@@ -6,6 +6,7 @@ const {
 } = require("../../config/env");
 const repository = require("./admin-auth.repository");
 const { hashPassword, verifyPassword } = require("./password.service");
+const { getRolePermissions } = require("./permissions.service");
 
 function normalizeUsername(value) {
   return String(value ?? "").trim().toLowerCase();
@@ -22,6 +23,7 @@ function publicUser(sessionOrUser) {
     email: sessionOrUser.email ?? null,
     displayName: sessionOrUser.displayName,
     role: sessionOrUser.role,
+    permissions: getRolePermissions(sessionOrUser.role),
     forcePasswordChange: !!sessionOrUser.forcePasswordChange,
   };
 }

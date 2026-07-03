@@ -6,6 +6,7 @@ export type AuthUser = {
   email: string | null;
   displayName: string;
   role: "admin" | "operator";
+  permissions?: string[];
   forcePasswordChange: boolean;
 };
 

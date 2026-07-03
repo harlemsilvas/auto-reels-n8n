@@ -1,5 +1,34 @@
 # Feature: permissões granulares por capacidade
 
+## Fase 1 implementada em 2026-07-02
+
+A primeira matriz foi implementada de forma estática e versionada no código,
+sem migration adicional:
+
+- backend calcula capacidades efetivas a partir do papel;
+- login e `/api/auth/me` devolvem `permissions`;
+- middleware `requirePermission()` nega por padrão e responde HTTP 403 com o
+  código `PERMISSION_DENIED`;
+- com autenticação desligada, o middleware mantém compatibilidade de rollout;
+- dashboard monta menus e protege rotas usando as capacidades devolvidas pelo
+  backend.
+
+Template atual do operador:
+
+- pode visualizar, criar, agendar, publicar e cancelar posts;
+- pode visualizar conversas e mensagens do Inbox;
+- não pode visualizar Dashboard, Histórico ou endpoints de métricas;
+- não pode responder mensagens por nenhuma das rotas de envio conhecidas;
+- não pode acessar Testers DM;
+- não pode alterar horários globais;
+- não pode gerenciar contas ou usuários.
+
+Também foi protegida `/api/internal/posts/events`, pois eventos de coleta
+poderiam expor dados de métricas indiretamente.
+
+Esta fase ainda não implementa concessões por usuário ou workspace. As tabelas
+propostas abaixo permanecem como evolução futura.
+
 ## Motivação
 
 Os papéis `admin` e `operator` são apenas modelos iniciais. Um operador pode,

@@ -133,6 +133,17 @@ O cabeçalho exibe junto ao botão “Sair” um resumo da sessão atual com:
 
 Lint do componente e build de produção do dashboard foram aprovados.
 
+## Matriz inicial de permissões implementada
+
+- capacidades efetivas são calculadas pelo backend e retornadas na sessão;
+- administrador recebe todas as capacidades cadastradas;
+- operador mantém criação e operação de posts e leitura do Inbox;
+- métricas, Histórico, respostas do Inbox, Testers DM, horários globais, contas
+  e usuários são negados ao operador;
+- o backend responde `403 PERMISSION_DENIED`, independentemente da interface;
+- menus, rotas e compositor de mensagem refletem as mesmas capacidades;
+- não houve mudança de schema nesta fase.
+
 ## Gestão de usuários implementada
 
 - troca obrigatória de senha com revogação de todas as sessões;

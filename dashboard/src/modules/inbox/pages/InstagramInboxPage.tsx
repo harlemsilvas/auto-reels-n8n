@@ -8,6 +8,7 @@ import ConversationMessages from "../components/ConversationMessages";
 import MessageComposer from "../components/MessageComposer";
 import EmptyConversation from "../components/EmptyConversation";
 import useRealtimeInbox from "../hooks/useRealtimeInbox";
+import { useAuth } from "../../auth/context/AuthContext";
 
 /**
  * ======================================
@@ -16,6 +17,9 @@ import useRealtimeInbox from "../hooks/useRealtimeInbox";
  */
 
 export default function InstagramInboxPage() {
+  const { can } = useAuth();
+  const canReply = can("inbox.reply");
+
   /**
    * ======================================
    * CONVERSATIONS
@@ -167,7 +171,14 @@ export default function InstagramInboxPage() {
             ====================================== */}
 
             <div className="border-t border-zinc-200 bg-white">
-              <MessageComposer sending={sending} onSend={sendMessage} />
+              {canReply ? (
+                <MessageComposer sending={sending} onSend={sendMessage} />
+              ) : (
+                <p className="inbox-readonly-notice">
+                  Acesso somente para leitura. Seu perfil não pode responder
+                  mensagens.
+                </p>
+              )}
             </div>
           </>
         )}

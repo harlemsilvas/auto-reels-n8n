@@ -6,7 +6,7 @@ import {
 import InstagramInboxPage from "../../modules/inbox/pages/InstagramInboxPage";
 import { ProtectedRoute } from "../guards/ProtectedRoute";
 import { PasswordChangeGuard } from "../guards/PasswordChangeGuard";
-import { AdminRoute } from "../guards/AdminRoute";
+import { PermissionRoute } from "../guards/PermissionRoute";
 import { AppLayout } from "../layout/AppLayout";
 import { LoginPage } from "../../modules/auth/pages/LoginPage";
 import { DashboardPage } from "../../modules/dashboard/pages/DashboardPage";
@@ -36,18 +36,42 @@ const router = createBrowserRouter([
             element: <AppLayout />,
             children: [
               { path: "/", element: <Navigate to="/dashboard" replace /> },
-              { path: "/dashboard", element: <DashboardPage /> },
               { path: "/uploads", element: <UploadPage /> },
               { path: "/agendamentos", element: <SchedulePage /> },
-              { path: "/horarios", element: <ScheduleSlotsPage /> },
-              { path: "/historico", element: <HistoryPage /> },
-              { path: "/reels/:id", element: <ReelDetailsPage /> },
               { path: "/inbox", element: <InstagramInboxPage /> },
-              { path: "/inbox/testers-dm", element: <TestersDmPage /> },
               {
-                element: <AdminRoute />,
+                element: <PermissionRoute permission="metrics.view" />,
+                children: [
+                  { path: "/dashboard", element: <DashboardPage /> },
+                  { path: "/historico", element: <HistoryPage /> },
+                  { path: "/reels/:id", element: <ReelDetailsPage /> },
+                ],
+              },
+              {
+                element: (
+                  <PermissionRoute permission="inbox.manage_testers" />
+                ),
+                children: [
+                  { path: "/inbox/testers-dm", element: <TestersDmPage /> },
+                ],
+              },
+              {
+                element: (
+                  <PermissionRoute permission="schedule_slots.manage" />
+                ),
+                children: [
+                  { path: "/horarios", element: <ScheduleSlotsPage /> },
+                ],
+              },
+              {
+                element: <PermissionRoute permission="accounts.manage" />,
                 children: [
                   { path: "/contas", element: <AccountsPage /> },
+                ],
+              },
+              {
+                element: <PermissionRoute permission="users.manage" />,
+                children: [
                   { path: "/usuarios", element: <UsersPage /> },
                 ],
               },

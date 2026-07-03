@@ -20,6 +20,7 @@ type AuthContextValue = {
   isLoading: boolean;
   isAuthenticated: boolean;
   user: AuthUser | null;
+  can: (permission: string) => boolean;
   login: (input: LoginInput) => Promise<boolean>;
   logout: () => Promise<void>;
 };
@@ -116,11 +117,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isAuthenticated =
     authEnabled === false ? legacyAuthenticated : !!user;
+  function can(permission: string) {
+    if (authEnabled === false) return true;
+    if (!user?.permissions) return user?.role === "admin";
+    return user.permissions.includes(permission);
+  }
   const value = {
     authEnabled,
     isLoading,
     isAuthenticated,
     user,
+    can,
     login,
     logout,
   };

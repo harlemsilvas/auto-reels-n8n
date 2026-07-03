@@ -1,5 +1,9 @@
-const { ADMIN_AUTH_COOKIE_NAME } = require("../../config/env");
+const {
+  ADMIN_AUTH_COOKIE_NAME,
+  ADMIN_AUTH_ENABLED,
+} = require("../../config/env");
 const { authenticateToken, validateCsrf } = require("./admin-auth.service");
+const { hasPermission } = require("./permissions.service");
 
 function readCookie(req, name) {
   const header = String(req.headers.cookie ?? "");
@@ -62,10 +66,29 @@ function requireRole(...roles) {
   };
 }
 
+function requirePermission(permission) {
+  return (req, res, next) => {
+    if (!ADMIN_AUTH_ENABLED) {
+      return next();
+    }
+
+    if (!req.auth || !hasPermission(req.auth.role, permission)) {
+      return res.status(403).json({
+        code: "PERMISSION_DENIED",
+        message: "Permissão insuficiente.",
+        permission,
+      });
+    }
+
+    return next();
+  };
+}
+
 module.exports = {
   readCookie,
   requireAdminSession,
   requireCsrf,
   requirePasswordChanged,
+  requirePermission,
   requireRole,
 };

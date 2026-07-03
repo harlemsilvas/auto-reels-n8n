@@ -31,8 +31,9 @@ const {
   requireAdminSession,
   requireCsrf,
   requirePasswordChanged,
-  requireRole,
+  requirePermission,
 } = require("./modules/auth/admin-auth.middleware");
+const { PERMISSIONS } = require("./modules/auth/permissions.service");
 
 const mediaInternalRoutes = require("./modules/media/media.internal.routes");
 
@@ -91,13 +92,37 @@ app.use((req, res, next) => {
   return requirePasswordChanged(req, res, next);
 });
 
-app.use("/api/internal/instagram", instagramSendInternalRoutes);
+app.use(
+  "/api/internal/instagram",
+  ...(ADMIN_AUTH_ENABLED
+    ? [requirePermission(PERMISSIONS.INBOX_REPLY)]
+    : []),
+  instagramSendInternalRoutes,
+);
 
-app.use("/api/internal/conversations", instagramConversationsRoutes);
+app.use(
+  "/api/internal/conversations",
+  ...(ADMIN_AUTH_ENABLED
+    ? [requirePermission(PERMISSIONS.INBOX_VIEW)]
+    : []),
+  instagramConversationsRoutes,
+);
 
-app.use("/api/inbox/send-message", instagramSendMessageRoutes);
+app.use(
+  "/api/inbox/send-message",
+  ...(ADMIN_AUTH_ENABLED
+    ? [requirePermission(PERMISSIONS.INBOX_REPLY)]
+    : []),
+  instagramSendMessageRoutes,
+);
 
-app.use("/api/realtime", realtimeRoutes);
+app.use(
+  "/api/realtime",
+  ...(ADMIN_AUTH_ENABLED
+    ? [requirePermission(PERMISSIONS.INBOX_VIEW)]
+    : []),
+  realtimeRoutes,
+);
 
 app.use((req, res, next) => {
   const startedAt = Date.now();
@@ -144,24 +169,62 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use("/api/dashboard", dashboardRoutes);
-app.use("/api/history", historyRoutes);
+app.use(
+  "/api/dashboard",
+  ...(ADMIN_AUTH_ENABLED
+    ? [requirePermission(PERMISSIONS.METRICS_VIEW)]
+    : []),
+  dashboardRoutes,
+);
+app.use(
+  "/api/history",
+  ...(ADMIN_AUTH_ENABLED
+    ? [requirePermission(PERMISSIONS.METRICS_VIEW)]
+    : []),
+  historyRoutes,
+);
 app.use("/api/media", mediaRoutes);
 
 app.use(
   "/api/internal/accounts",
-  ...(ADMIN_AUTH_ENABLED ? [requireRole("admin")] : []),
+  ...(ADMIN_AUTH_ENABLED
+    ? [requirePermission(PERMISSIONS.ACCOUNTS_MANAGE)]
+    : []),
   internalAccountsRoutes,
 );
 app.use("/api/internal/users", usersRoutes);
 app.use("/api/internal/posts", internalPostsRoutes);
 app.use("/api/internal/scheduler", internalSchedulerRoutes);
 app.use("/api/internal/queue", internalQueueRoutes);
-app.use("/api/internal/metrics", internalMetricsRoutes);
-app.use("/api/metrics", internalMetricsRoutes);
+app.use(
+  "/api/internal/metrics",
+  ...(ADMIN_AUTH_ENABLED
+    ? [requirePermission(PERMISSIONS.METRICS_VIEW)]
+    : []),
+  internalMetricsRoutes,
+);
+app.use(
+  "/api/metrics",
+  ...(ADMIN_AUTH_ENABLED
+    ? [requirePermission(PERMISSIONS.METRICS_VIEW)]
+    : []),
+  internalMetricsRoutes,
+);
 
-app.use("/api/internal/messages", instagramSendMessageRoutes);
-app.use("/api/internal/testers-dm", testersDmRoutes);
+app.use(
+  "/api/internal/messages",
+  ...(ADMIN_AUTH_ENABLED
+    ? [requirePermission(PERMISSIONS.INBOX_REPLY)]
+    : []),
+  instagramSendMessageRoutes,
+);
+app.use(
+  "/api/internal/testers-dm",
+  ...(ADMIN_AUTH_ENABLED
+    ? [requirePermission(PERMISSIONS.INBOX_MANAGE_TESTERS)]
+    : []),
+  testersDmRoutes,
+);
 
 app.use("/api/internal/media", mediaInternalRoutes);
 
