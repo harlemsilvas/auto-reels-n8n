@@ -20,6 +20,9 @@ const {
   ALLOWED_EXTENSIONS,
   validatePostUploadInput,
 } = require("../modules/uploads/post-upload.validation");
+const {
+  enqueueImmediatePost,
+} = require("../modules/uploads/immediate-queue.service");
 
 const router = express.Router();
 
@@ -95,6 +98,36 @@ async function removeUploadedFiles(files = []) {
   );
 }
 
+function resolvePostTitle(rawTitle, originalFileName) {
+  const requestedTitle = String(rawTitle ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (requestedTitle.length > 160) {
+    const error = new Error("O nome da postagem deve ter até 160 caracteres.");
+    error.status = 400;
+    throw error;
+  }
+
+  if (requestedTitle) {
+    return requestedTitle;
+  }
+
+  return path.parse(String(originalFileName ?? "publicacao")).name.slice(0, 160);
+}
+
+async function queueAfterUpload(post, input) {
+  if (input.hasSchedule) {
+    return { queued: false, reason: "scheduled" };
+  }
+
+  if (post.publishType !== "reel" && !MULTI_PUBLISH_ENABLED) {
+    return { queued: false, reason: "publish_disabled" };
+  }
+
+  return enqueueImmediatePost(post, input.actorUserId);
+}
+
 function receivePostFiles(req, res, next) {
   multiMediaUpload.array("files", 10)(req, res, (error) => {
     if (!error) {
@@ -156,6 +189,10 @@ router.post("/upload", upload.single("video"), async (req, res, next) => {
   try {
     const captionText = String(req.body?.captionText ?? "").trim();
     const scheduleAtRaw = String(req.body?.scheduleAt ?? "").trim();
+    const title = resolvePostTitle(
+      req.body?.postTitle ?? req.body?.title,
+      req.file?.originalname,
+    );
     const workspaceIdRaw = String(req.body?.workspaceId ?? "").trim();
     const workspaceId = workspaceIdRaw || null;
     const scheduleAt = scheduleAtRaw ? new Date(scheduleAtRaw) : null;
@@ -180,7 +217,7 @@ router.post("/upload", upload.single("video"), async (req, res, next) => {
     const itemId = path.parse(req.file.filename).name;
     await saveCaptionForVideo(itemId, captionText);
 
-    await createFromUpload({
+    const result = await createFromUpload({
       baseName: itemId,
       originalFileName: req.file.originalname,
       storedFileName: req.file.filename,
@@ -188,14 +225,24 @@ router.post("/upload", upload.single("video"), async (req, res, next) => {
       fileSize: req.file.size,
       storagePath: MEDIA_PENDING_DIR,
       captionText,
+      title,
       scheduleAt: scheduleAt ? scheduleAt.toISOString() : null,
       workspaceId,
       createdByUserId: req.auth?.userId ?? null,
+    });
+    const queue = await queueAfterUpload(result.payload, {
+      hasSchedule: !!scheduleAtRaw,
+      actorUserId: req.auth?.userId ?? null,
     });
 
     res.status(201).json({
       message: "Video e legenda enviados para pending.",
       itemId,
+      post: {
+        ...result.payload,
+        status: queue.queued ? "queued" : result.payload.status,
+      },
+      queue,
     });
   } catch (error) {
     next(error);
@@ -210,6 +257,10 @@ router.post("/upload-post", receivePostFiles, async (req, res, next) => {
     const workspaceIdRaw = String(req.body?.workspaceId ?? "").trim();
     const scheduleAt = scheduleAtRaw ? new Date(scheduleAtRaw) : null;
     const files = req.files ?? [];
+    const title = resolvePostTitle(
+      req.body?.postTitle ?? req.body?.title,
+      files[0]?.originalname,
+    );
 
     if (scheduleAtRaw && Number.isNaN(scheduleAt?.getTime())) {
       const error = new Error(
@@ -221,11 +272,13 @@ router.post("/upload-post", receivePostFiles, async (req, res, next) => {
 
     const mediaKinds = validatePostUploadInput({
       publishType,
+      title,
       files,
     });
 
     const result = await createFromMediaUpload({
       publishType,
+      title,
       captionText,
       scheduleAt: scheduleAt ? scheduleAt.toISOString() : null,
       workspaceId: workspaceIdRaw || null,
@@ -239,10 +292,18 @@ router.post("/upload-post", receivePostFiles, async (req, res, next) => {
         mediaKind: mediaKinds[index],
       })),
     });
+    const queue = await queueAfterUpload(result.payload, {
+      hasSchedule: !!scheduleAtRaw,
+      actorUserId: req.auth?.userId ?? null,
+    });
 
     res.status(201).json({
       message: "Post e arquivos recebidos.",
-      post: result.payload,
+      post: {
+        ...result.payload,
+        status: queue.queued ? "queued" : result.payload.status,
+      },
+      queue,
     });
   } catch (error) {
     await removeUploadedFiles(req.files);

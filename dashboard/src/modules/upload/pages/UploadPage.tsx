@@ -138,6 +138,7 @@ export function UploadPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [publishType, setPublishType] = useState<PublishType>("reel");
   const [files, setFiles] = useState<File[]>([]);
+  const [postTitle, setPostTitle] = useState("");
   const [captionText, setCaptionText] = useState("");
   const [scheduleDate, setScheduleDate] = useState("");
   const [scheduleSlot, setScheduleSlot] = useState("");
@@ -199,7 +200,10 @@ export function UploadPage() {
   );
 
   const canSubmit =
-    !isUploading && files.length > 0 && !fileValidationError;
+    !isUploading &&
+    postTitle.trim().length > 0 &&
+    files.length > 0 &&
+    !fileValidationError;
 
   function resetFiles() {
     setFiles([]);
@@ -241,22 +245,44 @@ export function UploadPage() {
       return;
     }
 
+    if (!postTitle.trim()) {
+      setFormError("Informe um nome para identificar a postagem.");
+      return;
+    }
+
+    if (!!scheduleDate !== !!scheduleSlot) {
+      setFormError("Para agendar, informe o dia e o horário.");
+      return;
+    }
+
     setFormError(null);
     setSuccessMessage(null);
 
     const response = await uploadPost({
       files,
+      postTitle: postTitle.trim(),
       publishType,
       captionText: captionText.trim(),
       scheduleAt: scheduleAt || undefined,
     });
 
     if (response) {
+      const queueMessage = response.queue.queued
+        ? "e enviada para a fila"
+        : response.queue.reason === "scheduled"
+          ? "e agendada"
+          : response.queue.reason === "publish_disabled"
+            ? "em modo de preparação"
+            : response.queue.reason === "queue_error"
+              ? "e mantida pendente para nova tentativa da fila"
+              : "criada";
+
       setSuccessMessage(
-        `Publicação criada como ${selectedType.label} (${response.post.id}).`,
+        `“${response.post.title}” foi criada como ${selectedType.label} ${queueMessage} (${response.post.id}).`,
       );
       resetFiles();
       setCaptionText("");
+      setPostTitle("");
       setScheduleDate("");
       setScheduleSlot("");
     }
@@ -293,6 +319,19 @@ export function UploadPage() {
                 </option>
               ))}
             </select>
+          </label>
+
+          <label>
+            Nome da postagem
+            <input
+              type="text"
+              value={postTitle}
+              maxLength={160}
+              required
+              disabled={isUploading}
+              placeholder="Ex.: Campanha Potenza GT — Julho"
+              onChange={(event) => setPostTitle(event.target.value)}
+            />
           </label>
 
           <div className="upload-type-hint">
@@ -424,7 +463,16 @@ export function UploadPage() {
             <p className="helper-text">
               Agendamento selecionado: {scheduleDate} às {scheduleSlot}
             </p>
-          ) : null}
+          ) : !scheduleDate && !scheduleSlot ? (
+            <p className="upload-immediate-notice">
+              Sem data: a publicação entrará na fila assim que o upload for
+              concluído.
+            </p>
+          ) : (
+            <p className="error-text">
+              Para agendar, informe o dia e o horário.
+            </p>
+          )}
 
           {formError ? <p className="error-text">{formError}</p> : null}
           {error ? <p className="error-text">{error}</p> : null}

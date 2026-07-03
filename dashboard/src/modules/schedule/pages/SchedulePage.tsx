@@ -367,6 +367,7 @@ export function SchedulePage() {
               <thead>
                 <tr>
                   <th>ID</th>
+                  <th>Nome</th>
                   <th>Status</th>
                   <th>Tipo</th>
                   <th>Criado por</th>
@@ -382,6 +383,7 @@ export function SchedulePage() {
                 {sortedPosts.map((post) => (
                   <tr key={post.id}>
                     <td className="mono-text">{shortId(post.id)}</td>
+                    <td>{post.title ?? "Sem nome"}</td>
                     <td>
                       <span
                         className={`status-pill status-${getStatusLabel(post.status).tone}`}

@@ -26,6 +26,7 @@ export type EnqueueReadyResponse = {
 
 export type PostListItem = {
   id: string;
+  title: string | null;
   status: string;
   caption: string | null;
   errorMessage: string | null;

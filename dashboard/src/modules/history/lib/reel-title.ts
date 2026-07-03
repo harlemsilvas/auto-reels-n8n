@@ -1,5 +1,6 @@
 type ReelIdentity = {
   postId: string;
+  postTitle?: string | null;
   videoFilename?: string | null;
   caption?: string | null;
 };
@@ -13,6 +14,14 @@ function titleFromFilename(filename: string) {
 }
 
 export function getReelTitle(item: ReelIdentity) {
+  const postTitle = item.postTitle?.trim();
+
+  if (postTitle) {
+    return postTitle.length > 80
+      ? `${postTitle.slice(0, 77).trim()}...`
+      : postTitle;
+  }
+
   const captionTitle = item.caption
     ?.split(/\r?\n/)
     .map((line) => line.trim())

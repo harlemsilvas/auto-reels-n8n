@@ -1871,6 +1871,108 @@ desta fase foi aplicada na VPS ainda.
 Próxima evolução recomendada: adicionar nome/título à postagem e tornar
 explícito que uma postagem sem data entra na fila assim que possível.
 
+## Nome da postagem e fila imediata preparados localmente em 2026-07-03
+
+Foi criada a migration `009-post-title-immediate-queue.sql` e seu verificador:
+
+- `posts.title VARCHAR(160)` opcional para compatibilidade;
+- constraint contra título vazio;
+- índice parcial `idx_posts_title`;
+- schema inicial alinhado;
+- posts antigos preservados sem backfill fictício.
+
+Backend:
+
+- endpoints legado e multi-tipo aceitam `postTitle` ou `title`;
+- título ausente em cliente legado usa o nome do primeiro arquivo como fallback;
+- criação retorna título e workspace necessários para orquestração;
+- post sem data é enviado ao BullMQ imediatamente após o commit;
+- sucesso marca `queued` e registra evento com origem
+  `media.upload.immediate`;
+- falha de Redis não desfaz o upload: mantém `pending`, registra `queue_failed`
+  quando possível e permite recuperação pelo coletor;
+- formatos multi-tipo não são enfileirados quando sua publicação está
+  desabilitada;
+- consultas de posts e eventos retornam o título.
+
+Dashboard:
+
+- título obrigatório com até 160 caracteres;
+- aviso explícito de publicação assim que possível quando não há data;
+- dia sem horário ou horário sem dia bloqueia o envio;
+- mensagem de sucesso diferencia fila, agendamento, preparação e erro de fila;
+- Agendamentos exibe a coluna Nome;
+- Histórico prioriza `postTitle` quando disponível.
+
+Validações locais:
+
+- migration aplicada duas vezes e verificador aprovado;
+- nove posts antigos permaneceram válidos com título nulo;
+- bootstrap completo aprovado em banco temporário removido ao final;
+- consulta real da listagem aprovada;
+- fila simulada com sucesso confirmou `markQueued` e evento `queued`;
+- falha simulada retornou `queue_error` e registrou `queue_failed` sem lançar
+  erro para o upload;
+- sintaxe backend aprovada;
+- ESLint do escopo e build do dashboard aprovados;
+- `SchedulePage` mantém débito preexistente de lint em `useEffect`;
+- nenhuma publicação real foi disparada;
+- migration `009` ainda não foi aplicada na VPS.
+
+Próximo passo: testar localmente um post com data futura e as validações de
+agendamento parcial. O teste real sem data exige autorização explícita porque
+pode publicar no Instagram imediatamente.
+
+### Ambiente local iniciado para validação em 2026-07-03
+
+Antes de iniciar o worker foram encontrados e, com autorização do usuário,
+cancelados três posts antigos:
+
+- `c86fed7b-697e-4a3d-9972-f4f6a20a72ca`;
+- `52a5f978-5b9b-4efb-98a9-b123e663224a`;
+- `e6964574-32a6-405f-96b4-d5d1d441345d`.
+
+Os três receberam evento `canceled`. A fila local `socialbot_publish` foi
+limpa por completo; havia um job Reel ativo órfão e, depois da limpeza, os
+estados waiting, active e delayed ficaram em zero.
+
+Serviços locais ativos para teste:
+
+- backend em `http://localhost:3101`, processo Node Windows `16856`;
+- frontend em `http://localhost:5181`, servido pelo Vite no WSL;
+- worker em processo Node Windows `10920`;
+- PostgreSQL, Redis e n8n ativos no Docker.
+
+O backend foi iniciado somente para esta sessão com
+`AUTO_ENQUEUE_READY_ENABLED=false`, evitando recolher agendamentos antigos.
+O novo enfileiramento imediato após upload continua ativo porque chama BullMQ
+diretamente. Para testar posts com data futura, lembrar que o coletor automático
+está desligado até o backend ser reiniciado normalmente.
+
+### Teste funcional de título e agendamento em 2026-07-03
+
+Dois carrosséis com quatro mídias cada foram criados pelo administrador:
+
+- `24f63912-2320-4fe8-9f47-b1bbaf77098e`:
+  - título `380xt-adv150`;
+  - criado sem data;
+  - status `pending`;
+  - apenas evento `created`;
+  - nenhum job no Redis;
+  - comportamento esperado porque `MULTI_PUBLISH_ENABLED=false` localmente:
+    formato permanece em preparação e não entra em uma fila que falharia.
+- `b48fb947-97e5-4157-80ab-7ad8e2ca2294`:
+  - título `Campanha Potenza 380XT para Scooters`;
+  - status `scheduled`;
+  - agendado para `2026-07-04 10:30:00-03`;
+  - apenas evento `created` e nenhum job antecipado no Redis.
+
+Ambos preservaram autoria `admin`, `retry_count=0`, ausência de erros e quatro
+itens de mídia. Conclusão: título e agendamento futuro estão validados. Para
+validar entrada imediata real de um carrossel, seria necessário ativar
+`MULTI_PUBLISH_ENABLED=true`, disponibilizar URLs públicas válidas e aceitar a
+possibilidade de publicação externa.
+
 ## Desenvolvimento programado após a validação multi-tipo
 
 Os itens abaixo foram solicitados em 2026-06-26 e estão apenas planejados. Não

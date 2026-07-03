@@ -32,6 +32,7 @@ export type PublishType =
 
 export type UploadPostInput = {
   files: File[];
+  postTitle: string;
   publishType: PublishType;
   captionText: string;
   workspaceId?: string;
@@ -42,11 +43,19 @@ export type UploadPostResponse = {
   message: string;
   post: {
     id: string;
+    title: string;
     status: string;
     publishType: PublishType;
     mediaType: "image" | "video" | "carousel";
     scheduledAt: string | null;
     mediaItems: number;
+  };
+  queue: {
+    queued: boolean;
+    reason?: string;
+    jobId?: string;
+    message?: string;
+    statusSync?: boolean;
   };
 };
 

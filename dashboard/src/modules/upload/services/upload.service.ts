@@ -47,6 +47,7 @@ export const uploadService = {
     });
 
     formData.append("publishType", input.publishType);
+    formData.append("postTitle", input.postTitle);
     formData.append("captionText", input.captionText);
 
     if (input.workspaceId) {

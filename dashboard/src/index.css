@@ -1009,3 +1009,12 @@ th {
     text-align: left;
   }
 }
+.upload-immediate-notice {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid #8acbb9;
+  border-radius: 10px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-size: 0.88rem;
+}

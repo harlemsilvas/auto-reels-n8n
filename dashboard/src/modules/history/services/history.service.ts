@@ -4,6 +4,7 @@ import { getJson, postJson } from "../../../shared/lib/http";
 export type PostEventItem = {
   id: number;
   postId: string;
+  postTitle: string | null;
   videoFilename: string | null;
   caption: string | null;
   eventType: string;

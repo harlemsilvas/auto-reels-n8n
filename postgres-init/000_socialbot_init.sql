@@ -220,6 +220,8 @@ CREATE TABLE IF NOT EXISTS posts (
 
     video_filename TEXT,
 
+    title VARCHAR(160),
+
     caption TEXT,
 
     hashtags TEXT[],
@@ -235,6 +237,10 @@ CREATE TABLE IF NOT EXISTS posts (
     carousel_children JSONB NOT NULL DEFAULT '[]'::jsonb,
     cover_image_filename TEXT,
     publish_options JSONB NOT NULL DEFAULT '{}'::jsonb,
+
+    CONSTRAINT posts_title_not_blank_check CHECK (
+      title IS NULL OR LENGTH(BTRIM(title)) BETWEEN 1 AND 160
+    ),
 
     scheduled_at TIMESTAMPTZ,
 
@@ -457,6 +463,10 @@ ON posts(created_at);
 
 CREATE INDEX IF NOT EXISTS idx_posts_publish_type
 ON posts(publish_type);
+
+CREATE INDEX IF NOT EXISTS idx_posts_title
+ON posts(title)
+WHERE title IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_posts_created_by_user
 ON posts(created_by_user_id)

@@ -178,6 +178,7 @@ async function createPostFromUpload(input) {
           workspace_id,
           account_id,
           upload_id,
+          title,
           caption,
           source_path,
           video_filename,
@@ -198,16 +199,19 @@ async function createPostFromUpload(input) {
           $5,
           $6,
           $7,
+          $8,
           'reel',
           'video',
-          $8::timestamptz,
-          $9,
-          $10::uuid,
+          $9::timestamptz,
+          $10,
+          $11::uuid,
           NOW(),
           NOW()
         )
         RETURNING
           id::text AS id,
+          workspace_id::text AS "workspaceId",
+          title,
           status::text AS status,
           publish_type AS "publishType",
           scheduled_at AS "scheduledAt"
@@ -216,6 +220,7 @@ async function createPostFromUpload(input) {
         workspaceId,
         account.id,
         uploadId,
+        input.title,
         input.captionText ?? null,
         input.storagePath,
         input.storedFileName ?? null,
@@ -398,6 +403,7 @@ async function createPostFromMediaUpload(input) {
           workspace_id,
           account_id,
           upload_id,
+          title,
           caption,
           source_path,
           video_filename,
@@ -420,14 +426,17 @@ async function createPostFromMediaUpload(input) {
           $7,
           $8,
           $9,
-          $10::timestamptz,
-          $11,
-          $12::uuid,
+          $10,
+          $11::timestamptz,
+          $12,
+          $13::uuid,
           NOW(),
           NOW()
         )
         RETURNING
           id::text AS id,
+          workspace_id::text AS "workspaceId",
+          title,
           status::text AS status,
           publish_type AS "publishType",
           media_type AS "mediaType",
@@ -437,6 +446,7 @@ async function createPostFromMediaUpload(input) {
         workspaceId,
         account.id,
         uploads[0].id,
+        input.title,
         input.captionText || null,
         primaryFile.storagePath,
         isLegacyReel ? primaryFile.storedFileName : null,
@@ -645,6 +655,7 @@ async function getPostForPublishing(id) {
     `
       SELECT
         p.id::text AS id,
+        p.title,
         p.status::text AS status,
         p.caption,
         p.scheduled_at AS "scheduledAt",
@@ -733,6 +744,7 @@ async function listPosts(filters = {}) {
     `
       SELECT
         p.id::text AS id,
+        p.title,
         p.status::text AS status,
         p.caption,
         p.error_message AS "errorMessage",
@@ -845,6 +857,7 @@ async function listPostEvents(filters = {}) {
               pe.id,
               pe.post_id::text AS "postId",
               p.video_filename AS "videoFilename",
+              p.title AS "postTitle",
               p.caption AS caption,
               pe.event_type AS "eventType",
               pe.actor_user_id::text AS "actorUserId",
@@ -869,6 +882,7 @@ async function listPostEvents(filters = {}) {
             pe.id,
             pe.post_id::text AS "postId",
             p.video_filename AS "videoFilename",
+            p.title AS "postTitle",
             p.caption AS caption,
             pe.event_type AS "eventType",
             pe.actor_user_id::text AS "actorUserId",
