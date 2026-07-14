@@ -124,13 +124,11 @@ Na interface:
 
 ## Próximas fases planejadas
 
-1. Preparar deploy da `010` e da interface atual para VPS, com backup e
-   verificação.
-2. Melhorar a prévia da postagem por TAG antes da criação final.
-3. Permitir editar variações geradas diretamente pela interface.
-4. Evoluir o gerador para provedor de IA configurável, mantendo modo teste e
+1. Preparar deploy incremental da interface atual para VPS, preservando
+   migrations já aplicadas.
+2. Evoluir o gerador para provedor de IA configurável, mantendo modo teste e
    aprovação humana obrigatória.
-5. Criar gestão mais fina de permissões para operadores.
+3. Criar gestão mais fina de permissões para operadores.
 
 ## Segurança
 
@@ -172,3 +170,61 @@ Validação executada:
 Decisão de segurança: esta etapa não publica, não enfileira e não chama IA
 externa. A variação gerada só pode virar postagem após aprovação humana e uso no
 fluxo de criação por TAG.
+
+## Atualização 2026-07-13 — revisão e edição de variações
+
+Foi implementada a primeira interface de revisão das variações de texto na tela
+`/modelos`.
+
+Dashboard:
+
+- botão "Revisar" em cada variação;
+- legenda exibida com quebra de linha e área rolável, evitando tabela
+  espremida;
+- formulário de edição para tipo de publicação, tom, objetivo, título, legenda,
+  hashtags e CTA;
+- botão "Salvar revisão", que grava a variação como `generated`;
+- botão "Salvar e aprovar", disponível somente para usuários com
+  `media_templates.approve`;
+- botão para cancelar edição sem alterar dados.
+
+Backend:
+
+- reaproveita o endpoint já existente
+  `PATCH /api/media/templates/:id/text-variants/:variantId`;
+- não exige migration nova;
+- não altera worker, n8n ou publicação real.
+
+Validação executada:
+
+- `npm run build` no dashboard via WSL.
+
+Decisão de segurança: editar uma variação aprovada por "Salvar revisão" volta o
+texto para `generated`, exigindo nova aprovação antes de criar postagens.
+
+## Atualização 2026-07-13 — prévia da postagem por TAG
+
+Foi implementada uma prévia visual antes da criação final da postagem pela TAG.
+
+Dashboard:
+
+- a seção "Criar postagem pela TAG" agora mostra status inicial previsto
+  (`pending` ou `scheduled`);
+- exibe tipo de publicação, quantidade de mídias, data de agendamento, título,
+  legenda, CTA e hashtags;
+- lista as mídias que serão copiadas para a postagem, com ordem, tipo, papel,
+  arquivo e tamanho;
+- bloqueia o botão de confirmação quando o modelo não está ativo, não possui
+  mídia ou não há variação aprovada;
+- o botão passou a ser "Confirmar criação da postagem", deixando mais claro que
+  a prévia é a última etapa antes de gravar o post.
+
+Backend:
+
+- não houve alteração;
+- o fluxo continua usando `POST /api/media/templates/by-tag/:tag/posts`;
+- não houve migration nova, alteração de worker, n8n ou publicação real.
+
+Validação executada:
+
+- `npm run build` no dashboard via WSL.

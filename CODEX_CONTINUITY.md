@@ -2363,10 +2363,56 @@ Validações executadas:
 - `node --check backend/src/modules/media-templates/media-templates.routes.js`;
 - `npm run build` no dashboard via WSL.
 
-O usuário testou a criação de agendamentos a partir dos modelos localmente. O
-próximo passo técnico recomendado é melhorar a prévia/edição da variação antes
-da aprovação e preparar o deploy VPS da Feature 002 com backup, migrations e
-deploy do dashboard.
+O usuário testou a criação de agendamentos a partir dos modelos localmente e
+confirmou que a VPS ficou funcionando como a local.
+
+#### Revisão e edição de variações de texto
+
+Em 2026-07-13 foi implementada a revisão direta das variações na página
+`/modelos`, sem migration nova e sem alterar backend de publicação:
+
+- `dashboard/src/modules/media-templates/services/mediaTemplates.service.ts`
+  passou a expor `updateTextVariant`;
+- `dashboard/src/modules/media-templates/pages/MediaTemplatesPage.tsx` ganhou
+  botão "Revisar" por variação;
+- o texto da legenda agora é exibido com quebra de linha e rolagem na tabela;
+- o formulário de revisão permite editar tipo, tom, objetivo, título, legenda,
+  hashtags e CTA;
+- "Salvar revisão" grava a variação como `generated`;
+- "Salvar e aprovar" grava como `approved` apenas para usuários com
+  `media_templates.approve`;
+- cancelar edição não altera dados.
+
+Validação executada:
+
+- `npm run build` no dashboard via WSL.
+
+Decisão de segurança: se uma variação aprovada for editada por "Salvar revisão",
+ela volta para `generated`, exigindo nova aprovação antes de ser usada para
+criar postagens.
+
+#### Prévia da postagem por TAG
+
+Em 2026-07-13 foi implementada a prévia da postagem antes da criação final pelo
+fluxo de TAG, sem migration nova e sem alterar backend/worker/n8n:
+
+- a seção "Criar postagem pela TAG" mostra status inicial previsto
+  (`pending` ou `scheduled`);
+- exibe tipo, quantidade de mídias, agendamento, título, legenda, CTA e
+  hashtags;
+- lista as mídias do modelo que serão copiadas para `post_media_items`, com
+  ordem, tipo, papel, arquivo e tamanho;
+- bloqueia a confirmação quando o modelo não está `active`, não possui mídia ou
+  não há variação aprovada;
+- o botão foi renomeado para "Confirmar criação da postagem".
+
+Validação executada:
+
+- `npm run build` no dashboard via WSL.
+
+Próximo passo técnico recomendado: preparar commit/deploy incremental da
+interface ou avançar para provedor real de IA configurável, mantendo o modo
+teste e a aprovação humana.
 
 ## Desenvolvimento programado após a validação multi-tipo
 

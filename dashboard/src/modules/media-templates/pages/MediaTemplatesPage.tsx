@@ -7,6 +7,8 @@ import {
   type MediaTemplate,
   type MediaTemplateStatus,
   type PublishType,
+  type TextVariant,
+  type TextVariantStatus,
 } from "../services/mediaTemplates.service";
 
 const TEMPLATE_INITIAL_FORM = {
@@ -33,6 +35,8 @@ const VARIANT_INITIAL_FORM = {
   hashtags: "",
   cta: "",
 };
+
+type VariantFormState = typeof VARIANT_INITIAL_FORM;
 
 const POST_INITIAL_FORM = {
   textVariantId: "",
@@ -65,6 +69,12 @@ function formatDate(value?: string | null) {
   }).format(new Date(value));
 }
 
+function formatFileSize(value?: number | null) {
+  if (!value) return "-";
+  if (value < 1024 * 1024) return `${Math.round(value / 1024)} KB`;
+  return `${(value / 1024 / 1024).toFixed(1)} MB`;
+}
+
 function statusLabel(status: string) {
   const labels: Record<string, string> = {
     active: "Ativo",
@@ -90,6 +100,18 @@ function publishTypeLabel(type: string) {
   return labels[type] ?? type;
 }
 
+function variantToForm(variant: TextVariant): VariantFormState {
+  return {
+    publishType: variant.publishType,
+    tone: variant.tone ?? "",
+    objective: variant.objective ?? "",
+    title: variant.title ?? "",
+    caption: variant.caption,
+    hashtags: variant.hashtags.join("\n"),
+    cta: variant.cta ?? "",
+  };
+}
+
 export function MediaTemplatesPage() {
   const { can } = useAuth();
   const canCreate = can("media_templates.create");
@@ -103,6 +125,9 @@ export function MediaTemplatesPage() {
     useState<MediaTemplate | null>(null);
   const [templateForm, setTemplateForm] = useState(TEMPLATE_INITIAL_FORM);
   const [variantForm, setVariantForm] = useState(VARIANT_INITIAL_FORM);
+  const [editingVariantId, setEditingVariantId] = useState("");
+  const [editingVariantForm, setEditingVariantForm] =
+    useState<VariantFormState>(VARIANT_INITIAL_FORM);
   const [postForm, setPostForm] = useState(POST_INITIAL_FORM);
   const [mediaForm, setMediaForm] = useState(MEDIA_INITIAL_FORM);
   const [q, setQ] = useState("");
@@ -119,6 +144,45 @@ export function MediaTemplatesPage() {
   const approvedVariants = useMemo(
     () => selectedVariants.filter((variant) => variant.status === "approved"),
     [selectedVariants],
+  );
+  const selectedPostVariant = useMemo(
+    () =>
+      approvedVariants.find((item) => item.id === postForm.textVariantId) ??
+      approvedVariants[0] ??
+      null,
+    [approvedVariants, postForm.textVariantId],
+  );
+  const postPreview = useMemo(() => {
+    if (!selectedTemplate || !selectedPostVariant) return null;
+
+    const mediaItems = selectedTemplate.mediaItems ?? [];
+    const scheduledAt = postForm.scheduledAt
+      ? new Date(postForm.scheduledAt)
+      : null;
+
+    return {
+      title: postForm.title.trim() || selectedPostVariant.title || selectedTemplate.name,
+      status:
+        scheduledAt && scheduledAt.getTime() > Date.now()
+          ? "scheduled"
+          : "pending",
+      scheduledAt: scheduledAt ? formatDate(scheduledAt.toISOString()) : null,
+      publishType: selectedPostVariant.publishType,
+      caption: selectedPostVariant.caption,
+      hashtags: selectedPostVariant.hashtags,
+      cta: selectedPostVariant.cta,
+      mediaItems,
+      canCreate:
+        selectedTemplate.status === "active" &&
+        mediaItems.length > 0 &&
+        selectedPostVariant.status === "approved",
+    };
+  }, [postForm.scheduledAt, postForm.title, selectedPostVariant, selectedTemplate]);
+  const editingVariant = useMemo(
+    () =>
+      selectedVariants.find((variant) => variant.id === editingVariantId) ??
+      null,
+    [editingVariantId, selectedVariants],
   );
 
   async function loadList() {
@@ -207,6 +271,18 @@ export function MediaTemplatesPage() {
     if (selectedId) {
       await loadSelected(selectedId);
     }
+  }
+
+  function startEditVariant(variant: TextVariant) {
+    setEditingVariantId(variant.id);
+    setEditingVariantForm(variantToForm(variant));
+    setError(null);
+    setMessage(null);
+  }
+
+  function cancelEditVariant() {
+    setEditingVariantId("");
+    setEditingVariantForm(VARIANT_INITIAL_FORM);
   }
 
   async function createTemplate(event: FormEvent<HTMLFormElement>) {
@@ -368,6 +444,51 @@ export function MediaTemplatesPage() {
     }
   }
 
+  async function saveVariantReview(status: TextVariantStatus = "generated") {
+    if (!selectedId || !editingVariantId) return;
+
+    if (!editingVariantForm.caption.trim()) {
+      setError("Legenda da variação é obrigatória.");
+      return;
+    }
+
+    setIsSaving(true);
+    setError(null);
+    setMessage(null);
+
+    try {
+      await mediaTemplatesService.updateTextVariant(
+        selectedId,
+        editingVariantId,
+        {
+          publishType: editingVariantForm.publishType,
+          tone: editingVariantForm.tone || undefined,
+          objective: editingVariantForm.objective || undefined,
+          title: editingVariantForm.title || undefined,
+          caption: editingVariantForm.caption,
+          hashtags: splitLines(editingVariantForm.hashtags),
+          cta: editingVariantForm.cta || undefined,
+          status,
+        },
+      );
+      setMessage(
+        status === "approved"
+          ? "Variação salva e aprovada."
+          : "Revisão salva. Aprove quando estiver pronta para uso.",
+      );
+      cancelEditVariant();
+      await refreshSelected();
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Erro ao salvar revisão.",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   async function rejectVariant(variantId: string) {
     if (!selectedId) return;
     setIsSaving(true);
@@ -392,12 +513,17 @@ export function MediaTemplatesPage() {
     event.preventDefault();
     if (!selectedTemplate) return;
 
-    const variant =
-      approvedVariants.find((item) => item.id === postForm.textVariantId) ??
-      approvedVariants[0];
+    const variant = selectedPostVariant;
 
     if (!variant) {
       setError("Aprove uma variação de texto antes de criar a postagem.");
+      return;
+    }
+
+    if (!postPreview?.canCreate) {
+      setError(
+        "Revise a prévia: o modelo precisa estar ativo, com mídia cadastrada e variação aprovada.",
+      );
       return;
     }
 
@@ -992,11 +1118,98 @@ export function MediaTemplatesPage() {
                 }
               />
             </label>
+            {postPreview ? (
+              <div
+                className="panel-card"
+                style={{ background: "#fffaf0", borderStyle: "dashed" }}
+              >
+                <h3>Prévia antes de criar</h3>
+                <dl className="stat-list">
+                  <div>
+                    <dt>Status inicial</dt>
+                    <dd>
+                      {postPreview.status === "scheduled"
+                        ? "Agendado"
+                        : "Pendente"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Tipo</dt>
+                    <dd>{publishTypeLabel(postPreview.publishType)}</dd>
+                  </div>
+                  <div>
+                    <dt>Mídias</dt>
+                    <dd>{postPreview.mediaItems.length}</dd>
+                  </div>
+                  <div>
+                    <dt>Agendamento</dt>
+                    <dd>{postPreview.scheduledAt ?? "Sem data futura"}</dd>
+                  </div>
+                </dl>
+                {!postPreview.canCreate ? (
+                  <p className="error-text">
+                    Para criar a postagem, o modelo deve estar ativo, ter pelo
+                    menos uma mídia e usar uma variação aprovada.
+                  </p>
+                ) : null}
+                <p>
+                  <strong>Título:</strong> {postPreview.title}
+                </p>
+                <p style={{ whiteSpace: "pre-wrap" }}>
+                  <strong>Legenda:</strong>
+                  {"\n"}
+                  {postPreview.caption}
+                </p>
+                {postPreview.cta ? (
+                  <p>
+                    <strong>CTA:</strong> {postPreview.cta}
+                  </p>
+                ) : null}
+                {postPreview.hashtags.length ? (
+                  <div className="hero-chip-list">
+                    {postPreview.hashtags.map((hashtag) => (
+                      <span key={hashtag} className="chip">
+                        {hashtag}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Ordem</th>
+                        <th>Tipo</th>
+                        <th>Papel</th>
+                        <th>Arquivo</th>
+                        <th>Tamanho</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {postPreview.mediaItems.map((item) => (
+                        <tr key={item.id}>
+                          <td>{item.sortOrder}</td>
+                          <td>{item.mediaKind}</td>
+                          <td>{item.role}</td>
+                          <td>{item.originalFilename ?? item.storedFilename}</td>
+                          <td>{formatFileSize(item.fileSize)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+              <p>
+                Aprove uma variação de texto para visualizar a prévia da
+                postagem antes de criar.
+              </p>
+            )}
             <button
               type="submit"
-              disabled={isSaving || approvedVariants.length === 0}
+              disabled={isSaving || !postPreview?.canCreate}
             >
-              Criar postagem
+              Confirmar criação da postagem
             </button>
           </form>
         </article>
@@ -1023,9 +1236,30 @@ export function MediaTemplatesPage() {
                     <td>{publishTypeLabel(variant.publishType)}</td>
                     <td>{statusLabel(variant.status)}</td>
                     <td>{variant.title ?? "-"}</td>
-                    <td>{variant.caption}</td>
+                    <td>
+                      <div
+                        style={{
+                          maxWidth: 520,
+                          maxHeight: 180,
+                          overflow: "auto",
+                          whiteSpace: "pre-wrap",
+                        }}
+                      >
+                        {variant.caption}
+                      </div>
+                    </td>
                     <td>{formatDate(variant.approvedAt)}</td>
                     <td>
+                      {canUpdate ? (
+                        <button
+                          type="button"
+                          className="link-button"
+                          onClick={() => startEditVariant(variant)}
+                          disabled={isSaving}
+                        >
+                          Revisar
+                        </button>
+                      ) : null}
                       {canApprove && variant.status !== "approved" ? (
                         <button
                           type="button"
@@ -1057,6 +1291,141 @@ export function MediaTemplatesPage() {
               </tbody>
             </table>
           </div>
+          {canUpdate && editingVariant ? (
+            <form
+              className="upload-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void saveVariantReview("generated");
+              }}
+            >
+              <h3>Revisar variação</h3>
+              <p>
+                Editando {publishTypeLabel(editingVariant.publishType)} — status
+                atual: {statusLabel(editingVariant.status)}. Salvar revisão
+                deixa o texto como gerado; use "Salvar e aprovar" somente quando
+                estiver pronto para criar postagens.
+              </p>
+              <label>
+                Tipo de publicação
+                <select
+                  value={editingVariantForm.publishType}
+                  onChange={(event) =>
+                    setEditingVariantForm({
+                      ...editingVariantForm,
+                      publishType: event.target.value as PublishType,
+                    })
+                  }
+                >
+                  <option value="feed_image">Feed imagem</option>
+                  <option value="feed_carousel">Carrossel</option>
+                  <option value="reel">Reel</option>
+                  <option value="story_image">Story imagem</option>
+                  <option value="story_video">Story vídeo</option>
+                </select>
+              </label>
+              <label>
+                Tom
+                <input
+                  value={editingVariantForm.tone}
+                  onChange={(event) =>
+                    setEditingVariantForm({
+                      ...editingVariantForm,
+                      tone: event.target.value,
+                    })
+                  }
+                />
+              </label>
+              <label>
+                Objetivo
+                <input
+                  value={editingVariantForm.objective}
+                  onChange={(event) =>
+                    setEditingVariantForm({
+                      ...editingVariantForm,
+                      objective: event.target.value,
+                    })
+                  }
+                />
+              </label>
+              <label>
+                Título
+                <input
+                  value={editingVariantForm.title}
+                  onChange={(event) =>
+                    setEditingVariantForm({
+                      ...editingVariantForm,
+                      title: event.target.value,
+                    })
+                  }
+                />
+              </label>
+              <label>
+                Legenda
+                <textarea
+                  rows={10}
+                  value={editingVariantForm.caption}
+                  onChange={(event) =>
+                    setEditingVariantForm({
+                      ...editingVariantForm,
+                      caption: event.target.value,
+                    })
+                  }
+                />
+              </label>
+              <label>
+                Hashtags
+                <textarea
+                  rows={3}
+                  value={editingVariantForm.hashtags}
+                  onChange={(event) =>
+                    setEditingVariantForm({
+                      ...editingVariantForm,
+                      hashtags: event.target.value,
+                    })
+                  }
+                />
+              </label>
+              <label>
+                CTA
+                <input
+                  value={editingVariantForm.cta}
+                  onChange={(event) =>
+                    setEditingVariantForm({
+                      ...editingVariantForm,
+                      cta: event.target.value,
+                    })
+                  }
+                />
+              </label>
+              <div className="button-row">
+                <button
+                  type="submit"
+                  disabled={isSaving || !editingVariantForm.caption.trim()}
+                >
+                  Salvar revisão
+                </button>
+                {canApprove ? (
+                  <button
+                    type="button"
+                    className="link-button"
+                    disabled={isSaving || !editingVariantForm.caption.trim()}
+                    onClick={() => void saveVariantReview("approved")}
+                  >
+                    Salvar e aprovar
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className="link-button"
+                  disabled={isSaving}
+                  onClick={cancelEditVariant}
+                >
+                  Cancelar edição
+                </button>
+              </div>
+            </form>
+          ) : null}
         </article>
       ) : null}
     </section>

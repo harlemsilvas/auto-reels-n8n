@@ -104,6 +104,17 @@ export type CreateTextVariantInput = {
   status?: TextVariantStatus;
 };
 
+export type UpdateTextVariantInput = {
+  publishType?: PublishType;
+  tone?: string;
+  objective?: string;
+  title?: string;
+  caption?: string;
+  hashtags?: string[];
+  cta?: string;
+  status?: TextVariantStatus;
+};
+
 export type GenerateTextVariantInput = {
   publishType?: PublishType;
   tone?: string;
@@ -221,6 +232,20 @@ export const mediaTemplatesService = {
       `/api/media/templates/${templateId}/text-variants/generate`,
       {
         method: "POST",
+        body: JSON.stringify(input),
+      },
+    );
+  },
+
+  updateTextVariant(
+    templateId: string,
+    variantId: string,
+    input: UpdateTextVariantInput,
+  ) {
+    return request<TextVariant>(
+      `/api/media/templates/${templateId}/text-variants/${variantId}`,
+      {
+        method: "PATCH",
         body: JSON.stringify(input),
       },
     );
