@@ -2414,6 +2414,25 @@ Próximo passo técnico recomendado: preparar commit/deploy incremental da
 interface ou avançar para provedor real de IA configurável, mantendo o modo
 teste e a aprovação humana.
 
+#### UX guiada na tela de modelos
+
+Em 2026-07-13 foi iniciada a melhoria de usabilidade da página `/modelos`:
+
+- barra superior com fases clicáveis: Buscar, Conferir modelo, Mídias, Textos e
+  Criar post;
+- clique em "Abrir" passa a selecionar o modelo e rolar para a seção de
+  detalhes;
+- clique em "Revisar" rola para o formulário de revisão da variação;
+- seções principais receberam cabeçalhos com fase, descrição curta e cor
+  lateral;
+- botões de próximo passo foram adicionados em detalhes, mídias e textos.
+
+Validação executada:
+
+- `npm run build` no dashboard via WSL.
+
+Essa mudança é somente frontend/CSS. Não altera banco, backend, worker ou n8n.
+
 ## Desenvolvimento programado após a validação multi-tipo
 
 Os itens abaixo foram solicitados em 2026-06-26 e ficaram registrados como

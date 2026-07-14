@@ -199,6 +199,30 @@ Validação executada:
 
 - `npm run build` no dashboard via WSL.
 
+## Atualização 2026-07-13 — fluxo guiado na tela de modelos
+
+Após validação manual, a página `/modelos` recebeu melhorias para reduzir a
+sensação de tela longa e sem direção.
+
+Dashboard:
+
+- barra de etapas clicáveis no topo da página;
+- fases: Buscar, Conferir modelo, Mídias, Textos e Criar post;
+- ao clicar em "Abrir", o modelo é selecionado e a tela rola para os detalhes;
+- ao clicar em "Revisar", a tela rola para o formulário de edição da variação;
+- cada seção principal ganhou cabeçalho com fase, descrição e cor lateral;
+- foram adicionados botões de próximo passo nas seções intermediárias.
+
+Backend:
+
+- não houve alteração;
+- não houve migration nova;
+- não houve alteração de worker, n8n ou publicação real.
+
+Validação executada:
+
+- `npm run build` no dashboard via WSL.
+
 Decisão de segurança: editar uma variação aprovada por "Salvar revisão" volta o
 texto para `generated`, exigindo nova aprovação antes de criar postagens.
 

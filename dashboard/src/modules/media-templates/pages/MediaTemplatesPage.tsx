@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import { useAuth } from "../../auth/context/AuthContext";
 import {
   mediaTemplatesService,
@@ -37,6 +43,7 @@ const VARIANT_INITIAL_FORM = {
 };
 
 type VariantFormState = typeof VARIANT_INITIAL_FORM;
+type WorkflowAnchor = "search" | "details" | "media" | "text" | "post" | "review";
 
 const POST_INITIAL_FORM = {
   textVariantId: "",
@@ -130,12 +137,19 @@ export function MediaTemplatesPage() {
     useState<VariantFormState>(VARIANT_INITIAL_FORM);
   const [postForm, setPostForm] = useState(POST_INITIAL_FORM);
   const [mediaForm, setMediaForm] = useState(MEDIA_INITIAL_FORM);
+  const [pendingAnchor, setPendingAnchor] = useState<WorkflowAnchor | null>(null);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("all");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const searchSectionRef = useRef<HTMLElement | null>(null);
+  const detailsSectionRef = useRef<HTMLElement | null>(null);
+  const mediaSectionRef = useRef<HTMLElement | null>(null);
+  const textSectionRef = useRef<HTMLElement | null>(null);
+  const postSectionRef = useRef<HTMLElement | null>(null);
+  const reviewSectionRef = useRef<HTMLFormElement | null>(null);
 
   const selectedVariants = useMemo(
     () => selectedTemplate?.textVariants ?? [],
@@ -266,6 +280,19 @@ export function MediaTemplatesPage() {
     };
   }, [selectedId]);
 
+  useEffect(() => {
+    if (!selectedTemplate || !pendingAnchor) return;
+
+    const anchor = pendingAnchor;
+    setPendingAnchor(null);
+    window.requestAnimationFrame(() => {
+      getAnchorRef(anchor).current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  }, [pendingAnchor, selectedTemplate]);
+
   async function refreshSelected() {
     await loadList();
     if (selectedId) {
@@ -273,11 +300,49 @@ export function MediaTemplatesPage() {
     }
   }
 
+  function getAnchorRef(anchor: WorkflowAnchor) {
+    return {
+      search: searchSectionRef,
+      details: detailsSectionRef,
+      media: mediaSectionRef,
+      text: textSectionRef,
+      post: postSectionRef,
+      review: reviewSectionRef,
+    }[anchor];
+  }
+
+  function scrollToAnchor(anchor: WorkflowAnchor) {
+    window.requestAnimationFrame(() => {
+      getAnchorRef(anchor).current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  }
+
+  function openTemplate(templateId: string) {
+    setSelectedId(templateId);
+    setPendingAnchor("details");
+    setMessage("Modelo aberto. Próximo passo: confira status, mídias e textos.");
+    setError(null);
+  }
+
+  function goToWorkflowAnchor(anchor: WorkflowAnchor) {
+    if (anchor !== "search" && !selectedTemplate) {
+      setMessage("Abra um modelo primeiro para continuar o fluxo.");
+      scrollToAnchor("search");
+      return;
+    }
+
+    scrollToAnchor(anchor);
+  }
+
   function startEditVariant(variant: TextVariant) {
     setEditingVariantId(variant.id);
     setEditingVariantForm(variantToForm(variant));
     setError(null);
     setMessage(null);
+    setPendingAnchor("review");
   }
 
   function cancelEditVariant() {
@@ -601,8 +666,61 @@ export function MediaTemplatesPage() {
         {message ? <p className="upload-success-text">{message}</p> : null}
       </article>
 
-      <article className="panel-card">
-        <h2>Buscar modelos</h2>
+      <nav className="workflow-nav" aria-label="Etapas dos modelos">
+        <button
+          type="button"
+          className="workflow-step-button"
+          onClick={() => goToWorkflowAnchor("search")}
+        >
+          <span>1</span>
+          Buscar
+        </button>
+        <button
+          type="button"
+          className="workflow-step-button"
+          onClick={() => goToWorkflowAnchor("details")}
+        >
+          <span>2</span>
+          Conferir modelo
+        </button>
+        <button
+          type="button"
+          className="workflow-step-button"
+          onClick={() => goToWorkflowAnchor("media")}
+        >
+          <span>3</span>
+          Mídias
+        </button>
+        <button
+          type="button"
+          className="workflow-step-button"
+          onClick={() => goToWorkflowAnchor("text")}
+        >
+          <span>4</span>
+          Textos
+        </button>
+        <button
+          type="button"
+          className="workflow-step-button"
+          onClick={() => goToWorkflowAnchor("post")}
+        >
+          <span>5</span>
+          Criar post
+        </button>
+      </nav>
+
+      <article
+        id="modelos-busca"
+        ref={searchSectionRef}
+        className="panel-card workflow-card workflow-card--search"
+      >
+        <div className="workflow-heading">
+          <span>Fase 1</span>
+          <div>
+            <h2>Buscar modelos</h2>
+            <p>Comece abrindo uma TAG. Depois a tela leva você para a edição.</p>
+          </div>
+        </div>
         <form className="upload-form" onSubmit={(event) => event.preventDefault()}>
           <label>
             Busca por TAG, nome, marca ou produto
@@ -646,7 +764,7 @@ export function MediaTemplatesPage() {
                     <button
                       type="button"
                       className="link-button"
-                      onClick={() => setSelectedId(template.id)}
+                      onClick={() => openTemplate(template.id)}
                     >
                       Abrir
                     </button>
@@ -803,8 +921,18 @@ export function MediaTemplatesPage() {
         </article>
       ) : null}
 
-      <article className="panel-card">
-        <h2>Modelo selecionado</h2>
+      <article
+        id="modelos-detalhes"
+        ref={detailsSectionRef}
+        className="panel-card workflow-card workflow-card--details"
+      >
+        <div className="workflow-heading">
+          <span>Fase 2</span>
+          <div>
+            <h2>Modelo selecionado</h2>
+            <p>Confira se a TAG está ativa e siga para mídias, textos e post.</p>
+          </div>
+        </div>
         {selectedTemplate ? (
           <>
             <dl className="stat-list">
@@ -889,6 +1017,29 @@ export function MediaTemplatesPage() {
                 Arquivar modelo
               </button>
             ) : null}
+            <div className="workflow-next-actions">
+              <button
+                type="button"
+                className="link-button"
+                onClick={() => goToWorkflowAnchor("media")}
+              >
+                Próximo: mídias
+              </button>
+              <button
+                type="button"
+                className="link-button"
+                onClick={() => goToWorkflowAnchor("text")}
+              >
+                Ir para textos
+              </button>
+              <button
+                type="button"
+                className="link-button"
+                onClick={() => goToWorkflowAnchor("post")}
+              >
+                Criar postagem
+              </button>
+            </div>
           </>
         ) : (
           <p>Selecione ou crie um modelo.</p>
@@ -896,8 +1047,18 @@ export function MediaTemplatesPage() {
       </article>
 
       {selectedTemplate && canUpdate ? (
-        <article className="panel-card">
-          <h2>Adicionar mídia ao modelo</h2>
+        <article
+          id="modelos-midias"
+          ref={mediaSectionRef}
+          className="panel-card workflow-card workflow-card--media"
+        >
+          <div className="workflow-heading">
+            <span>Fase 3</span>
+            <div>
+              <h2>Adicionar mídia ao modelo</h2>
+              <p>Inclua ou confira as imagens/vídeos que serão copiados para o post.</p>
+            </div>
+          </div>
           <p>
             Use JPG, JPEG, PNG ou MP4. Essas mídias serão copiadas para a
             postagem criada pela TAG.
@@ -958,13 +1119,30 @@ export function MediaTemplatesPage() {
             <button type="submit" disabled={isSaving || !mediaForm.file}>
               Adicionar mídia
             </button>
+            <button
+              type="button"
+              className="link-button"
+              onClick={() => goToWorkflowAnchor("text")}
+            >
+              Próximo: textos
+            </button>
           </form>
         </article>
       ) : null}
 
       {selectedTemplate && canUpdate ? (
-        <article className="panel-card">
-          <h2>Nova variação de texto</h2>
+        <article
+          id="modelos-textos"
+          ref={textSectionRef}
+          className="panel-card workflow-card workflow-card--text"
+        >
+          <div className="workflow-heading">
+            <span>Fase 4</span>
+            <div>
+              <h2>Nova variação de texto</h2>
+              <p>Crie, gere ou revise textos. Só variações aprovadas viram post.</p>
+            </div>
+          </div>
           <form className="upload-form" onSubmit={createVariant}>
             <label>
               Tipo de publicação
@@ -1062,13 +1240,31 @@ export function MediaTemplatesPage() {
                 Gerar sugestão em modo teste
               </button>
             ) : null}
+            <button
+              type="button"
+              className="link-button"
+              onClick={() => goToWorkflowAnchor("post")}
+              disabled={!approvedVariants.length}
+            >
+              Próximo: criar post
+            </button>
           </form>
         </article>
       ) : null}
 
       {selectedTemplate && canCreatePost ? (
-        <article className="panel-card">
-          <h2>Criar postagem pela TAG</h2>
+        <article
+          id="modelos-post"
+          ref={postSectionRef}
+          className="panel-card workflow-card workflow-card--post"
+        >
+          <div className="workflow-heading">
+            <span>Fase 5</span>
+            <div>
+              <h2>Criar postagem pela TAG</h2>
+              <p>Revise a prévia. Confirmar aqui grava a postagem no fluxo atual.</p>
+            </div>
+          </div>
           <p>
             Usa uma variação aprovada e as mídias cadastradas no modelo. A
             postagem será criada no fluxo atual; sem data futura, entra como
@@ -1216,8 +1412,14 @@ export function MediaTemplatesPage() {
       ) : null}
 
       {selectedTemplate ? (
-        <article className="panel-card">
-          <h2>Variações de texto</h2>
+        <article className="panel-card workflow-card workflow-card--variants">
+          <div className="workflow-heading">
+            <span>Revisão</span>
+            <div>
+              <h2>Variações de texto</h2>
+              <p>Revise, aprove ou rejeite antes de avançar para a postagem.</p>
+            </div>
+          </div>
           <div className="table-wrap">
             <table>
               <thead>
@@ -1293,6 +1495,7 @@ export function MediaTemplatesPage() {
           </div>
           {canUpdate && editingVariant ? (
             <form
+              ref={reviewSectionRef}
               className="upload-form"
               onSubmit={(event) => {
                 event.preventDefault();
