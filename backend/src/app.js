@@ -3,6 +3,7 @@ const cors = require("cors");
 
 const dashboardRoutes = require("./routes/dashboard.routes");
 const mediaRoutes = require("./routes/media.routes");
+const mediaTemplatesRoutes = require("./modules/media-templates/media-templates.routes");
 
 const internalAccountsRoutes = require("./modules/accounts/accounts.internal.routes");
 const internalPostsRoutes = require("./modules/posts/posts.internal.routes");
@@ -183,6 +184,8 @@ app.use(
     : []),
   historyRoutes,
 );
+app.use("/api/media-templates", mediaTemplatesRoutes);
+app.use("/api/media/templates", mediaTemplatesRoutes);
 app.use("/api/media", mediaRoutes);
 
 app.use(

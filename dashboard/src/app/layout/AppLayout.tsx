@@ -10,6 +10,7 @@ const links = [
     label: "Horarios",
     permission: "schedule_slots.manage",
   },
+  { to: "/modelos", label: "Modelos", permission: "media_templates.view" },
   { to: "/historico", label: "Historico", permission: "metrics.view" },
   { to: "/inbox", label: "Inbox", permission: "inbox.view" },
   {

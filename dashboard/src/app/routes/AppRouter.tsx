@@ -19,6 +19,7 @@ import { UploadPage } from "../../modules/upload/pages/UploadPage";
 import TestersDmPage from "../../modules/inbox/pages/TestersDmPage";
 import { ChangePasswordPage } from "../../modules/auth/pages/ChangePasswordPage";
 import { UsersPage } from "../../modules/users/pages/UsersPage";
+import { MediaTemplatesPage } from "../../modules/media-templates/pages/MediaTemplatesPage";
 
 const router = createBrowserRouter([
   {
@@ -67,6 +68,14 @@ const router = createBrowserRouter([
                 element: <PermissionRoute permission="accounts.manage" />,
                 children: [
                   { path: "/contas", element: <AccountsPage /> },
+                ],
+              },
+              {
+                element: (
+                  <PermissionRoute permission="media_templates.view" />
+                ),
+                children: [
+                  { path: "/modelos", element: <MediaTemplatesPage /> },
                 ],
               },
               {

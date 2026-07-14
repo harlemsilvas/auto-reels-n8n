@@ -42,6 +42,7 @@ dashboard/dist/
 postgres/
 redis/
 n8n/
+backups/
 
 # Midias e binarios grandes
 #media/

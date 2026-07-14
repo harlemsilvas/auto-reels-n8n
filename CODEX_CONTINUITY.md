@@ -1,6 +1,6 @@
 # SocialBot — Contexto de Continuidade para Codex
 
-Atualizado em: 2026-06-25
+Atualizado em: 2026-07-14
 
 ## Objetivo
 
@@ -1973,10 +1973,406 @@ validar entrada imediata real de um carrossel, seria necessário ativar
 `MULTI_PUBLISH_ENABLED=true`, disponibilizar URLs públicas válidas e aceitar a
 possibilidade de publicação externa.
 
+## Estado atual consolidado em 2026-07-12
+
+Este é o ponto recomendado de retomada. O desenvolvimento local está à frente
+da VPS no item de título/fila imediata, e a próxima sessão deve evitar refazer
+fases já concluídas.
+
+### Fases multi-tipo
+
+- Fases 1 e 2 concluídas: schema multi-tipo e `post_media_items`.
+- Fase 3 concluída: endpoint `POST /api/media/upload-post` com múltiplos tipos.
+- Fases 4 a 8 concluídas: publisher por estratégia, Feed Imagem, Carrossel e
+  Stories preparados.
+- Fase 9 concluída: worker integrado ao publisher multi-tipo atrás de feature
+  flag, preservando Reels via n8n.
+- Fases 10 e 11 concluídas: interface multi-tipo e tela de Agendamentos com
+  tipo, quantidade, autoria e título.
+- Reels estão publicados via n8n v4 na VPS e o fluxo foi validado com sucesso.
+- Feed Imagem, Carrossel, Story Imagem e Story Vídeo já têm publicação via Meta
+  preparada/validada em rollout controlado anterior. Usar sempre feature flag e
+  post alvo antes de testes reais.
+
+### Autenticação, usuários e permissões
+
+- Autenticação administrativa própria foi implantada na VPS e validada.
+- Usuários, sessões, troca de senha, papéis e auditoria básica estão ativos.
+- OAuth Meta possui proteção por sessão administrativa e `state`.
+- Autoria de postagens e atores de eventos foi implementada localmente.
+- Cabeçalho exibe usuário logado e papel.
+- Matriz inicial de permissões do operador foi implementada e testada
+  localmente:
+  - operador pode criar/agendar/publicar/cancelar posts;
+  - operador pode visualizar Inbox;
+  - operador não pode acessar métricas, histórico/eventos, responder Inbox,
+    testers DM, horários globais, contas ou usuários.
+
+### Título da postagem e fila sem data
+
+- Commit local criado: `6544139 feat: adiciona titulo e fila imediata`.
+- Migration local criada e testada:
+  - `backend/sql/009-post-title-immediate-queue.sql`;
+  - `backend/sql/009-post-title-immediate-queue-verify.sql`.
+- `posts.title` foi adicionado como campo opcional, com validação contra texto
+  vazio e limite de 160 caracteres no dashboard.
+- Uploads aceitam `postTitle` ou `title`; clientes legados usam fallback pelo
+  primeiro arquivo.
+- Sem data agendada significa “publicar assim que possível”, mas respeitando:
+  - Reels podem entrar na fila imediatamente;
+  - formatos multi-tipo só entram se a publicação estiver habilitada pela flag;
+  - falha de Redis não desfaz upload, registra `queue_failed` e mantém
+    recuperação possível.
+- Testes locais de título/agendamento foram aprovados com posts:
+  - `24f63912-2320-4fe8-9f47-b1bbaf77098e`, sem data, ficou `pending` porque
+    `MULTI_PUBLISH_ENABLED=false`;
+  - `b48fb947-97e5-4157-80ab-7ad8e2ca2294`, agendado para
+    `2026-07-04 10:30:00-03`, sem job antecipado.
+
+### Diferença local versus VPS
+
+- A VPS já tem autenticação, usuários, permissões anteriores e fluxo de
+  publicação funcionando.
+- A migration `009` e o commit `6544139` ainda precisam ser enviados/aplicados
+  na VPS.
+- Não copiar portas locais para a VPS. A VPS já está operacional com PM2,
+  Docker, n8n, domínios e Nginx próprios.
+- Antes de qualquer deploy de schema na VPS, fazer backup PostgreSQL e rodar o
+  verificador correspondente.
+
+### Próxima ordem segura
+
+1. Verificar `git status --short`; `reels/` pode permanecer não rastreado.
+2. Fazer `git push origin main` local se o commit `6544139` ainda não estiver
+   no remoto.
+3. Na VPS, executar `git pull --ff-only origin main`.
+4. Fazer backup do PostgreSQL da VPS.
+5. Aplicar `backend/sql/009-post-title-immediate-queue.sql`.
+6. Rodar `backend/sql/009-post-title-immediate-queue-verify.sql`.
+7. Reiniciar backend e worker via PM2.
+8. Publicar dashboard com `sudo ./scripts/deploy_frontend_hostinger.sh`.
+9. Validar:
+   - login;
+   - tela de Uploads exigindo título;
+   - post com data futura;
+   - post sem data apenas quando a intenção for testar fila imediata;
+   - permissões do operador.
+
+### Próximas evoluções recomendadas
+
+- Refinar permissões do operador em capacidades mais granulares, incluindo
+  regras de posts próprios versus posts do workspace.
+- Implementar autenticação de serviço para rotas chamadas por integrações, em
+  vez de expor `/api/internal` sem escopo claro.
+- Exibir responsável também no resumo do Histórico, não apenas nos detalhes.
+- Melhorar painel de auditoria de ações administrativas.
+- Criar rotina operacional para backup/export do workflow n8n v4 após mudanças.
+
+### Modelos de mídia com IA e TAG — fundação preparada
+
+Em 2026-07-12 foi criada a proposta
+`docs/features/002-modelos-midias-ia-tags.md`.
+
+A ideia é adicionar ao SocialBot uma biblioteca de campanhas/modelos
+reutilizáveis, identificados por TAG, com mídias aprovadas e textos gerados ou
+assistidos por IA. Ao criar uma postagem, o usuário poderá informar a TAG,
+carregar mídias e legendas sugeridas, revisar e então criar Feed, Carrossel,
+Story ou Reel usando o fluxo atual.
+
+Referência conceitual usada: `C:\Projetos\otimizador_skills`, especialmente:
+
+- cadastro de produto com imagem-modelo;
+- compatibilidades e dados reais para evitar invenções da IA;
+- fila de geração;
+- prompt enviado salvo para auditoria;
+- modo teste de IA;
+- provedor OpenAI-compatible/LM Studio.
+
+Como `/docs/` é ignorado para arquivos novos, também foi criada documentação
+versionável em:
+
+- `project-docs/features/002-modelos-midias-ia-tags.md`.
+
+Fundação local implementada:
+
+- `backend/sql/010-media-templates.sql`;
+- `backend/sql/010-media-templates-verify.sql`;
+- alinhamento de `postgres-init/000_socialbot_init.sql`;
+- tabelas `media_templates`, `media_template_items` e
+  `media_template_text_variants`;
+- colunas opcionais em `posts`: `media_template_id` e
+  `media_template_text_variant_id`;
+- constraints, índices e triggers de `updated_at` para modelos e variações.
+
+Validação realizada:
+
+- `git diff --check` aprovado no escopo alterado;
+- schema inicial aplicado com sucesso em banco temporário
+  `socialbot_schema_010_tmp`;
+- migration `010` aplicada duas vezes no mesmo banco temporário para validar
+  idempotência;
+- verificador `010-media-templates-verify.sql` aprovado;
+- banco temporário removido ao final.
+
+Status: fundação de banco pronta localmente. Ainda não foram criados endpoints,
+serviços, dashboard, integração de IA, worker ou publicação por TAG. A migration
+`010` ainda não foi aplicada no banco real local nem na VPS.
+
+#### CRUD backend básico de modelos implementado
+
+Ainda em 2026-07-12 foi implementada a primeira camada backend da Feature 002:
+
+- permissões novas em `backend/src/modules/auth/permissions.service.js`:
+  - `media_templates.view`;
+  - `media_templates.create`;
+  - `media_templates.update`;
+  - `media_templates.approve`;
+  - `media_templates.generate_ai_text`;
+  - `media_templates.create_post`;
+- operador recebe inicialmente somente `media_templates.view` e
+  `media_templates.create_post`;
+- novo módulo:
+  - `backend/src/modules/media-templates/media-templates.service.js`;
+  - `backend/src/modules/media-templates/media-templates.routes.js`;
+- rotas montadas em:
+  - `GET /api/media/templates`;
+  - `GET /api/media/templates/by-tag/:tag`;
+  - `GET /api/media/templates/:id`;
+  - `POST /api/media/templates`;
+  - `PATCH /api/media/templates/:id`;
+  - `POST /api/media/templates/:id/approve`;
+  - `DELETE /api/media/templates/:id`;
+  - `POST /api/media/templates/:id/items`;
+  - `DELETE /api/media/templates/:id/items/:itemId`;
+  - alias temporário `/api/media-templates`.
+
+O CRUD atual permite criar, listar, buscar por TAG, editar, aprovar, arquivar e
+adicionar/remover itens de mídia já existentes por metadados. Ele ainda não faz
+upload de arquivos para modelos, não gera textos por IA, não cria posts por TAG
+e não possui interface no dashboard.
+
+Validação adicional:
+
+- `node --check` aprovado para o serviço, rotas, permissões e `app.js`;
+- teste Node real contra banco temporário `socialbot_templates_crud_tmp`:
+  - criou workspace temporário;
+  - criou modelo com TAG `potenza-gt-forza-kawasaki`;
+  - listou por busca;
+  - buscou por TAG;
+  - adicionou item de mídia;
+  - aprovou o modelo;
+  - arquivou o modelo;
+  - banco temporário removido ao final.
+
+A migration `010` foi aplicada no banco real local em Docker Desktop/Windows no
+dia 2026-07-12:
+
+- banco: `n8n`;
+- container: `socialbot_postgres`;
+- comando executado via PowerShell, usando `docker exec`;
+- verificador `010-media-templates-verify.sql` aprovado;
+- tabelas novas confirmadas vazias:
+  - `media_templates = 0`;
+  - `media_template_items = 0`;
+  - `media_template_text_variants = 0`.
+
+A migration `010` ainda não foi aplicada na VPS.
+
+Roteiro versionável para a futura subida na VPS criado em:
+
+- `project-docs/deploy/002-media-templates-vps.md`.
+
+Script versionável de backup PostgreSQL criado em:
+
+- `scripts/backup_postgres_db.sh`.
+
+Uso recomendado na VPS antes das migrations:
+
+```bash
+cd /home/socialbot/apps/auto-reels-n8n
+bash scripts/backup_postgres_db.sh
+```
+
+Script PowerShell separado para backup do PostgreSQL local em Docker
+Desktop/Windows criado em:
+
+- `scripts/backup_postgres_db_local.ps1`.
+
+Uso local recomendado:
+
+```powershell
+cd C:\Projetos\auto-reels-n8n
+powershell -ExecutionPolicy Bypass -File .\scripts\backup_postgres_db_local.ps1
+```
+
+Em 2026-07-13, o script local foi ajustado para compatibilidade com Windows
+PowerShell 5.1, evitando `ProcessStartInfo.ArgumentList`, validado com parser
+PowerShell e executado com sucesso contra o container `socialbot_postgres`.
+Também foi adicionada a regra `backups/` ao `.gitignore` para impedir commit
+acidental de dumps locais.
+
+Script PowerShell local para reset seguro de senha administrativa criado em:
+
+- `scripts/reset_admin_password_local.ps1`.
+
+Ele pede a nova senha via prompt seguro, gera o hash usando
+`backend/src/modules/auth/password.service.js`, atualiza `socialbot_users`,
+limpa `failed_login_attempts`/`locked_until`, força `active = TRUE` e revoga
+sessões abertas em `socialbot_sessions`. Uso local recomendado:
+
+```powershell
+cd C:\Projetos\auto-reels-n8n
+powershell -ExecutionPolicy Bypass -File .\scripts\reset_admin_password_local.ps1
+```
+
+Esse roteiro mantém a ordem segura: backup, `git pull`, validar/aplicar `009`,
+validar/aplicar `010`, reiniciar somente o backend, testar as rotas novas e
+então publicar o dashboard com o script já existente da VPS. Não há necessidade
+de alterar n8n, worker, portas ou domínios nesta etapa.
+
+#### Variações de texto manuais para modelos
+
+Em 2026-07-13 foi adicionada a camada backend para criar, editar, aprovar e
+rejeitar variações de texto de um modelo, sem acionar IA externa e sem alterar
+worker/publicação:
+
+- `POST /api/media/templates/:id/text-variants`;
+- `PATCH /api/media/templates/:id/text-variants/:variantId`;
+- `POST /api/media/templates/:id/text-variants/:variantId/approve`;
+- `DELETE /api/media/templates/:id/text-variants/:variantId`.
+
+O `DELETE` não apaga fisicamente: ele marca a variação como `rejected`,
+preservando histórico. A listagem detalhada do modelo já retorna
+`textVariants`. Validação executada: `node --check` em
+`media-templates.service.js` e `media-templates.routes.js`.
+
+#### Primeira interface autenticada de modelos
+
+Ainda em 2026-07-13 foi criada a página do dashboard `/modelos`, protegida por
+`media_templates.view`, com consumo autenticado dos endpoints via cookie/CSRF:
+
+- novo service:
+  `dashboard/src/modules/media-templates/services/mediaTemplates.service.ts`;
+- nova página:
+  `dashboard/src/modules/media-templates/pages/MediaTemplatesPage.tsx`;
+- rota adicionada em `AppRouter.tsx`;
+- item `Modelos` adicionado ao menu principal em `AppLayout.tsx`.
+
+A página permite listar/buscar modelos, criar modelo quando o usuário possui
+`media_templates.create`, selecionar detalhes, aprovar/arquivar conforme
+permissões, criar variações manuais e aprovar/rejeitar variações. Validação
+executada: `npm run build` no dashboard via WSL, concluído com sucesso.
+
+#### Criação inicial de postagem a partir da TAG
+
+Em seguida foi implementado o primeiro fluxo de criação de post por TAG:
+
+- backend:
+  `POST /api/media/templates/by-tag/:tag/posts`, protegido por
+  `media_templates.create_post`;
+- service:
+  `createPostFromTemplateTag` em `media-templates.service.js`;
+- dashboard:
+  formulário "Criar postagem pela TAG" na página `/modelos`;
+- frontend service:
+  `mediaTemplatesService.createPostFromTag`.
+
+O fluxo exige modelo `active`, variação de texto `approved` e mídias já
+cadastradas em `media_template_items`. Ele copia a legenda final para
+`posts.caption`, grava `media_template_id` e `media_template_text_variant_id`,
+copia mídias do modelo para `post_media_items`, cria evento `created` com
+`source = media-template.tag` e não publica automaticamente. Sem data futura, o
+post nasce `pending`; com data futura, nasce `scheduled`.
+
+Validação executada: `node --check` nos arquivos backend e `npm run build` no
+dashboard via WSL, concluído com sucesso.
+
+Pendência direta: criar upload/reuso real de mídias para modelos na interface.
+Enquanto isso não existir, modelos somente textuais retornarão "Modelo não
+possui mídias cadastradas" ao tentar criar postagem por TAG.
+
+#### Upload inicial de mídias para modelos
+
+Foi implementada a primeira versão do upload de mídia para modelos:
+
+- backend:
+  `POST /api/media/templates/:id/media-upload`, protegido por
+  `media_templates.update`;
+- upload via `multer`, aceitando JPG, JPEG, PNG ou MP4;
+- destino atual: `MEDIA_PENDING_DIR`, reaproveitando a infraestrutura local de
+  mídias já usada por posts;
+- após o upload, o backend cria o item em `media_template_items` usando
+  `addTemplateItem`;
+- dashboard `/modelos`: bloco "Adicionar mídia ao modelo";
+- a tela também lista as mídias cadastradas no modelo selecionado.
+
+Validação executada: `node --check` nos arquivos backend e `npm run build` no
+dashboard via WSL, concluído com sucesso. Próximo teste manual recomendado:
+anexar uma mídia real em um modelo ativo com variação aprovada e então criar
+uma postagem pela TAG.
+
+#### Seeds locais de referência para campos de modelo
+
+Em 2026-07-13 foram preenchidos no banco local exemplos manuais para facilitar
+o entendimento dos campos de modelo, com base nas postagens antigas locais:
+
+- `potenza-380xt`;
+- `potenza-xt-evolution`;
+- `potenza-gt-forza`.
+
+Foram atualizados campos como `brand`, `product_name`, `base_description`,
+`target_audience`, `allowed_claims`, `forbidden_claims`, `default_cta`,
+`base_hashtags` e `notes`. Também foi criada uma variação de texto aprovada
+para cada modelo. O modelo `potenza-380xt` foi ativado localmente para permitir
+teste do fluxo por TAG.
+
+Esses dados são exemplos locais para validação/treinamento de uso da tela e não
+contêm credenciais. Antes de levar para VPS, revisar se os textos e claims
+devem ser considerados conteúdo oficial ou apenas seed de desenvolvimento.
+
+#### Geração local de textos em modo teste
+
+Em 2026-07-14 foi implementada a primeira geração de sugestão de texto para os
+modelos, ainda sem provedor externo de IA:
+
+- backend:
+  `POST /api/media/templates/:id/text-variants/generate`;
+- permissão:
+  `media_templates.generate_ai_text`;
+- service:
+  `generateTextVariantDraft` em `media-templates.service.js`;
+- dashboard:
+  botão "Gerar sugestão em modo teste" na página `/modelos`;
+- status criado:
+  `generated`, exigindo revisão e aprovação humana antes de uso;
+- auditoria:
+  `media_templates.text_variant_generated_local`;
+- campos usados:
+  produto, marca, descrição base, público-alvo, claims permitidos, claims
+  proibidos, CTA e hashtags base;
+- campos auditáveis:
+  `prompt_sent` e `ai_response`, sem tokens, chaves ou segredos.
+
+A geração é determinística/local, útil para preencher rascunhos e testar a UX.
+Ela não publica, não enfileira e não chama API externa. A postagem por TAG
+continua exigindo variação aprovada e mídias vinculadas ao modelo.
+
+Validações executadas:
+
+- `node --check backend/src/modules/media-templates/media-templates.service.js`;
+- `node --check backend/src/modules/media-templates/media-templates.routes.js`;
+- `npm run build` no dashboard via WSL.
+
+O usuário testou a criação de agendamentos a partir dos modelos localmente. O
+próximo passo técnico recomendado é melhorar a prévia/edição da variação antes
+da aprovação e preparar o deploy VPS da Feature 002 com backup, migrations e
+deploy do dashboard.
+
 ## Desenvolvimento programado após a validação multi-tipo
 
-Os itens abaixo foram solicitados em 2026-06-26 e estão apenas planejados. Não
-foram implementados nem aplicados na VPS.
+Os itens abaixo foram solicitados em 2026-06-26 e ficaram registrados como
+planejamento inicial. Parte deles já foi implementada nas seções posteriores
+deste documento; manter esta seção apenas como histórico de intenção.
 
 ### Postagem sem data agendada
 
