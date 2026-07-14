@@ -46,19 +46,27 @@ Não versionar chaves, senhas, tokens ou `.env`.
 
 ## Pré-condição de sudo
 
-O deploy do dashboard chama:
+O deploy do dashboard chama o script como usuário `socialbot`:
 
 ```bash
-sudo -n ./deploy_frontend_hostinger.sh
+./deploy_frontend_hostinger.sh
 ```
 
-O `-n` faz o comando falhar em vez de pedir senha interativamente. Portanto, a
-VPS precisa permitir que o usuário do deploy execute os comandos necessários sem
-prompt de senha, ou o workflow falhará com segurança.
+O script usa `sudo` internamente apenas nos comandos que precisam escrever em
+`/var/www` ou recarregar o Nginx. Portanto, a VPS precisa permitir que o usuário
+do deploy execute esses comandos necessários sem prompt de senha, ou o workflow
+falhará com segurança.
 
-Se hoje o deploy manual já pede senha de `sudo`, será necessário ajustar a regra
-de sudoers antes de usar a Action para publicar o dashboard. Fazer isso somente
-com cuidado na VPS.
+Teste manual correto na VPS:
+
+```bash
+cd /home/socialbot/apps/auto-reels-n8n/scripts
+./deploy_frontend_hostinger.sh
+```
+
+Não executar `sudo ./deploy_frontend_hostinger.sh`, porque isso tentaria rodar o
+script inteiro como root. A regra de sudoers recomendada libera apenas comandos
+internos específicos.
 
 ## Uso recomendado
 

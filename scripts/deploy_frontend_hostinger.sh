@@ -33,14 +33,10 @@ main() {
     exit 1
   fi
 
-  if [[ ! -f "$NGINX_SITE" ]]; then
-    echo "Arquivo de site do Nginx nao encontrado: $NGINX_SITE"
-    exit 1
-  fi
-
   log "Frontend dir: $FRONTEND_DIR"
   log "Web root: $WEB_ROOT"
-  log "Nginx site: $NGINX_SITE"
+  log "Nginx site esperado: $NGINX_SITE"
+  log "A validacao real do Nginx sera feita via: sudo nginx -t"
 
   cd "$FRONTEND_DIR"
 

@@ -144,7 +144,7 @@ jobs:
             if [[ "$DEPLOY_DASHBOARD" == "true" ]]; then
               log "Publicando dashboard"
               cd "$APP_DIR/scripts"
-              sudo -n ./deploy_frontend_hostinger.sh
+              ./deploy_frontend_hostinger.sh
             else
               log "Deploy dashboard desativado"
             fi

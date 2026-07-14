@@ -2467,6 +2467,14 @@ Observação operacional: o workflow usa `sudo -n` ao publicar o dashboard. Se o
 usuário da VPS exigir senha interativa para `sudo`, essa etapa falhará com
 segurança. Ajustar sudoers/NOPASSWD somente com cuidado e autorização explícita.
 
+Atualização em 2026-07-14: a Action foi ajustada para executar
+`./deploy_frontend_hostinger.sh` como usuário `socialbot`, sem `sudo` antes do
+script. O próprio script mantém os `sudo` internos apenas para `mkdir`, `rsync`,
+`chown`, `nginx -t` e `systemctl reload nginx`. Também foi removida a checagem
+direta de leitura do arquivo em `/etc/nginx/sites-enabled`, pois o usuário
+`socialbot` não tem permissão de listagem/leitura nesse diretório; a validação
+real fica a cargo de `sudo nginx -t`, que já funciona na VPS.
+
 ## Desenvolvimento programado após a validação multi-tipo
 
 Os itens abaixo foram solicitados em 2026-06-26 e ficaram registrados como
