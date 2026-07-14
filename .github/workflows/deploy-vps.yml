@@ -1,0 +1,155 @@
+name: Deploy VPS
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_dashboard:
+        description: "Publicar dashboard"
+        required: true
+        type: boolean
+        default: true
+      restart_backend:
+        description: "Reiniciar backend PM2"
+        required: true
+        type: boolean
+        default: false
+      run_migrations:
+        description: "Executar migrations selecionadas"
+        required: true
+        type: boolean
+        default: false
+      migration_set:
+        description: "Migrations"
+        required: true
+        type: choice
+        default: "none"
+        options:
+          - "none"
+          - "009"
+          - "010"
+          - "009_010"
+
+concurrency:
+  group: deploy-vps
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy controlado na VPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Executar deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          command_timeout: 30m
+          script: |
+            set -euo pipefail
+
+            APP_DIR="/home/socialbot/apps/auto-reels-n8n"
+            DEPLOY_DASHBOARD="${{ inputs.deploy_dashboard }}"
+            RESTART_BACKEND="${{ inputs.restart_backend }}"
+            RUN_MIGRATIONS="${{ inputs.run_migrations }}"
+            MIGRATION_SET="${{ inputs.migration_set }}"
+
+            log() {
+              echo "[deploy-vps] $*"
+            }
+
+            run_migration() {
+              local file="$1"
+              local verify_file="$2"
+
+              log "Aplicando migration: $file"
+              docker exec -i socialbot_postgres psql -U n8n -d n8n < "$file"
+
+              log "Validando migration: $verify_file"
+              docker exec -i socialbot_postgres psql -U n8n -d n8n < "$verify_file"
+            }
+
+            log "Entrando no projeto"
+            cd "$APP_DIR"
+
+            log "Estado antes do pull"
+            git status --short
+            git rev-parse --short HEAD
+
+            log "Atualizando main"
+            git fetch origin main
+            git checkout main
+            git pull --ff-only origin main
+
+            log "Commit em deploy"
+            git rev-parse --short HEAD
+
+            log "Validando arquivos backend principais"
+            cd "$APP_DIR/backend"
+            node --check src/app.js
+            node --check src/modules/auth/permissions.service.js
+            node --check src/modules/media-templates/media-templates.service.js
+            node --check src/modules/media-templates/media-templates.routes.js
+
+            if [[ "$RUN_MIGRATIONS" == "true" ]]; then
+              if [[ "$MIGRATION_SET" == "none" ]]; then
+                echo "run_migrations=true exige migration_set diferente de none."
+                exit 1
+              fi
+
+              log "Backup PostgreSQL antes das migrations"
+              cd "$APP_DIR"
+              bash scripts/backup_postgres_db.sh
+
+              cd "$APP_DIR/backend"
+              case "$MIGRATION_SET" in
+                "009")
+                  run_migration \
+                    "sql/009-post-title-immediate-queue.sql" \
+                    "sql/009-post-title-immediate-queue-verify.sql"
+                  ;;
+                "010")
+                  run_migration \
+                    "sql/010-media-templates.sql" \
+                    "sql/010-media-templates-verify.sql"
+                  ;;
+                "009_010")
+                  run_migration \
+                    "sql/009-post-title-immediate-queue.sql" \
+                    "sql/009-post-title-immediate-queue-verify.sql"
+                  run_migration \
+                    "sql/010-media-templates.sql" \
+                    "sql/010-media-templates-verify.sql"
+                  ;;
+                *)
+                  echo "migration_set invalido: $MIGRATION_SET"
+                  exit 1
+                  ;;
+              esac
+            else
+              log "Migrations desativadas"
+            fi
+
+            if [[ "$RESTART_BACKEND" == "true" ]]; then
+              log "Reiniciando backend PM2"
+              pm2 restart socialbot-backend
+              pm2 save
+            else
+              log "Restart backend desativado"
+            fi
+
+            if [[ "$DEPLOY_DASHBOARD" == "true" ]]; then
+              log "Publicando dashboard"
+              cd "$APP_DIR/scripts"
+              sudo -n ./deploy_frontend_hostinger.sh
+            else
+              log "Deploy dashboard desativado"
+            fi
+
+            log "Health check API"
+            curl -fsS -I https://api.hrmmotos.com.br/api/health || true
+
+            log "Deploy finalizado"

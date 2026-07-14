@@ -2433,6 +2433,40 @@ Validação executada:
 
 Essa mudança é somente frontend/CSS. Não altera banco, backend, worker ou n8n.
 
+#### GitHub Actions para deploy controlado
+
+Em 2026-07-13 foi criado o primeiro workflow manual de deploy da VPS:
+
+- arquivo:
+  `.github/workflows/deploy-vps.yml`;
+- acionamento:
+  somente `workflow_dispatch` pelo GitHub Actions;
+- não executa deploy automático a cada `git push`;
+- opções manuais:
+  `deploy_dashboard`, `restart_backend`, `run_migrations` e `migration_set`;
+- migrations suportadas:
+  `009`, `010` ou `009_010`;
+- quando `run_migrations=true`, executa backup PostgreSQL antes das migrations
+  via `scripts/backup_postgres_db.sh`;
+- deploy do dashboard usa o script existente
+  `scripts/deploy_frontend_hostinger.sh`;
+- restart do backend usa `pm2 restart socialbot-backend` e `pm2 save`.
+
+Secrets necessários no GitHub Actions:
+
+- `VPS_HOST`;
+- `VPS_USER`;
+- `VPS_SSH_KEY`;
+- `VPS_PORT`.
+
+Documento de apoio criado:
+
+- `project-docs/deploy/003-github-actions-deploy-vps.md`.
+
+Observação operacional: o workflow usa `sudo -n` ao publicar o dashboard. Se o
+usuário da VPS exigir senha interativa para `sudo`, essa etapa falhará com
+segurança. Ajustar sudoers/NOPASSWD somente com cuidado e autorização explícita.
+
 ## Desenvolvimento programado após a validação multi-tipo
 
 Os itens abaixo foram solicitados em 2026-06-26 e ficaram registrados como
