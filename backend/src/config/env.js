@@ -65,6 +65,15 @@ const ADMIN_AUTH_COOKIE_SECURE =
 
 /**
  * ======================================
+ * AI CREDENTIALS
+ * ======================================
+ */
+
+const AI_CREDENTIALS_ENCRYPTION_KEY =
+  process.env.AI_CREDENTIALS_ENCRYPTION_KEY ?? "";
+
+/**
+ * ======================================
  * MEDIA
  * ======================================
  */
@@ -207,6 +216,8 @@ module.exports = {
   ADMIN_AUTH_MAX_FAILED_ATTEMPTS,
   ADMIN_AUTH_LOCK_MINUTES,
   ADMIN_AUTH_COOKIE_SECURE,
+
+  AI_CREDENTIALS_ENCRYPTION_KEY,
 
   MEDIA_ROOT,
   MEDIA_PENDING_DIR,

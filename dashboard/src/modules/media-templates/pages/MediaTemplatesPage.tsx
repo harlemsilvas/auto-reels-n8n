@@ -435,9 +435,11 @@ export function MediaTemplatesPage() {
         objective: variantForm.objective || undefined,
         title: variantForm.title || undefined,
         cta: variantForm.cta || undefined,
+        generationMode: "local",
+        useLocalFallback: true,
       });
       setMessage(
-        "Sugestão de texto gerada em modo teste. Revise e aprove antes de usar.",
+        "Sugestão local de texto gerada. Revise e aprove antes de usar.",
       );
       await refreshSelected();
     } catch (generateError) {
@@ -997,7 +999,49 @@ export function MediaTemplatesPage() {
                 </tbody>
               </table>
             </div>
-            {canApprove && selectedTemplate.status !== "active" ? (
+            <h3>Uso recente da TAG</h3>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Post</th>
+                    <th>Tipo</th>
+                    <th>Status</th>
+                    <th>Agendamento</th>
+                    <th>Criado em</th>
+                    <th>Criado por</th>
+                    <th>Mídias</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(selectedTemplate.recentPosts ?? []).map((post) => (
+                    <tr key={post.id}>
+                      <td>
+                        <div className="history-post-cell">
+                          <strong>{post.title ?? "Sem título"}</strong>
+                          <span className="history-inline-note">
+                            {post.id.slice(0, 8)}
+                          </span>
+                        </div>
+                      </td>
+                      <td>{publishTypeLabel(post.publishType)}</td>
+                      <td>{statusLabel(post.status)}</td>
+                      <td>{formatDate(post.scheduledAt)}</td>
+                      <td>{formatDate(post.createdAt)}</td>
+                      <td>{post.createdByDisplayName ?? "-"}</td>
+                      <td>{post.mediaItemsCount}</td>
+                    </tr>
+                  ))}
+                  {!selectedTemplate.recentPosts?.length ? (
+                    <tr>
+                      <td colSpan={7}>
+                        Nenhuma postagem criada a partir desta TAG ainda.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>`n            {canApprove && selectedTemplate.status !== "active" ? (
               <button
                 type="button"
                 className="link-button"
@@ -1237,7 +1281,7 @@ export function MediaTemplatesPage() {
                 onClick={generateVariantDraft}
                 disabled={isSaving}
               >
-                Gerar sugestão em modo teste
+                Gerar sugestão local
               </button>
             ) : null}
             <button

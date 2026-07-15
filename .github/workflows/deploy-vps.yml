@@ -28,6 +28,9 @@ on:
           - "009"
           - "010"
           - "009_010"
+          - "011"
+          - "010_011"
+          - "009_010_011"
 
 concurrency:
   group: deploy-vps
@@ -93,6 +96,9 @@ jobs:
             node --check src/modules/auth/permissions.service.js
             node --check src/modules/media-templates/media-templates.service.js
             node --check src/modules/media-templates/media-templates.routes.js
+            node --check src/modules/ai-credentials/ai-credentials.crypto.js
+            node --check src/modules/ai-credentials/ai-credentials.service.js
+            node --check src/modules/ai-credentials/ai-credentials.routes.js
 
             if [[ "$RUN_MIGRATIONS" == "true" ]]; then
               if [[ "$MIGRATION_SET" == "none" ]]; then
@@ -116,6 +122,11 @@ jobs:
                     "sql/010-media-templates.sql" \
                     "sql/010-media-templates-verify.sql"
                   ;;
+                "011")
+                  run_migration \
+                    "sql/011-ai-provider-credentials.sql" \
+                    "sql/011-ai-provider-credentials-verify.sql"
+                  ;;
                 "009_010")
                   run_migration \
                     "sql/009-post-title-immediate-queue.sql" \
@@ -123,6 +134,25 @@ jobs:
                   run_migration \
                     "sql/010-media-templates.sql" \
                     "sql/010-media-templates-verify.sql"
+                  ;;
+                "010_011")
+                  run_migration \
+                    "sql/010-media-templates.sql" \
+                    "sql/010-media-templates-verify.sql"
+                  run_migration \
+                    "sql/011-ai-provider-credentials.sql" \
+                    "sql/011-ai-provider-credentials-verify.sql"
+                  ;;
+                "009_010_011")
+                  run_migration \
+                    "sql/009-post-title-immediate-queue.sql" \
+                    "sql/009-post-title-immediate-queue-verify.sql"
+                  run_migration \
+                    "sql/010-media-templates.sql" \
+                    "sql/010-media-templates-verify.sql"
+                  run_migration \
+                    "sql/011-ai-provider-credentials.sql" \
+                    "sql/011-ai-provider-credentials-verify.sql"
                   ;;
                 *)
                   echo "migration_set invalido: $MIGRATION_SET"

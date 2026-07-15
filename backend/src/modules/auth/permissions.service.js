@@ -18,6 +18,8 @@ const PERMISSIONS = Object.freeze({
   MEDIA_TEMPLATES_APPROVE: "media_templates.approve",
   MEDIA_TEMPLATES_GENERATE_AI_TEXT: "media_templates.generate_ai_text",
   MEDIA_TEMPLATES_CREATE_POST: "media_templates.create_post",
+  AI_CREDENTIALS_VIEW: "ai_credentials.view",
+  AI_CREDENTIALS_MANAGE: "ai_credentials.manage",
 });
 
 const ROLE_PERMISSIONS = Object.freeze({

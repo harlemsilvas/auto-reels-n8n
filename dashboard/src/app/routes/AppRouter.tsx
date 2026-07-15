@@ -20,6 +20,7 @@ import TestersDmPage from "../../modules/inbox/pages/TestersDmPage";
 import { ChangePasswordPage } from "../../modules/auth/pages/ChangePasswordPage";
 import { UsersPage } from "../../modules/users/pages/UsersPage";
 import { MediaTemplatesPage } from "../../modules/media-templates/pages/MediaTemplatesPage";
+import { AiCredentialsPage } from "../../modules/ai-credentials/pages/AiCredentialsPage";
 
 const router = createBrowserRouter([
   {
@@ -76,6 +77,12 @@ const router = createBrowserRouter([
                 ),
                 children: [
                   { path: "/modelos", element: <MediaTemplatesPage /> },
+                ],
+              },
+              {
+                element: <PermissionRoute permission="ai_credentials.view" />,
+                children: [
+                  { path: "/ia/credenciais", element: <AiCredentialsPage /> },
                 ],
               },
               {

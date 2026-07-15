@@ -1,6 +1,6 @@
 # Feature 002 — Modelos de mídias com textos por IA e criação por TAG
 
-Data: 2026-07-13  
+Data: 2026-07-13
 Status: em implementação — fundação de banco, CRUD backend, variações manuais,
 geração local em modo teste, interface autenticada, upload de mídia para modelos
 e criação inicial de post por TAG
@@ -252,3 +252,20 @@ Backend:
 Validação executada:
 
 - `npm run build` no dashboard via WSL.
+
+## 2026-07-15 — Uso recente por TAG
+
+Foi adicionada uma melhoria da Fase E para mostrar, dentro do detalhe do modelo, as postagens recentes criadas a partir daquela TAG/modelo.
+
+Comportamento:
+
+- `GET /api/media/templates/:id` com detalhes agora retorna `recentPosts`;
+- cada item mostra título, status, tipo de publicação, agendamento, criação, publicação, criador e quantidade de mídias;
+- a tela `/modelos` exibe a seção `Uso recente da TAG` logo abaixo das mídias do modelo;
+- não há alteração de schema, worker, fila ou publicação.
+
+Objetivo:
+
+- facilitar auditoria operacional;
+- confirmar se um modelo/TAG já está sendo usado para gerar posts;
+- preparar métricas futuras por campanha/TAG.

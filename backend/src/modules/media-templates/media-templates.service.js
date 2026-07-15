@@ -1,5 +1,6 @@
 const { getPool, query } = require("../../lib/db");
 const authRepository = require("../auth/admin-auth.repository");
+const { generateGeminiTextDraft } = require("./gemini-text-generator");
 
 const TEMPLATE_STATUSES = new Set(["draft", "active", "archived"]);
 const TEMPLATE_ITEM_KINDS = new Set(["image", "video"]);
@@ -550,6 +551,37 @@ async function listTemplates(filters = {}) {
   };
 }
 
+async function listTemplateRecentPosts(templateId, limit = 10) {
+  const normalizedLimit = Math.max(1, Math.min(Number(limit) || 10, 30));
+  const result = await query(
+    `
+      SELECT
+        p.id::text AS id,
+        p.title,
+        p.status::text AS status,
+        p.publish_type AS "publishType",
+        p.media_type AS "mediaType",
+        p.scheduled_at AS "scheduledAt",
+        p.created_at AS "createdAt",
+        p.published_at AS "publishedAt",
+        p.created_by_user_id::text AS "createdByUserId",
+        creator.display_name AS "createdByDisplayName",
+        COUNT(pmi.id)::int AS "mediaItemsCount"
+      FROM posts p
+      LEFT JOIN socialbot_users creator ON creator.id = p.created_by_user_id
+      LEFT JOIN post_media_items pmi
+        ON pmi.post_id = p.id
+       AND pmi.deleted_at IS NULL
+      WHERE p.media_template_id = $1::uuid
+      GROUP BY p.id, creator.display_name
+      ORDER BY p.created_at DESC
+      LIMIT $2
+    `,
+    [templateId, normalizedLimit],
+  );
+
+  return result.rows;
+}
 async function getTemplate(templateId, options = {}) {
   const result = await query(
     `
@@ -571,15 +603,17 @@ async function getTemplate(templateId, options = {}) {
     return template;
   }
 
-  const [items, variants] = await Promise.all([
+  const [items, variants, recentPosts] = await Promise.all([
     listTemplateItems(template.id),
     listTextVariants(template.id),
+    listTemplateRecentPosts(template.id),
   ]);
 
   return {
     ...template,
     mediaItems: items,
     textVariants: variants,
+    recentPosts,
   };
 }
 
@@ -1207,19 +1241,47 @@ async function createTextVariant(templateId, input, actor, req) {
 
 async function generateTextVariantDraft(templateId, input, actor, req) {
   const template = await getTemplate(templateId);
-  const draft = buildLocalAiTextDraft(template, input);
+  let draft;
+  let mode = "gemini";
+  let generationError = null;
+
+  if (input?.useLocalFallback === true || input?.generationMode === "local") {
+    draft = buildLocalAiTextDraft(template, input);
+    mode = "local";
+  } else {
+    try {
+      draft = await generateGeminiTextDraft(template, input);
+    } catch (error) {
+      generationError = error;
+
+      if (input?.allowLocalFallback === true) {
+        draft = buildLocalAiTextDraft(template, input);
+        mode = "local-fallback";
+      } else {
+        throw error;
+      }
+    }
+  }
+
   const variant = await createTextVariant(templateId, draft, actor, req);
 
   await authRepository.insertAuditLog({
     userId: actor?.userId ?? null,
     workspaceId: template.workspaceId,
-    action: "media_templates.text_variant_generated_local",
+    action:
+      mode === "gemini"
+        ? "media_templates.text_variant_generated_gemini"
+        : mode === "local"
+          ? "media_templates.text_variant_generated_local"
+          : "media_templates.text_variant_generated_local_fallback",
     entityType: "media_template",
     entityId: template.id,
     details: {
       variantId: variant.id,
       publishType: variant.publishType,
-      mode: "local-test",
+      mode,
+      errorCode: generationError?.code ?? null,
+      errorMessage: generationError?.message ?? null,
     },
     ...metadata(req),
   });

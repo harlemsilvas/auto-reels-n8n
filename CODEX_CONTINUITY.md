@@ -2539,3 +2539,126 @@ Depois da gestão de usuários:
 7. implementar enfileiramento automático de posts sem data;
 8. testar localmente e liberar na VPS por etapas, sem alterar portas ou
    infraestrutura operacional.
+
+## 2026-07-14 — Credenciais de IA / Gemini preparadas
+
+Foi iniciada a fase de cofre de credenciais de IA para suportar Gemini sem expor chaves no repositório ou no dashboard.
+
+Arquivos adicionados/preparados:
+
+- `backend/sql/011-ai-provider-credentials.sql`
+- `backend/sql/011-ai-provider-credentials-verify.sql`
+- `backend/src/modules/ai-credentials/ai-credentials.crypto.js`
+- `backend/src/modules/ai-credentials/ai-credentials.service.js`
+- `backend/src/modules/ai-credentials/ai-credentials.routes.js`
+- `dashboard/src/modules/ai-credentials/services/aiCredentials.service.ts`
+- `dashboard/src/modules/ai-credentials/pages/AiCredentialsPage.tsx`
+- `project-docs/features/003-credenciais-ia-gemini.md`
+
+Alterações:
+
+- nova rota `/api/ai/credentials`;
+- novas permissões `ai_credentials.view` e `ai_credentials.manage`;
+- nova página `/ia/credenciais` no dashboard;
+- chaves Gemini salvas com AES-256-GCM usando `AI_CREDENTIALS_ENCRYPTION_KEY`;
+- respostas da API retornam apenas `apiKeyHint`, nunca a chave completa;
+- schema inicial e workflow de deploy preparados para a migration 011.
+
+Validações executadas:
+
+- `node --check` nos arquivos backend alterados;
+- `npm run build` no dashboard.
+
+Pendente para teste local/VPS:
+
+1. gerar e configurar `AI_CREDENTIALS_ENCRYPTION_KEY` no `.env` do ambiente;
+2. aplicar `backend/sql/011-ai-provider-credentials.sql`;
+3. reiniciar backend;
+4. acessar `/ia/credenciais` com usuário admin;
+5. cadastrar chave de teste Gemini pela UI.
+
+Não foram alterados worker, n8n, portas, PM2, Nginx ou fluxo de Reels.
+
+## 2026-07-14 — Integração real Gemini no gerador de modelos
+
+O botão de geração de variações em `/modelos` foi conectado ao Gemini real usando credenciais cadastradas em `/ia/credenciais`.
+
+Arquivos alterados/adicionados:
+
+- `backend/src/modules/media-templates/gemini-text-generator.js`
+- `backend/src/modules/media-templates/media-templates.service.js`
+- `backend/src/modules/ai-credentials/ai-credentials.service.js`
+- `dashboard/src/modules/media-templates/pages/MediaTemplatesPage.tsx`
+- `project-docs/features/003-credenciais-ia-gemini.md`
+
+Comportamento:
+
+- seleciona credencial ativa da tarefa `media_templates_text`;
+- chama Gemini via REST `generateContent`;
+- exige JSON com `title`, `caption`, `hashtags` e `cta`;
+- cria variação com status `generated`;
+- salva prompt e resposta bruta em `prompt_sent` e `ai_response`;
+- registra eventos de uso em `ai_provider_usage_events`;
+- marca credencial como `limited` em 429 e `expired` em 401/403/404;
+- tenta outra credencial ativa quando a falha for limitação/expiração;
+- não aprova nem publica automaticamente.
+
+Validação local:
+
+- sintaxe backend validada com `node --check`;
+- build do dashboard validado com `npm run build`;
+- conectividade WSL com Gemini validada;
+- chamada sem chave retornou 403 esperado;
+- listagem de modelos com a chave local retornou modelos disponíveis;
+- chamadas com `gemini-2.0-flash` e `gemini-2.0-flash-lite` retornaram 429 de quota zero, indicando chave reconhecida mas sem quota disponível no projeto atual.
+
+Pendente:
+
+- testar geração bem-sucedida com chave/projeto com quota disponível;
+- opcionalmente criar endpoint de teste de credencial/modelo na tela `/ia/credenciais`.
+
+## 2026-07-15 — Uso recente da TAG em Modelos
+
+Como retomada das fases pendentes após decidir deixar API/modelo local para etapa posterior, a geração de texto na tela de modelos foi ajustada para modo local por padrão:
+
+- `generateTextVariantDraft` agora gera local direto quando recebe `generationMode = 'local'` ou `useLocalFallback = true`;
+- a tela `/modelos` envia `generationMode: 'local'` no botão de geração;
+- o botão voltou a informar `Gerar sugestão local`;
+- a integração Gemini permanece preparada para uso futuro, mas não bloqueia o fluxo atual.
+
+Foi adicionada melhoria da Fase E dos modelos:
+
+- `getTemplate(..., { includeDetails: true })` retorna `recentPosts`;
+- a tela `/modelos` exibe `Uso recente da TAG` com posts criados por aquele modelo;
+- não houve alteração de schema, worker, n8n, portas ou publicação.
+
+Validações executadas:
+
+- `node --check` em `backend/src/modules/media-templates/media-templates.service.js`;
+- `npm run build` no dashboard;
+- `git diff --check`.
+
+Tentativa de teste direto via WSL com `getTemplate` ficou bloqueada por `ECONNREFUSED 127.0.0.1:55532`, indicando indisponibilidade momentânea da conexão local com PostgreSQL a partir do WSL. Não foi feita alteração de porta.
+
+Próximo passo recomendado:
+
+1. testar visualmente `/modelos` com backend local ativo;
+2. criar/abrir um modelo que já tenha posts por TAG;
+3. confirmar a tabela `Uso recente da TAG`;
+4. seguir para refinamento de permissões granulares ou provider local de IA quando for a prioridade.
+
+### Validação local de uso por TAG em 2026-07-15
+
+O usuário criou uma nova postagem local a partir de modelo/TAG e a checagem no PostgreSQL confirmou:
+
+- post `c42ac3be-85ee-4eb3-b147-c52c4c573436`;
+- título `Pastilha PTZ231GT`;
+- `publish_type = feed_image`;
+- `status = scheduled`;
+- agendamento `2026-07-15 23:00:00-03`;
+- TAG `potenza-231gt`;
+- modelo `ptz231gt`;
+- criador `Administrador`;
+- 1 mídia vinculada.
+
+Isso valida a nova seção `Uso recente da TAG` e a vinculação `posts.media_template_id` para pelo menos um fluxo real local. A migration `011` também foi verificada no banco local com `011-ai-provider-credentials-verify.sql`.

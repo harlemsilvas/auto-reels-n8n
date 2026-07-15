@@ -35,6 +35,21 @@ export type MediaTemplate = {
   archivedAt?: string | null;
   mediaItems?: TemplateMediaItem[];
   textVariants?: TextVariant[];
+  recentPosts?: TemplateRecentPost[];
+};
+
+export type TemplateRecentPost = {
+  id: string;
+  title: string | null;
+  status: string;
+  publishType: PublishType;
+  mediaType: string | null;
+  scheduledAt: string | null;
+  createdAt: string;
+  publishedAt: string | null;
+  createdByUserId?: string | null;
+  createdByDisplayName?: string | null;
+  mediaItemsCount: number;
 };
 
 export type TemplateMediaItem = {
@@ -121,6 +136,9 @@ export type GenerateTextVariantInput = {
   objective?: string;
   title?: string;
   cta?: string;
+  generationMode?: "local" | "gemini";
+  useLocalFallback?: boolean;
+  allowLocalFallback?: boolean;
 };
 
 export type TemplatePost = {
