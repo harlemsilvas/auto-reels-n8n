@@ -315,6 +315,80 @@ h1 {
   margin-top: 0.9rem;
 }
 
+.model-guide-card {
+  display: grid;
+  gap: 1rem;
+  border-color: #b9d7ff;
+  background: linear-gradient(135deg, #f7fbff 0%, #fffdf7 100%);
+}
+
+.model-guide-steps {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: model-guide;
+}
+
+.model-guide-steps li {
+  counter-increment: model-guide;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 0.7rem;
+  row-gap: 0.12rem;
+  align-items: start;
+  padding: 0.72rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.model-guide-steps li::before {
+  content: counter(model-guide);
+  display: inline-grid;
+  width: 1.65rem;
+  height: 1.65rem;
+  place-items: center;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #175cd3;
+  font-weight: 800;
+}
+
+.model-guide-steps strong,
+.model-guide-steps span {
+  grid-column: 2;
+}
+
+.model-guide-steps span {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.model-helper-card {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0.85rem 0;
+  padding: 0.85rem;
+  border: 1px dashed #c7b8ff;
+  border-radius: 12px;
+  background: #fbfaff;
+}
+
+.model-helper-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.field-help {
+  display: block;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
 .simple-list {
   margin: 0;
   padding-left: 1.1rem;

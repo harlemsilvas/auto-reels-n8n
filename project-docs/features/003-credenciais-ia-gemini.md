@@ -104,10 +104,15 @@ A lista foi deixada configurável no backend. Opções iniciais:
 - `gemini-2.5-flash`
 - `gemini-2.5-flash-lite`
 - `gemini-2.5-pro`
+- `gemini-flash-lite-latest`
 - `gemini-flash-latest`
 - `gemini-pro-latest`
 
-Esses nomes devem ser revisados periodicamente na documentação oficial do Gemini antes de uso em produção.
+Em 2026-07-15, o teste mínimo local com a chave salva no cofre retornou `OK`
+com `gemini-flash-lite-latest`. Alguns modelos versionados retornaram `429`
+por quota zero no projeto, apesar da chave estar válida. Esses nomes devem ser
+revisados periodicamente na documentação oficial do Gemini antes de uso em
+produção.
 
 ## Rotação planejada
 

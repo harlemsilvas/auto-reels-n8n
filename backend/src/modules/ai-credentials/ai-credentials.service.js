@@ -33,9 +33,10 @@ const AI_TASKS = Object.freeze([
 ]);
 
 const GEMINI_MODELS = Object.freeze([
-  { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash", recommended: true },
+  { value: "gemini-flash-lite-latest", label: "Gemini Flash Lite latest", recommended: true },
   { value: "gemini-flash-latest", label: "Gemini Flash latest" },
   { value: "gemini-pro-latest", label: "Gemini Pro latest" },
+  { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash" },
   { value: "gemini-3-flash-preview", label: "Gemini 3 Flash Preview" },
   { value: "gemini-3-pro-preview", label: "Gemini 3 Pro Preview" },
   { value: "gemini-3.1-flash-lite-preview", label: "Gemini 3.1 Flash-Lite Preview" },

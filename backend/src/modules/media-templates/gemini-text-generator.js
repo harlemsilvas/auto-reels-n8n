@@ -173,7 +173,7 @@ async function callGeminiGenerateContent(credential, request) {
         ],
         generationConfig: {
           temperature: 0.8,
-          maxOutputTokens: 1200,
+          maxOutputTokens: 2400,
           responseMimeType: "application/json",
         },
       }),

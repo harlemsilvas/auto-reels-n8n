@@ -13,7 +13,7 @@ const INITIAL_FORM = {
   provider: "gemini" as AiProvider,
   label: "",
   task: "media_templates_text" as AiTask,
-  model: "gemini-3.5-flash",
+  model: "gemini-flash-lite-latest",
   apiKey: "",
   priority: "100",
   dailyLimit: "",

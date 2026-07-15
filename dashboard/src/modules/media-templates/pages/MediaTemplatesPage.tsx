@@ -65,6 +65,16 @@ function splitLines(value: string) {
     .filter(Boolean);
 }
 
+function slugify(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+}
+
 function formatDate(value?: string | null) {
   if (!value) return "-";
   return new Intl.DateTimeFormat("pt-BR", {
@@ -350,6 +360,74 @@ export function MediaTemplatesPage() {
     setEditingVariantForm(VARIANT_INITIAL_FORM);
   }
 
+  function suggestTemplateFields() {
+    const product =
+      templateForm.productName.trim() ||
+      templateForm.name.trim() ||
+      "produto da campanha";
+    const brand = templateForm.brand.trim() || "Potenza";
+    const baseSlug = slugify(`${brand}-${product}`) || "modelo-campanha";
+
+    setTemplateForm({
+      ...templateForm,
+      tag: templateForm.tag || baseSlug,
+      name: templateForm.name || `${brand} - ${product}`,
+      brand: templateForm.brand || brand,
+      productName: templateForm.productName || product,
+      baseDescription:
+        templateForm.baseDescription ||
+        `${product} da ${brand}. Use esta descrição para informar aplicação, diferenciais reais, benefício principal e cuidados de compatibilidade antes da compra.`,
+      targetAudience:
+        templateForm.targetAudience ||
+        "Motociclistas que buscam manutenção preventiva, reposição de qualidade e orientação antes de comprar.",
+      allowedClaims:
+        templateForm.allowedClaims ||
+        "alta performance\nboa resposta de frenagem\nproduto para reposição\nconsulte a aplicação correta",
+      forbiddenClaims:
+        templateForm.forbiddenClaims ||
+        "garantia absoluta de segurança\ncompatibilidade não informada\nmelhor do mercado\npromessa de resultado sem comprovação\npreço ou promoção não cadastrados",
+      defaultCta:
+        templateForm.defaultCta ||
+        "Chame no direct e consulte a aplicação correta para sua moto.",
+      baseHashtags:
+        templateForm.baseHashtags ||
+        "#PotenzaFreio\n#Motopeças\n#ManutençãoDeMotos\n#PastilhaDeFreio\n#MotoBrasil\n#PeçasParaMoto",
+      notes:
+        templateForm.notes ||
+        "Revise compatibilidade, aplicação dianteira/traseira e qualquer informação técnica antes de aprovar o texto.",
+    });
+    setMessage("Campos sugeridos preenchidos. Revise antes de criar o modelo.");
+  }
+
+  function suggestVariantFields() {
+    const product =
+      selectedTemplate?.productName ||
+      selectedTemplate?.name ||
+      "produto da campanha";
+
+    setVariantForm({
+      ...variantForm,
+      tone: variantForm.tone || "comercial claro, direto e confiável",
+      objective:
+        variantForm.objective ||
+        "explicar o benefício principal, orientar compatibilidade e incentivar contato",
+      title: variantForm.title || `${product} | consulte a aplicação correta`,
+      caption:
+        variantForm.caption ||
+        `${product}\n\nUma opção para quem busca reposição de qualidade e orientação antes da compra.\n\nConsulte a aplicação correta para sua moto antes de finalizar o pedido.`,
+      hashtags:
+        variantForm.hashtags ||
+        (selectedTemplate?.baseHashtags?.length
+          ? selectedTemplate.baseHashtags.join("\n")
+          : "#PotenzaFreio\n#Motopeças\n#MotoBrasil"),
+      cta:
+        variantForm.cta ||
+        selectedTemplate?.defaultCta ||
+        "Chame no direct e consulte a aplicação correta para sua moto.",
+    });
+    setMessage("Sugestão manual preenchida. Edite ou use Gemini para gerar outra opção.");
+  }
+
   async function createTemplate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setIsSaving(true);
@@ -421,7 +499,7 @@ export function MediaTemplatesPage() {
     }
   }
 
-  async function generateVariantDraft() {
+  async function generateVariantDraft(generationMode: "local" | "gemini" = "local") {
     if (!selectedId) return;
 
     setIsSaving(true);
@@ -435,11 +513,14 @@ export function MediaTemplatesPage() {
         objective: variantForm.objective || undefined,
         title: variantForm.title || undefined,
         cta: variantForm.cta || undefined,
-        generationMode: "local",
-        useLocalFallback: true,
+        generationMode,
+        useLocalFallback: generationMode === "local",
+        allowLocalFallback: false,
       });
       setMessage(
-        "Sugestão local de texto gerada. Revise e aprove antes de usar.",
+        generationMode === "gemini"
+          ? "Sugestão com Gemini gerada. Revise e aprove antes de usar."
+          : "Sugestão local de texto gerada. Revise e aprove antes de usar.",
       );
       await refreshSelected();
     } catch (generateError) {
@@ -668,6 +749,40 @@ export function MediaTemplatesPage() {
         {message ? <p className="upload-success-text">{message}</p> : null}
       </article>
 
+      <article className="panel-card model-guide-card">
+        <div>
+          <p className="eyebrow">Guia rápido</p>
+          <h2>Como criar uma postagem por modelo</h2>
+          <p className="helper-text">
+            Pense no modelo como uma ficha reutilizável da campanha. Você preenche
+            a base uma vez, adiciona mídias, gera/revisa textos e só então cria a
+            postagem pela TAG.
+          </p>
+        </div>
+        <ol className="model-guide-steps">
+          <li>
+            <strong>Crie ou abra uma TAG.</strong>
+            <span>Ex.: `potenza-231gt`. A TAG identifica o modelo e liga posts futuros.</span>
+          </li>
+          <li>
+            <strong>Preencha a ficha base.</strong>
+            <span>Produto, público, claims, CTA e hashtags orientam a IA e evitam textos arriscados.</span>
+          </li>
+          <li>
+            <strong>Adicione mídias.</strong>
+            <span>Imagem principal para feed, itens ordenados para carrossel ou vídeo para Reel/Story.</span>
+          </li>
+          <li>
+            <strong>Gere e aprove o texto.</strong>
+            <span>Use sugestão local para rascunho rápido ou Gemini para texto por IA. Revise antes de aprovar.</span>
+          </li>
+          <li>
+            <strong>Crie a postagem.</strong>
+            <span>Somente texto aprovado e modelo ativo entram na criação do post.</span>
+          </li>
+        </ol>
+      </article>
+
       <nav className="workflow-nav" aria-label="Etapas dos modelos">
         <button
           type="button"
@@ -786,9 +901,23 @@ export function MediaTemplatesPage() {
       {canCreate ? (
         <article className="panel-card">
           <h2>Novo modelo</h2>
+          <p className="helper-text">
+            Preencha o mínimo necessário ou use o botão de sugestão para criar
+            uma base editável. Nada é salvo até clicar em <strong>Criar modelo</strong>.
+          </p>
+          <button
+            type="button"
+            className="link-button"
+            onClick={suggestTemplateFields}
+          >
+            Sugerir preenchimento
+          </button>
           <form className="upload-form" onSubmit={createTemplate}>
             <label>
               TAG
+              <span className="field-help">
+                Identificador curto da campanha. Use letras, números e hífen.
+              </span>
               <input
                 placeholder="potenza-gt-forza-kawasaki"
                 value={templateForm.tag}
@@ -799,6 +928,9 @@ export function MediaTemplatesPage() {
             </label>
             <label>
               Nome
+              <span className="field-help">
+                Nome legível que aparece para o operador no dashboard.
+              </span>
               <input
                 value={templateForm.name}
                 onChange={(event) =>
@@ -808,6 +940,7 @@ export function MediaTemplatesPage() {
             </label>
             <label>
               Marca
+              <span className="field-help">Marca ou linha principal do produto.</span>
               <input
                 value={templateForm.brand}
                 onChange={(event) =>
@@ -817,6 +950,9 @@ export function MediaTemplatesPage() {
             </label>
             <label>
               Produto
+              <span className="field-help">
+                Produto exato da campanha, de preferência com código/modelo.
+              </span>
               <input
                 value={templateForm.productName}
                 onChange={(event) =>
@@ -829,6 +965,9 @@ export function MediaTemplatesPage() {
             </label>
             <label>
               Descrição base
+              <span className="field-help">
+                Matéria-prima para textos: aplicação, diferencial real e contexto de venda.
+              </span>
               <textarea
                 rows={3}
                 value={templateForm.baseDescription}
@@ -842,6 +981,9 @@ export function MediaTemplatesPage() {
             </label>
             <label>
               Público-alvo
+              <span className="field-help">
+                Para quem o texto deve falar: cliente, moto, necessidade ou situação.
+              </span>
               <input
                 value={templateForm.targetAudience}
                 onChange={(event) =>
@@ -854,6 +996,9 @@ export function MediaTemplatesPage() {
             </label>
             <label>
               Claims permitidos, separados por vírgula ou linha
+              <span className="field-help">
+                Frases/diferenciais que a IA pode usar. Ex.: alta performance, reposição, aplicação informada.
+              </span>
               <textarea
                 rows={3}
                 value={templateForm.allowedClaims}
@@ -867,6 +1012,9 @@ export function MediaTemplatesPage() {
             </label>
             <label>
               Claims proibidos, separados por vírgula ou linha
+              <span className="field-help">
+                O que a IA não deve prometer. Ex.: compatibilidade não informada, garantia absoluta, preço não cadastrado.
+              </span>
               <textarea
                 rows={3}
                 value={templateForm.forbiddenClaims}
@@ -880,6 +1028,9 @@ export function MediaTemplatesPage() {
             </label>
             <label>
               CTA padrão
+              <span className="field-help">
+                Chamada para ação. Ex.: “Chame no direct e consulte a aplicação correta”.
+              </span>
               <input
                 value={templateForm.defaultCta}
                 onChange={(event) =>
@@ -892,6 +1043,9 @@ export function MediaTemplatesPage() {
             </label>
             <label>
               Hashtags base
+              <span className="field-help">
+                Uma por linha ou separadas por vírgula. Elas entram como base das variações.
+              </span>
               <textarea
                 rows={2}
                 value={templateForm.baseHashtags}
@@ -905,6 +1059,9 @@ export function MediaTemplatesPage() {
             </label>
             <label>
               Observações
+              <span className="field-help">
+                Regras internas para revisão humana: compatibilidade, estoque, tom ou cuidados.
+              </span>
               <textarea
                 rows={2}
                 value={templateForm.notes}
@@ -1041,7 +1198,8 @@ export function MediaTemplatesPage() {
                   ) : null}
                 </tbody>
               </table>
-            </div>`n            {canApprove && selectedTemplate.status !== "active" ? (
+            </div>
+            {canApprove && selectedTemplate.status !== "active" ? (
               <button
                 type="button"
                 className="link-button"
@@ -1187,9 +1345,23 @@ export function MediaTemplatesPage() {
               <p>Crie, gere ou revise textos. Só variações aprovadas viram post.</p>
             </div>
           </div>
+          <div className="model-helper-card">
+            <strong>O que preencher aqui?</strong>
+            <p>
+              Esta seção cria uma legenda específica para um tipo de post. O
+              modelo guarda a regra geral; a variação guarda o texto que será
+              revisado/aprovado para uso.
+            </p>
+            <button type="button" className="link-button" onClick={suggestVariantFields}>
+              Sugerir preenchimento do texto
+            </button>
+          </div>
           <form className="upload-form" onSubmit={createVariant}>
             <label>
               Tipo de publicação
+              <span className="field-help">
+                Escolha o formato final: imagem única, carrossel, Reel ou Story.
+              </span>
               <select
                 value={variantForm.publishType}
                 onChange={(event) =>
@@ -1208,6 +1380,9 @@ export function MediaTemplatesPage() {
             </label>
             <label>
               Tom
+              <span className="field-help">
+                Como a legenda deve soar. Ex.: direto, técnico, promocional, premium.
+              </span>
               <input
                 value={variantForm.tone}
                 onChange={(event) =>
@@ -1217,6 +1392,9 @@ export function MediaTemplatesPage() {
             </label>
             <label>
               Objetivo
+              <span className="field-help">
+                O que o texto precisa conseguir: explicar, vender, educar, chamar para direct.
+              </span>
               <input
                 value={variantForm.objective}
                 onChange={(event) =>
@@ -1229,6 +1407,9 @@ export function MediaTemplatesPage() {
             </label>
             <label>
               Título
+              <span className="field-help">
+                Nome curto para identificar a variação. Não precisa ser publicado.
+              </span>
               <input
                 value={variantForm.title}
                 onChange={(event) =>
@@ -1238,6 +1419,9 @@ export function MediaTemplatesPage() {
             </label>
             <label>
               Legenda
+              <span className="field-help">
+                Texto principal da postagem. Pode ser manual ou gerado por Gemini.
+              </span>
               <textarea
                 rows={5}
                 value={variantForm.caption}
@@ -1251,6 +1435,9 @@ export function MediaTemplatesPage() {
             </label>
             <label>
               Hashtags
+              <span className="field-help">
+                Uma por linha ou separadas por vírgula. Revise para não duplicar.
+              </span>
               <textarea
                 rows={2}
                 value={variantForm.hashtags}
@@ -1264,6 +1451,9 @@ export function MediaTemplatesPage() {
             </label>
             <label>
               CTA
+              <span className="field-help">
+                A ação final esperada: chamar no direct, consultar aplicação, pedir orçamento.
+              </span>
               <input
                 value={variantForm.cta}
                 onChange={(event) =>
@@ -1275,14 +1465,24 @@ export function MediaTemplatesPage() {
               Criar variação
             </button>
             {canGenerateAiText ? (
-              <button
-                type="button"
-                className="link-button"
-                onClick={generateVariantDraft}
-                disabled={isSaving}
-              >
-                Gerar sugestão local
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="link-button"
+                  onClick={() => generateVariantDraft("local")}
+                  disabled={isSaving}
+                >
+                  Gerar sugestão local
+                </button>
+                <button
+                  type="button"
+                  className="link-button"
+                  onClick={() => generateVariantDraft("gemini")}
+                  disabled={isSaving}
+                >
+                  Gerar com Gemini
+                </button>
+              </>
             ) : null}
             <button
               type="button"

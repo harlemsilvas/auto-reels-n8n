@@ -2662,3 +2662,64 @@ O usuário criou uma nova postagem local a partir de modelo/TAG e a checagem no 
 - 1 mídia vinculada.
 
 Isso valida a nova seção `Uso recente da TAG` e a vinculação `posts.media_template_id` para pelo menos um fluxo real local. A migration `011` também foi verificada no banco local com `011-ai-provider-credentials-verify.sql`.
+
+### Ajuste de modelo Gemini funcional em 2026-07-15
+
+Após teste mínimo com a chave salva no cofre de credenciais IA, a API Gemini
+respondeu `OK` usando o modelo `gemini-flash-lite-latest`. Os modelos
+`gemini-2.0-flash` e `gemini-2.0-flash-lite` retornaram `429 RESOURCE_EXHAUSTED`
+com quota free tier zerada no projeto, apesar de a chave autenticar e listar
+modelos com sucesso.
+
+Foi ajustada a lista de modelos em `backend/src/modules/ai-credentials/ai-credentials.service.js`
+para incluir `gemini-flash-lite-latest` como opção recomendada. O formulário
+`/ia/credenciais` também passou a usar esse modelo como default para novas
+credenciais. Nenhum segredo foi registrado no repositório.
+
+### Teste real de geração Gemini em 2026-07-15
+
+A credencial local ativa da tarefa `media_templates_text` foi ajustada para o
+modelo `gemini-flash-lite-latest`, preservando a chave criptografada e sem
+registrar segredo em arquivo versionado.
+
+Foi executado teste real de criação de variação de texto por Gemini no modelo
+`ptz231gt` (`tag = potenza-231gt`). Resultado:
+
+- variação criada com status `generated`;
+- `hasAiResponse = true`;
+- título gerado: `Pastilha de Freio Potenza GT Forza PTZ231GT`;
+- hashtags retornadas pela IA;
+- nenhuma postagem foi criada;
+- nenhuma publicação externa foi disparada.
+
+A primeira tentativa direta sem objeto `req` HTTP chegou a criar resposta da IA,
+mas falhou no audit log por falta de `req.ip`. A segunda tentativa usou um
+`req` falso mínimo e confirmou o fluxo.
+
+Também foi aumentado `maxOutputTokens` do gerador Gemini de `1200` para `2400`
+para reduzir risco de JSON truncado em legendas maiores, e a tela `/modelos`
+passou a exibir dois caminhos explícitos:
+
+- `Gerar sugestão local`;
+- `Gerar com Gemini`.
+
+O botão `Gerar com Gemini` não usa fallback local, para que erros de chave,
+quota ou modelo apareçam claramente durante validação.
+
+### Melhoria de orientação da tela `/modelos` em 2026-07-15
+
+A tela de modelos recebeu uma camada de orientação para reduzir dúvidas no
+preenchimento:
+
+- guia rápido no topo explicando o fluxo: criar/abrir TAG, preencher ficha,
+  adicionar mídias, gerar/aprovar texto e criar postagem;
+- botão `Sugerir preenchimento` no formulário de novo modelo, com exemplos
+  editáveis para TAG, descrição, público, claims, CTA, hashtags e observações;
+- explicações curtas abaixo dos campos principais;
+- bloco de ajuda na fase de textos;
+- botão `Sugerir preenchimento do texto`, que preenche tom, objetivo, título,
+  legenda, hashtags e CTA com base no modelo selecionado;
+- correção de artefato visual literal `` `n `` que aparecia na seção de detalhes.
+
+Esses recursos não salvam automaticamente, não chamam Gemini e não publicam. São
+apenas auxiliares de preenchimento antes da revisão humana.
