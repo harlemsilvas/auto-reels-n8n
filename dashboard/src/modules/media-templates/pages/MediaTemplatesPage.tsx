@@ -7,6 +7,7 @@ import {
 } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../auth/context/AuthContext";
+import { scheduleService } from "../../schedule/services/schedule.service";
 import {
   mediaTemplatesService,
   type CreateTemplateInput,
@@ -43,13 +44,24 @@ const VARIANT_INITIAL_FORM = {
   cta: "",
 };
 
+const FIXED_TIME_SLOTS = [
+  "08:00",
+  "10:30",
+  "12:00",
+  "14:30",
+  "17:00",
+  "19:30",
+  "21:00",
+];
+
 type VariantFormState = typeof VARIANT_INITIAL_FORM;
 type WorkflowAnchor = "search" | "details" | "media" | "text" | "post" | "review";
 
 const POST_INITIAL_FORM = {
   textVariantId: "",
   title: "",
-  scheduledAt: "",
+  scheduleDate: "",
+  scheduleSlot: "",
 };
 
 const MEDIA_INITIAL_FORM = {
@@ -147,6 +159,8 @@ export function MediaTemplatesPage() {
   const [editingVariantForm, setEditingVariantForm] =
     useState<VariantFormState>(VARIANT_INITIAL_FORM);
   const [postForm, setPostForm] = useState(POST_INITIAL_FORM);
+  const [availableSlots, setAvailableSlots] =
+    useState<string[]>(FIXED_TIME_SLOTS);
   const [mediaForm, setMediaForm] = useState(MEDIA_INITIAL_FORM);
   const [pendingAnchor, setPendingAnchor] = useState<WorkflowAnchor | null>(null);
   const [q, setQ] = useState("");
@@ -177,13 +191,18 @@ export function MediaTemplatesPage() {
       null,
     [approvedVariants, postForm.textVariantId],
   );
+  const postScheduleAt = useMemo(() => {
+    if (!postForm.scheduleDate || !postForm.scheduleSlot) {
+      return "";
+    }
+
+    return `${postForm.scheduleDate}T${postForm.scheduleSlot}:00`;
+  }, [postForm.scheduleDate, postForm.scheduleSlot]);
   const postPreview = useMemo(() => {
     if (!selectedTemplate || !selectedPostVariant) return null;
 
     const mediaItems = selectedTemplate.mediaItems ?? [];
-    const scheduledAt = postForm.scheduledAt
-      ? new Date(postForm.scheduledAt)
-      : null;
+    const scheduledAt = postScheduleAt ? new Date(postScheduleAt) : null;
 
     return {
       title: postForm.title.trim() || selectedPostVariant.title || selectedTemplate.name,
@@ -202,7 +221,7 @@ export function MediaTemplatesPage() {
         mediaItems.length > 0 &&
         selectedPostVariant.status === "approved",
     };
-  }, [postForm.scheduledAt, postForm.title, selectedPostVariant, selectedTemplate]);
+  }, [postForm.title, postScheduleAt, selectedPostVariant, selectedTemplate]);
   const editingVariant = useMemo(
     () =>
       selectedVariants.find((variant) => variant.id === editingVariantId) ??
@@ -222,6 +241,19 @@ export function MediaTemplatesPage() {
       setSelectedId(result.items[0].id);
     }
   }
+
+  useEffect(() => {
+    scheduleService
+      .getSlots(true)
+      .then((data) => {
+        const slots = data.items.map((item) => item.timeValue).filter(Boolean);
+
+        if (slots.length > 0) {
+          setAvailableSlots(slots);
+        }
+      })
+      .catch(() => null);
+  }, []);
 
   async function loadSelected(templateId: string) {
     const template = await mediaTemplatesService.get(templateId);
@@ -676,6 +708,11 @@ export function MediaTemplatesPage() {
       return;
     }
 
+    if (!!postForm.scheduleDate !== !!postForm.scheduleSlot) {
+      setError("Para agendar, informe o dia e o horário.");
+      return;
+    }
+
     setIsSaving(true);
     setError(null);
     setMessage(null);
@@ -687,7 +724,7 @@ export function MediaTemplatesPage() {
           textVariantId: variant.id,
           publishType: variant.publishType,
           title: postForm.title || undefined,
-          scheduledAt: postForm.scheduledAt || undefined,
+          scheduledAt: postScheduleAt || undefined,
         },
       );
       setPostForm(POST_INITIAL_FORM);
@@ -1600,19 +1637,56 @@ export function MediaTemplatesPage() {
                 placeholder={selectedTemplate.name}
               />
             </label>
-            <label>
-              Agendar para
-              <input
-                type="datetime-local"
-                value={postForm.scheduledAt}
-                onChange={(event) =>
-                  setPostForm({
-                    ...postForm,
-                    scheduledAt: event.target.value,
-                  })
-                }
-              />
-            </label>
+            <div className="upload-schedule-grid">
+              <label>
+                Dia do agendamento (opcional)
+                <input
+                  type="date"
+                  value={postForm.scheduleDate}
+                  onChange={(event) =>
+                    setPostForm({
+                      ...postForm,
+                      scheduleDate: event.target.value,
+                    })
+                  }
+                />
+              </label>
+
+              <label>
+                Horário fixo (opcional)
+                <select
+                  value={postForm.scheduleSlot}
+                  onChange={(event) =>
+                    setPostForm({
+                      ...postForm,
+                      scheduleSlot: event.target.value,
+                    })
+                  }
+                >
+                  <option value="">Selecione um horário</option>
+                  {availableSlots.map((slot) => (
+                    <option key={slot} value={slot}>
+                      {slot}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            {postScheduleAt ? (
+              <p className="helper-text">
+                Agendamento selecionado: {postForm.scheduleDate} às{" "}
+                {postForm.scheduleSlot}
+              </p>
+            ) : !postForm.scheduleDate && !postForm.scheduleSlot ? (
+              <p className="upload-immediate-notice">
+                Sem data: a postagem entrará na fila assim que for criada pela
+                TAG.
+              </p>
+            ) : (
+              <p className="error-text">
+                Para agendar, informe o dia e o horário.
+              </p>
+            )}
             {postPreview ? (
               <div
                 className="panel-card"

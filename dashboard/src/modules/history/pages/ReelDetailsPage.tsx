@@ -23,6 +23,41 @@ function formatDelta(value: number) {
   return String(value);
 }
 
+function getPublishTypeLabel(value: ReelDetail["post"]["publishType"]) {
+  const labels: Record<ReelDetail["post"]["publishType"], string> = {
+    feed_carousel: "Carrossel",
+    feed_image: "Feed imagem",
+    reel: "Reel",
+    story_image: "Story imagem",
+    story_video: "Story vídeo",
+  };
+
+  return labels[value] ?? value;
+}
+
+function getPostOrigin(detail: ReelDetail) {
+  if (!detail.post.mediaTemplateId) {
+    return {
+      title: "Upload/manual",
+      detail: "Sem modelo/TAG",
+    };
+  }
+
+  return {
+    title: detail.post.mediaTemplateTag
+      ? `TAG ${detail.post.mediaTemplateTag}`
+      : "Modelo por TAG",
+    detail: [
+      detail.post.mediaTemplateName,
+      detail.post.mediaTemplateTextVariantTitle
+        ? `Texto: ${detail.post.mediaTemplateTextVariantTitle}`
+        : null,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+  };
+}
+
 function buildPolylinePoints(values: number[], maxValue: number) {
   if (values.length === 0) {
     return "";
@@ -51,7 +86,7 @@ export function ReelDetailsPage() {
 
   useEffect(() => {
     if (!id) {
-      setError("Reel nao informado.");
+      setError("Post nao informado.");
       setIsLoading(false);
       return;
     }
@@ -62,7 +97,7 @@ export function ReelDetailsPage() {
     historyService
       .getReelDetail(id)
       .then((data) => setDetail(data))
-      .catch(() => setError("Falha ao carregar detalhes do Reel."))
+      .catch(() => setError("Falha ao carregar detalhes do post."))
       .finally(() => setIsLoading(false));
   }, [id]);
 
@@ -78,20 +113,22 @@ export function ReelDetailsPage() {
   }, [detail]);
 
   if (isLoading) {
-    return <p>Carregando Reel...</p>;
+    return <p>Carregando post...</p>;
   }
 
   if (error || !detail) {
-    return <p className="error-text">{error ?? "Reel nao encontrado."}</p>;
+    return <p className="error-text">{error ?? "Post nao encontrado."}</p>;
   }
 
   const title = getReelTitle({
     postId: detail.post.id,
+    postTitle: detail.post.title,
     videoFilename: detail.post.videoFilename,
     caption: detail.post.caption,
   });
   const status = getStatusLabel(detail.post.status);
   const latest = detail.latestMetrics;
+  const origin = getPostOrigin(detail);
 
   const metricCards = [
     ["Likes", latest?.likes ?? 0, detail.delta.likes],
@@ -117,9 +154,34 @@ export function ReelDetailsPage() {
   return (
     <section className="dashboard-grid">
       <article className="panel-card full-width">
-        <Link to="/historico">Voltar para historico</Link>
+        <div className="workflow-next-actions">
+          <Link className="link-button" to="/historico">
+            Voltar para histórico
+          </Link>
+          <Link className="link-button" to="/agendamentos">
+            Ver agendamentos
+          </Link>
+          {detail.post.mediaTemplateId ? (
+            <Link className="link-button" to="/modelos">
+              Ver modelos
+            </Link>
+          ) : null}
+        </div>
+        <p className="eyebrow">Detalhes do post</p>
         <h2 style={{ marginTop: 12 }}>{title}</h2>
         <dl className="stat-list">
+          <div>
+            <dt>Tipo</dt>
+            <dd>{getPublishTypeLabel(detail.post.publishType)}</dd>
+          </div>
+          <div>
+            <dt>Origem</dt>
+            <dd>
+              <strong>{origin.title}</strong>
+              <br />
+              <span className="history-inline-note">{origin.detail}</span>
+            </dd>
+          </div>
           <div>
             <dt>Status</dt>
             <dd>
@@ -129,8 +191,32 @@ export function ReelDetailsPage() {
             </dd>
           </div>
           <div>
+            <dt>Agendado para</dt>
+            <dd>{formatDateTime(detail.post.scheduledAt)}</dd>
+          </div>
+          <div>
             <dt>Publicado em</dt>
             <dd>{formatDateTime(detail.post.publishedAt)}</dd>
+          </div>
+          <div>
+            <dt>Criado em</dt>
+            <dd>{formatDateTime(detail.post.createdAt)}</dd>
+          </div>
+          <div>
+            <dt>Atualizado em</dt>
+            <dd>{formatDateTime(detail.post.updatedAt)}</dd>
+          </div>
+          <div>
+            <dt>Retry</dt>
+            <dd>{detail.post.retryCount}/2</dd>
+          </div>
+          <div>
+            <dt>Erro</dt>
+            <dd>{detail.post.errorMessage ?? "-"}</dd>
+          </div>
+          <div>
+            <dt>Meta Container ID</dt>
+            <dd>{detail.post.metaContainerId ?? "-"}</dd>
           </div>
           <div>
             <dt>Meta Media ID</dt>
@@ -141,8 +227,13 @@ export function ReelDetailsPage() {
             <dd>{detail.post.accountName ?? detail.post.instagramId ?? "-"}</dd>
           </div>
           <div>
-            <dt>Arquivo</dt>
-            <dd>{detail.post.videoFilename ?? "-"}</dd>
+            <dt>Mídia principal</dt>
+            <dd>
+              {detail.post.mediaFile ?? "-"}
+              {detail.post.mediaItemsCount > 1
+                ? ` (+${detail.post.mediaItemsCount - 1})`
+                : ""}
+            </dd>
           </div>
         </dl>
       </article>
@@ -192,7 +283,7 @@ export function ReelDetailsPage() {
 
       <article className="panel-card full-width">
         <h2>Eventos</h2>
-        <div className="table-wrap" role="region" aria-label="eventos do Reel">
+        <div className="table-wrap" role="region" aria-label="eventos do post">
           <table>
             <thead>
               <tr>

@@ -6,6 +6,8 @@ set -euo pipefail
 # Uso:
 #   bash scripts/dev_wsl_background.sh start
 #   bash scripts/dev_wsl_background.sh start --with-worker
+#   bash scripts/dev_wsl_background.sh restart
+#   bash scripts/dev_wsl_background.sh restart --with-worker
 #   bash scripts/dev_wsl_background.sh status
 #   bash scripts/dev_wsl_background.sh logs
 #   bash scripts/dev_wsl_background.sh logs backend
@@ -17,6 +19,9 @@ LOG_DIR="$RUN_DIR/logs"
 
 BACKEND_DIR="$ROOT_DIR/backend"
 DASHBOARD_DIR="$ROOT_DIR/dashboard"
+
+BACKEND_PORT="3101"
+DASHBOARD_PORT="5181"
 
 BACKEND_PID="$RUN_DIR/backend.pid"
 DASHBOARD_PID="$RUN_DIR/dashboard.pid"
@@ -47,6 +52,31 @@ pid_is_running() {
   kill -0 "$pid" >/dev/null 2>&1
 }
 
+kill_matching_processes() {
+  local name="$1"
+  local pattern="$2"
+
+  if ! command -v pgrep >/dev/null 2>&1; then
+    return
+  fi
+
+  local pids
+  pids="$(pgrep -f "$pattern" 2>/dev/null || true)"
+
+  if [[ -z "$pids" ]]; then
+    return
+  fi
+
+  log "Encerrando processos órfãos de $name"
+  while IFS= read -r pid; do
+    [[ -n "$pid" ]] || continue
+    [[ "$pid" != "$$" ]] || continue
+    kill "$pid" >/dev/null 2>&1 || true
+  done <<<"$pids"
+
+  sleep 0.5
+}
+
 start_service() {
   local name="$1"
   local dir="$2"
@@ -61,7 +91,7 @@ start_service() {
   log "Iniciando $name"
   (
     cd "$dir"
-    nohup "$@" >"$LOG_DIR/$name.log" 2>&1 &
+    nohup setsid "$@" >"$LOG_DIR/$name.log" 2>&1 &
     echo $! >"$pid_file"
   )
   log "$name iniciado (pid $(cat "$pid_file")). Log: $LOG_DIR/$name.log"
@@ -80,7 +110,12 @@ stop_service() {
   local pid
   pid="$(cat "$pid_file")"
   log "Parando $name (pid $pid)"
-  kill "$pid" >/dev/null 2>&1 || true
+
+  if kill -0 "-$pid" >/dev/null 2>&1; then
+    kill "-$pid" >/dev/null 2>&1 || true
+  else
+    kill "$pid" >/dev/null 2>&1 || true
+  fi
 
   for _ in {1..20}; do
     if ! kill -0 "$pid" >/dev/null 2>&1; then
@@ -92,8 +127,53 @@ stop_service() {
   done
 
   log "$name não encerrou com SIGTERM; forçando."
-  kill -9 "$pid" >/dev/null 2>&1 || true
+  if kill -0 "-$pid" >/dev/null 2>&1; then
+    kill -9 "-$pid" >/dev/null 2>&1 || true
+  else
+    kill -9 "$pid" >/dev/null 2>&1 || true
+  fi
   rm -f "$pid_file"
+}
+
+release_port() {
+  local name="$1"
+  local port="$2"
+
+  if command -v fuser >/dev/null 2>&1; then
+    if fuser -s "$port/tcp" >/dev/null 2>&1; then
+      log "Liberando porta $port usada por $name"
+      fuser -k "$port/tcp" >/dev/null 2>&1 || true
+      sleep 0.5
+    fi
+    return
+  fi
+
+  if command -v lsof >/dev/null 2>&1; then
+    local pids
+    pids="$(lsof -ti tcp:"$port" 2>/dev/null || true)"
+
+    if [[ -n "$pids" ]]; then
+      log "Liberando porta $port usada por $name"
+      while IFS= read -r pid; do
+        [[ -n "$pid" ]] || continue
+        kill "$pid" >/dev/null 2>&1 || true
+      done <<<"$pids"
+      sleep 0.5
+    fi
+    return
+  fi
+
+  log "Não foi possível verificar a porta $port: instale fuser ou lsof se o problema persistir."
+}
+
+prepare_local_ports() {
+  log "Preparando portas locais"
+  stop_service "dashboard" "$DASHBOARD_PID"
+  stop_service "backend" "$BACKEND_PID"
+  kill_matching_processes "dashboard" "$DASHBOARD_DIR/node_modules/.bin/vite"
+  kill_matching_processes "backend" "$BACKEND_DIR/node_modules/.bin/nodemon src/server.js"
+  release_port "dashboard" "$DASHBOARD_PORT"
+  release_port "backend" "$BACKEND_PORT"
 }
 
 status_service() {
@@ -128,6 +208,7 @@ start_all() {
   done
 
   ensure_dirs
+  prepare_local_ports
 
   start_service "backend" "$BACKEND_DIR" "$BACKEND_PID" npm run dev
   start_service "dashboard" "$DASHBOARD_DIR" "$DASHBOARD_PID" npm run dev -- --host 0.0.0.0 --strictPort
@@ -136,8 +217,8 @@ start_all() {
     start_service "worker" "$BACKEND_DIR" "$WORKER_PID" npm run worker
   fi
 
-  log "Backend:   http://localhost:3101"
-  log "Dashboard: http://localhost:5181"
+  log "Backend:   http://localhost:$BACKEND_PORT"
+  log "Dashboard: http://localhost:$DASHBOARD_PORT"
   log "Logs:      bash scripts/dev_wsl_background.sh logs"
 }
 
@@ -150,8 +231,8 @@ stop_all() {
 
 status_all() {
   ensure_dirs
-  status_service "backend" "$BACKEND_PID" "http://localhost:3101"
-  status_service "dashboard" "$DASHBOARD_PID" "http://localhost:5181"
+  status_service "backend" "$BACKEND_PID" "http://localhost:$BACKEND_PORT"
+  status_service "dashboard" "$DASHBOARD_PID" "http://localhost:$DASHBOARD_PORT"
   status_service "worker" "$WORKER_PID"
 }
 

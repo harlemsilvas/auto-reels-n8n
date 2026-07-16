@@ -75,11 +75,27 @@ export type PostMetricTimelineItem = {
 export type ReelDetail = {
   post: {
     id: string;
+    title: string | null;
     videoFilename: string | null;
+    mediaFile: string | null;
     caption: string | null;
+    publishType: "reel" | "feed_image" | "feed_carousel" | "story_image" | "story_video";
+    mediaType: string | null;
+    scheduledAt: string | null;
+    createdAt: string;
+    updatedAt: string;
     publishedAt: string | null;
+    retryCount: number;
+    errorMessage: string | null;
+    metaContainerId: string | null;
     metaMediaId: string | null;
     status: string;
+    mediaTemplateId: string | null;
+    mediaTemplateTextVariantId: string | null;
+    mediaTemplateTag: string | null;
+    mediaTemplateName: string | null;
+    mediaTemplateTextVariantTitle: string | null;
+    mediaItemsCount: number;
     accountName: string | null;
     instagramId: string | null;
   };

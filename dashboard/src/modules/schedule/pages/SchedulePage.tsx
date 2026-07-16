@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   scheduleService,
   type PostListItem,
@@ -363,6 +364,9 @@ export function SchedulePage() {
       <article className="panel-card full-width">
         <div className="panel-actions">
           <h2 style={{ margin: 0 }}>Posts operacionais</h2>
+          <Link className="link-button" to="/modelos">
+            Criar pela TAG
+          </Link>
           <label>
             Status
             <select

@@ -2840,3 +2840,60 @@ Observação posterior: o Vite pode subir em outra porta quando `5181` está
 ocupada. O script foi ajustado para usar `--strictPort`, evitando que o
 dashboard suba silenciosamente em `5182` enquanto o usuário testa uma instância
 antiga em `5181`.
+
+Observação posterior em 2026-07-16: o script agora prepara as portas locais
+antes de subir backend/dashboard. Ao executar `start`, ele encerra processos
+registrados em `.dev-run/`, limpa processos órfãos conhecidos do projeto,
+libera as portas `3101` e `5181` com `fuser` ou `lsof` quando disponíveis e
+inicia os serviços em sessão própria para permitir parada por grupo de
+processos. Isso evita instâncias antigas do Vite/backend ocupando as portas e
+servindo bundle antigo. Esta regra é apenas para o ambiente local WSL; não deve
+ser copiada como alteração de PM2/portas na VPS.
+
+### Detalhes genéricos de post em 2026-07-16
+
+A página histórica `/reels/:id` foi evoluída para funcionar como uma tela
+genérica de detalhes do post, mantendo a rota antiga por compatibilidade:
+
+- textos da UI agora falam em `Post`, não apenas `Reel`;
+- o backend `getPostDetail()` passou a retornar dados genéricos:
+  - `title`;
+  - `publishType`;
+  - `mediaType`;
+  - `scheduledAt`, `createdAt`, `updatedAt`;
+  - `retryCount`, `errorMessage`;
+  - `metaContainerId`;
+  - `mediaFile`, `mediaItemsCount`;
+  - origem por modelo/TAG e variação de texto.
+- a tela mostra tipo de publicação, origem, agendamento, criação/atualização,
+  retry/erro, IDs Meta, conta e mídia principal;
+- foram adicionados atalhos para histórico, agendamentos e modelos.
+
+Validações locais:
+
+- `node --check backend/src/modules/metrics/metrics.service.js`;
+- `npm run build` no dashboard;
+- `git diff --check`;
+- chamada direta de `getPostDetail()` para o post local `a99999bc`, confirmando
+  `feed_image`, TAG `potenza-231gt`, modelo `ptz231gt`, variação vinculada,
+  mídia principal e eventos.
+
+### Agendamento guiado na criação por TAG em 2026-07-16
+
+A criação de postagem pela TAG em `/modelos` deixou de usar um campo único
+`datetime-local` e passou a seguir o mesmo padrão da página de upload:
+
+- campo separado para `Dia do agendamento`;
+- seleção de `Horário fixo`;
+- horários carregados de `/api/internal/scheduler/slots`;
+- fallback local para horários padrão se a API de horários não responder;
+- validação impedindo criar post com apenas data ou apenas horário;
+- mensagem clara para postagem sem data: entra na fila quando criada pela TAG.
+
+Também foi adicionado um atalho `Criar pela TAG` na página de agendamentos,
+apontando para `/modelos`, para conectar melhor o fluxo de agenda com a criação
+por modelo/TAG.
+
+Validação local:
+
+- `npm run build` no dashboard.

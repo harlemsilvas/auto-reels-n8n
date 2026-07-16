@@ -549,16 +549,50 @@ async function getPostDetail(postId) {
         `
           SELECT
             p.id::text AS id,
+            p.title,
             p.video_filename AS "videoFilename",
+            COALESCE(p.video_filename, primary_media.stored_filename) AS "mediaFile",
             p.caption,
+            p.publish_type AS "publishType",
+            p.media_type AS "mediaType",
+            p.scheduled_at AS "scheduledAt",
+            p.created_at AS "createdAt",
+            p.updated_at AS "updatedAt",
             p.published_at AS "publishedAt",
+            p.retry_count AS "retryCount",
+            p.error_message AS "errorMessage",
+            p.meta_container_id AS "metaContainerId",
             p.meta_media_id AS "metaMediaId",
             p.status::text AS status,
+            p.media_template_id::text AS "mediaTemplateId",
+            p.media_template_text_variant_id::text AS "mediaTemplateTextVariantId",
+            mt.tag AS "mediaTemplateTag",
+            mt.name AS "mediaTemplateName",
+            mttv.title AS "mediaTemplateTextVariantTitle",
+            media_summary.item_count::int AS "mediaItemsCount",
             ia.nome AS "accountName",
             ia.instagram_id AS "instagramId"
           FROM posts p
           LEFT JOIN instagram_accounts ia
             ON ia.id = p.account_id
+          LEFT JOIN media_templates mt
+            ON mt.id = p.media_template_id
+          LEFT JOIN media_template_text_variants mttv
+            ON mttv.id = p.media_template_text_variant_id
+          LEFT JOIN LATERAL (
+            SELECT pmi.stored_filename
+            FROM post_media_items pmi
+            WHERE pmi.post_id = p.id
+              AND pmi.deleted_at IS NULL
+            ORDER BY pmi.sort_order ASC
+            LIMIT 1
+          ) primary_media ON TRUE
+          LEFT JOIN LATERAL (
+            SELECT COUNT(*) AS item_count
+            FROM post_media_items pmi
+            WHERE pmi.post_id = p.id
+              AND pmi.deleted_at IS NULL
+          ) media_summary ON TRUE
           WHERE p.deleted_at IS NULL
             AND p.id = $1::uuid
           LIMIT 1
@@ -602,7 +636,7 @@ async function getPostDetail(postId) {
   );
 
   if (postResult.rowCount === 0) {
-    const error = new Error("Reel nao encontrado.");
+    const error = new Error("Post nao encontrado.");
     error.status = 404;
     throw error;
   }
