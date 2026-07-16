@@ -759,6 +759,12 @@ async function listPosts(filters = {}) {
         p.meta_media_id AS "metaMediaId",
         p.account_id::text AS "accountId",
         p.workspace_id::text AS "workspaceId",
+        p.media_template_id::text AS "mediaTemplateId",
+        p.media_template_text_variant_id::text AS "mediaTemplateTextVariantId",
+        mt.tag AS "mediaTemplateTag",
+        mt.name AS "mediaTemplateName",
+        mttv.title AS "mediaTemplateTextVariantTitle",
+        mttv.status::text AS "mediaTemplateTextVariantStatus",
         ia.instagram_id AS "igAccountId",
         ${credentialsSelect}
         p.publish_type AS "publishType",
@@ -776,6 +782,10 @@ async function listPosts(filters = {}) {
           ON ia.id = p.account_id
         LEFT JOIN socialbot_users creator
           ON creator.id = p.created_by_user_id
+        LEFT JOIN media_templates mt
+          ON mt.id = p.media_template_id
+        LEFT JOIN media_template_text_variants mttv
+          ON mttv.id = p.media_template_text_variant_id
         LEFT JOIN LATERAL (
           SELECT pmi.stored_filename
           FROM post_media_items pmi

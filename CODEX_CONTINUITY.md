@@ -2723,3 +2723,33 @@ preenchimento:
 
 Esses recursos não salvam automaticamente, não chamam Gemini e não publicam. São
 apenas auxiliares de preenchimento antes da revisão humana.
+
+### Rastreabilidade de posts por modelo na agenda em 2026-07-15
+
+Foi iniciada a fase de rastreabilidade operacional dos posts criados por
+modelo/TAG, sem migration nova e sem alterar worker/publicação:
+
+- `listPosts()` passou a retornar, quando houver origem por modelo:
+  - `mediaTemplateId`;
+  - `mediaTemplateTextVariantId`;
+  - `mediaTemplateTag`;
+  - `mediaTemplateName`;
+  - `mediaTemplateTextVariantTitle`;
+  - `mediaTemplateTextVariantStatus`.
+- a página `/agendamentos` passou a mostrar uma coluna `Origem`;
+- posts vindos de modelo aparecem como `TAG <tag>` com detalhes do modelo e
+  variação de texto;
+- posts legados/upload manual aparecem como `Upload/manual`;
+- o card de última publicação real também mostra a origem quando houver modelo.
+
+Validações executadas:
+
+- `node --check` em `backend/src/modules/posts/providers/db-posts.provider.js`;
+- `npm run build` no dashboard;
+- `git diff --check`;
+- teste direto local de `listPosts({ limit: 20 })`, confirmando exemplos com
+  tags como `potenza-xt-evolution`, `potenza-231gt` e `potenza-605xt`.
+
+Próximo passo recomendado: testar visualmente `/agendamentos` com posts
+criados pela TAG na VPS e, em seguida, evoluir os detalhes/ações da seção
+`Uso recente da TAG` dentro de `/modelos`.

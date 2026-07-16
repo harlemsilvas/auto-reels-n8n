@@ -41,6 +41,12 @@ export type PostListItem = {
   metaMediaId: string | null;
   accountId: string | null;
   workspaceId: string | null;
+  mediaTemplateId: string | null;
+  mediaTemplateTextVariantId: string | null;
+  mediaTemplateTag: string | null;
+  mediaTemplateName: string | null;
+  mediaTemplateTextVariantTitle: string | null;
+  mediaTemplateTextVariantStatus: string | null;
   publishType: "reel" | "feed_image" | "feed_carousel" | "story_image" | "story_video";
   mediaType: "image" | "video" | "carousel" | null;
   mediaFile: string | null;

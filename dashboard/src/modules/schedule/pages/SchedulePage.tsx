@@ -65,6 +65,29 @@ function getPublishTypeLabel(value: PostListItem["publishType"]) {
   return labels[value] ?? value;
 }
 
+function getPostOriginLabel(post: PostListItem) {
+  if (!post.mediaTemplateId) {
+    return {
+      title: "Upload/manual",
+      detail: "Sem modelo/TAG",
+    };
+  }
+
+  return {
+    title: post.mediaTemplateTag
+      ? `TAG ${post.mediaTemplateTag}`
+      : "Modelo por TAG",
+    detail: [
+      post.mediaTemplateName,
+      post.mediaTemplateTextVariantTitle
+        ? `Texto: ${post.mediaTemplateTextVariantTitle}`
+        : null,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+  };
+}
+
 type ToastTone = "ok" | "warn" | "error";
 
 type ToastState = {
@@ -319,6 +342,11 @@ export function SchedulePage() {
                 )}
               </span>
               <span>Mídia: {latestPublished.mediaFile ?? "-"}</span>
+              {latestPublished.mediaTemplateId ? (
+                <span>
+                  Origem: {getPostOriginLabel(latestPublished).title}
+                </span>
+              ) : null}
             </>
           ) : (
             <span>Ainda sem post publicado no banco.</span>
@@ -370,6 +398,7 @@ export function SchedulePage() {
                   <th>Nome</th>
                   <th>Status</th>
                   <th>Tipo</th>
+                  <th>Origem</th>
                   <th>Criado por</th>
                   <th>Agendado para</th>
                   <th>Mídia</th>
@@ -392,6 +421,14 @@ export function SchedulePage() {
                       </span>
                     </td>
                     <td>{getPublishTypeLabel(post.publishType)}</td>
+                    <td>
+                      <div className="history-post-cell">
+                        <strong>{getPostOriginLabel(post).title}</strong>
+                        <span className="history-inline-note">
+                          {getPostOriginLabel(post).detail}
+                        </span>
+                      </div>
+                    </td>
                     <td>
                       {post.createdByDisplayName ??
                         post.createdByUsername ??
@@ -449,7 +486,7 @@ export function SchedulePage() {
                 ))}
                 {sortedPosts.length === 0 ? (
                   <tr>
-                    <td colSpan={9}>Nenhum post encontrado para o filtro.</td>
+                    <td colSpan={12}>Nenhum post encontrado para o filtro.</td>
                   </tr>
                 ) : null}
               </tbody>
