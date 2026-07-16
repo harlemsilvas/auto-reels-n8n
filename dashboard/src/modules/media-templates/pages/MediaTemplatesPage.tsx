@@ -5,6 +5,7 @@ import {
   useState,
   type FormEvent,
 } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../../auth/context/AuthContext";
 import {
   mediaTemplatesService,
@@ -1162,12 +1163,17 @@ export function MediaTemplatesPage() {
                 <thead>
                   <tr>
                     <th>Post</th>
+                    <th>Texto usado</th>
                     <th>Tipo</th>
                     <th>Status</th>
                     <th>Agendamento</th>
+                    <th>Publicado</th>
                     <th>Criado em</th>
                     <th>Criado por</th>
                     <th>Mídias</th>
+                    <th>Meta</th>
+                    <th>Erro</th>
+                    <th>Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1181,17 +1187,66 @@ export function MediaTemplatesPage() {
                           </span>
                         </div>
                       </td>
+                      <td>
+                        <div className="history-post-cell">
+                          <strong>
+                            {post.mediaTemplateTextVariantTitle ?? "-"}
+                          </strong>
+                          <span className="history-inline-note">
+                            {post.mediaTemplateTextVariantId
+                              ? post.mediaTemplateTextVariantId.slice(0, 8)
+                              : "Sem variação vinculada"}
+                          </span>
+                        </div>
+                      </td>
                       <td>{publishTypeLabel(post.publishType)}</td>
                       <td>{statusLabel(post.status)}</td>
                       <td>{formatDate(post.scheduledAt)}</td>
+                      <td>{formatDate(post.publishedAt)}</td>
                       <td>{formatDate(post.createdAt)}</td>
                       <td>{post.createdByDisplayName ?? "-"}</td>
                       <td>{post.mediaItemsCount}</td>
+                      <td>
+                        <div className="history-post-cell">
+                          <strong>
+                            {post.metaMediaId
+                              ? post.metaMediaId.slice(0, 8)
+                              : "-"}
+                          </strong>
+                          <span className="history-inline-note">
+                            {post.metaContainerId
+                              ? `container ${post.metaContainerId.slice(0, 8)}`
+                              : "Sem ID Meta"}
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        {post.errorMessage ? (
+                          <div className="history-post-cell">
+                            <strong>{post.retryCount}/2</strong>
+                            <span className="history-inline-note">
+                              {post.errorMessage}
+                            </span>
+                          </div>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
+                      <td>
+                        <div className="workflow-next-actions">
+                          <Link className="link-button" to={`/reels/${post.id}`}>
+                            Detalhes
+                          </Link>
+                          <Link className="link-button" to="/agendamentos">
+                            Agendamentos
+                          </Link>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                   {!selectedTemplate.recentPosts?.length ? (
                     <tr>
-                      <td colSpan={7}>
+                      <td colSpan={12}>
                         Nenhuma postagem criada a partir desta TAG ainda.
                       </td>
                     </tr>

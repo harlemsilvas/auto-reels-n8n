@@ -559,21 +559,30 @@ async function listTemplateRecentPosts(templateId, limit = 10) {
         p.id::text AS id,
         p.title,
         p.status::text AS status,
+        p.retry_count AS "retryCount",
+        p.error_message AS "errorMessage",
         p.publish_type AS "publishType",
         p.media_type AS "mediaType",
         p.scheduled_at AS "scheduledAt",
         p.created_at AS "createdAt",
+        p.updated_at AS "updatedAt",
         p.published_at AS "publishedAt",
+        p.meta_container_id AS "metaContainerId",
+        p.meta_media_id AS "metaMediaId",
+        p.media_template_text_variant_id::text AS "mediaTemplateTextVariantId",
+        mttv.title AS "mediaTemplateTextVariantTitle",
         p.created_by_user_id::text AS "createdByUserId",
         creator.display_name AS "createdByDisplayName",
         COUNT(pmi.id)::int AS "mediaItemsCount"
       FROM posts p
       LEFT JOIN socialbot_users creator ON creator.id = p.created_by_user_id
+      LEFT JOIN media_template_text_variants mttv
+        ON mttv.id = p.media_template_text_variant_id
       LEFT JOIN post_media_items pmi
         ON pmi.post_id = p.id
        AND pmi.deleted_at IS NULL
       WHERE p.media_template_id = $1::uuid
-      GROUP BY p.id, creator.display_name
+      GROUP BY p.id, creator.display_name, mttv.title
       ORDER BY p.created_at DESC
       LIMIT $2
     `,

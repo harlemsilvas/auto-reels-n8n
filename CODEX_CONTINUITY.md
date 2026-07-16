@@ -2753,3 +2753,90 @@ Validações executadas:
 Próximo passo recomendado: testar visualmente `/agendamentos` com posts
 criados pela TAG na VPS e, em seguida, evoluir os detalhes/ações da seção
 `Uso recente da TAG` dentro de `/modelos`.
+
+### Validação VPS e evolução de `Uso recente da TAG` em 2026-07-16
+
+Após a publicação real programada por modelo/TAG, a VPS foi verificada de forma
+somente leitura:
+
+- commit em produção: `81c041b feat: exibe origem por modelo nos agendamentos`;
+- backend `socialbot-backend` online no PM2;
+- worker `socialbot-worker` online no PM2;
+- API `https://api.hrmmotos.com.br/api/health` retornou `{"ok":true}`.
+
+Posts por modelo confirmados na VPS:
+
+- `acf4d308-8549-435f-9968-5a017f65ee43`
+  - título: `🚀 Dê um Upgrade na sua Pilotagem com a Potenza XT Evolution!`;
+  - `publish_type = feed_carousel`;
+  - status `published`;
+  - retry `0`;
+  - `scheduled_at = 2026-07-16 08:01:00-03`;
+  - `published_at = 2026-07-16 08:01:45.766-03`;
+  - `meta_container_id = 18547214059078109`;
+  - `meta_media_id = 17871746001553033`;
+  - TAG `potenza-campanha-380xt`;
+  - modelo `Potenza - 380XT`;
+  - variação `Potenza 380XT: Tecnologia e Performance para sua Honda`.
+
+Eventos do post agendado confirmados:
+
+- `created`;
+- `processing_started`;
+- `queued`;
+- `publisher_completed`;
+- `published`.
+
+Também havia post por modelo publicado em `2026-07-15 22:04:48.642-03` com
+evento posterior de `metrics_collected`.
+
+Como continuação, a seção `/modelos > Uso recente da TAG` foi enriquecida sem
+alterar schema, worker ou publicação:
+
+- backend `listTemplateRecentPosts()` agora retorna `retryCount`,
+  `errorMessage`, `updatedAt`, `metaContainerId`, `metaMediaId`,
+  `mediaTemplateTextVariantId` e `mediaTemplateTextVariantTitle`;
+- dashboard mostra na tabela:
+  - texto/variação usada;
+  - data de publicação;
+  - IDs Meta resumidos;
+  - retry/erro quando houver.
+
+Validações locais executadas:
+
+- `node --check backend/src/modules/media-templates/media-templates.service.js`;
+- `npm run build` no dashboard;
+- `git diff --check`;
+- consulta local de `getTemplate(..., { includeDetails: true })` confirmando
+  os novos campos em `recentPosts`.
+
+Validação visual posterior:
+
+- o usuário confirmou que o post local `a99999bc` aparece corretamente como
+  recente no modelo/TAG `potenza-231gt`;
+- foi adicionado na tabela `Uso recente da TAG` o campo `Ações`, com atalhos
+  para abrir `Detalhes` do post e voltar para `/agendamentos`;
+- `npm run build` no dashboard e `git diff --check` passaram após essa melhoria.
+
+### Script local WSL para subir backend/dashboard em background
+
+Foi criado `scripts/dev_wsl_background.sh` para facilitar testes locais no WSL
+sem alterar configuração da VPS:
+
+- `bash scripts/dev_wsl_background.sh start` sobe backend com `npm run dev` e
+  dashboard com `npm run dev -- --host 0.0.0.0 --strictPort`;
+- `bash scripts/dev_wsl_background.sh start --with-worker` também sobe o worker
+  local com `npm run worker`;
+- `status`, `logs`, `restart` e `stop` auxiliam operação local;
+- PIDs e logs ficam em `.dev-run/`, que é artefato local de execução.
+
+Validações:
+
+- `chmod +x scripts/dev_wsl_background.sh`;
+- `bash -n scripts/dev_wsl_background.sh`;
+- `bash scripts/dev_wsl_background.sh status`.
+
+Observação posterior: o Vite pode subir em outra porta quando `5181` está
+ocupada. O script foi ajustado para usar `--strictPort`, evitando que o
+dashboard suba silenciosamente em `5182` enquanto o usuário testa uma instância
+antiga em `5181`.

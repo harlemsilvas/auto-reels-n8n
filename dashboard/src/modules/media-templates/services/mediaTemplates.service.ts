@@ -42,11 +42,18 @@ export type TemplateRecentPost = {
   id: string;
   title: string | null;
   status: string;
+  retryCount: number;
+  errorMessage: string | null;
   publishType: PublishType;
   mediaType: string | null;
   scheduledAt: string | null;
   createdAt: string;
+  updatedAt: string;
   publishedAt: string | null;
+  metaContainerId: string | null;
+  metaMediaId: string | null;
+  mediaTemplateTextVariantId: string | null;
+  mediaTemplateTextVariantTitle: string | null;
   createdByUserId?: string | null;
   createdByDisplayName?: string | null;
   mediaItemsCount: number;

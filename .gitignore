@@ -63,6 +63,7 @@ backups/
 # Arquivos operacionais opcionais
 *.pid
 *.seed
+.dev-run/
 
 # Artefatos antigos que nao serao mais utilizados
 /nao_usaremos/
