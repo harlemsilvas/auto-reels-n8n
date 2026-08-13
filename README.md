@@ -1,93 +1,116 @@
-# 📱 SocialBot
+# SocialBot
 
-**Plataforma para gerenciamento, agendamento e automação de publicações no Instagram, integrando backend, banco de dados, filas, automações e APIs externas.**
+Plataforma full stack para operacao de conteudo no Instagram, combinando publicacao, agendamento, automacao, inbox, autenticacao administrativa e monitoramento em uma unica base de produto.
 
-O **SocialBot** nasceu como uma solução para automatizar a publicação de Reels e evoluiu para uma arquitetura preparada para trabalhar com diferentes formatos de conteúdo do Instagram.
+Este projeto demonstra a construcao de um sistema real de operacao interna: backend, dashboard, banco de dados, filas, workers, integracoes externas e evolucao incremental de arquitetura sem quebrar o fluxo legado mais sensivel do negocio.
 
-O projeto combina desenvolvimento backend, automação, filas de processamento, banco de dados e infraestrutura para criar um fluxo controlado de gerenciamento e publicação de conteúdo.
+## Destaques Do Projeto
 
----
+- Evolucao de um fluxo legado de Reels para uma arquitetura preparada para multiplos formatos de publicacao
+- Backend modular com autenticacao, permissoes, scheduler, historico, inbox, metricas e publisher por estrategia
+- Dashboard administrativo em React para operacao diaria
+- Worker assíncrono com BullMQ e Redis para processamento desacoplado
+- Integracao com n8n e Meta Graph API
+- Modelagem de dados preparada para multiplas midias por post
+- Separacao cuidadosa entre ambiente local e VPS
 
-## 🎯 Objetivo
+## O Problema Que O Sistema Resolve
 
-Centralizar e automatizar processos relacionados à publicação de conteúdo em redes sociais, reduzindo tarefas manuais e criando uma infraestrutura capaz de evoluir para múltiplas contas e diferentes formatos de publicação.
+O SocialBot centraliza tarefas que normalmente ficariam espalhadas entre planilhas, ferramentas de automacao, publicacao manual e operacao via celular.
 
-O desenvolvimento preserva o fluxo funcional existente de Reels enquanto novos tipos de publicação são incorporados gradualmente.
+Na pratica, ele cria uma base unica para:
 
----
+- receber uploads de conteudo;
+- agendar publicacoes;
+- controlar status operacionais;
+- publicar com seguranca;
+- acompanhar historico;
+- responder mensagens;
+- administrar contas, usuarios e permissoes;
+- preparar a evolucao do produto sem interromper o fluxo que ja funciona.
 
-## ✨ Funcionalidades
+## Escopo Tecnico Atual
 
-Entre os recursos implementados e em evolução estão:
+Hoje o sistema ja possui implementacao real para:
 
-- Upload e gerenciamento de mídia
-- Cadastro e gerenciamento de publicações
-- Agendamento de conteúdo
-- Processamento assíncrono de tarefas
-- Filas de publicação
-- Worker dedicado
-- Integração com PostgreSQL
-- Integração com Redis
-- Automação de processos
-- Dashboard administrativo
-- Gerenciamento de contas
-- Estrutura para múltiplos workspaces
-- Histórico e acompanhamento de publicações
+- upload legado de Reels via `POST /api/media/upload`;
+- upload multi-tipo via `POST /api/media/upload-post`;
+- posts `reel`, `feed_image`, `feed_carousel`, `story_image` e `story_video`;
+- dashboard administrativo com login, troca obrigatoria de senha e controle por permissao;
+- tela de uploads, agendamentos, historico, contas, usuarios e horarios;
+- inbox Instagram com visualizacao de conversas, leitura de mensagens e resposta;
+- stream em tempo real via SSE para atualizacao de inbox;
+- worker de publicacao com BullMQ;
+- fluxo seguro de Reels via n8n;
+- publisher multi-tipo com estrategias por formato;
+- metricas e consultas operacionais;
+- templates de midia e base para geracao assistida de conteudo;
+- gerenciamento de credenciais de IA;
+- limpeza e manutencao de midia por worker dedicado.
 
-O modelo de dados já contempla diferentes tipos de publicação:
+## Arquitetura E Decisoes De Engenharia
 
-- Reels
-- Imagens no Feed
-- Carrosséis
-- Stories com imagem
-- Stories com vídeo
+Uma das decisoes centrais do projeto foi preservar o fluxo funcional de Reels enquanto a plataforma ganhava suporte a novos formatos.
 
-A evolução desses formatos é realizada de forma incremental para preservar compatibilidade com o fluxo de Reels já existente.
+Isso levou a algumas escolhas importantes:
 
----
+- `publish_type = 'reel'` como default para compatibilidade com dados antigos;
+- criacao de `post_media_items` para suportar multiplos arquivos por post;
+- camada de publisher por estrategia, separando o comportamento por tipo;
+- uso de feature flag para liberar multi-publicacao de forma controlada;
+- manutencao do caminho n8n para Reels enquanto os novos formatos evoluem;
+- separacao clara entre configuracoes locais e configuracoes de VPS.
 
-## 📸 Screenshots
+Esse desenho mostra um tipo de evolucao muito comum em sistemas reais: melhorar a arquitetura sem exigir reescrita total nem interromper a operacao existente.
 
-> As capturas serão adicionadas após a seleção das principais telas para apresentação pública.
+## Fluxo Simplificado
 
-### Dashboard
+```text
+Dashboard
+   ->
+Backend / API
+   ->
+PostgreSQL + Redis
+   ->
+BullMQ
+   ->
+Worker
+   ->
+n8n ou Meta Graph API
+   ->
+Instagram
+```
 
-`docs/screenshots/dashboard.png`
+Regras atuais do fluxo:
 
-### Gestão de Publicações
+- Reels continuam publicados pelo caminho mais estavel com n8n.
+- Feed, Carrossel e Stories passam pela camada de publisher multi-tipo.
+- A publicacao multi-tipo depende de `MULTI_PUBLISH_ENABLED=true`.
+- Com a flag desligada, o sistema ainda pode criar e agendar posts multi-tipo sem publica-los automaticamente.
 
-`docs/screenshots/posts.png`
-
-### Upload e Agendamento
-
-`docs/screenshots/scheduler.png`
-
-### Gestão de Contas
-
-`docs/screenshots/accounts.png`
-
-### Métricas / Acompanhamento
-
-`docs/screenshots/metrics.png`
-
----
-
-## 🚀 Tecnologias
+## Stack
 
 ### Backend
 
 - Node.js
 - Express 5
 - PostgreSQL
-- Axios
+- `pg`
 - Multer
+- Axios
 - dotenv
 
-### Filas e Automação
+### Frontend
 
-- BullMQ
+- React 19
+- React Router 7
+- TypeScript
+- Vite
+
+### Processamento E Automacao
+
 - Redis
-- ioredis
+- BullMQ
 - node-cron
 - n8n
 
@@ -95,122 +118,104 @@ A evolução desses formatos é realizada de forma incremental para preservar co
 
 - Docker
 - Docker Compose
-- Linux
-- Git
-- GitHub
+- Linux / WSL
+- Git e GitHub
 
-### Integrações
-
-- APIs externas para publicação e gerenciamento de conteúdo
-- Automações n8n
-- Serviços de mídia
-
----
-
-## 🏗️ Arquitetura
-
-O projeto é organizado em componentes independentes para API, dashboard, banco de dados, automações e processamento assíncrono.
+## Estrutura Do Repositorio
 
 ```text
 auto-reels-n8n/
-│
 ├── backend/
-│   ├── src/
-│   │   ├── modules/
-│   │   ├── routes/
-│   │   ├── providers/
-│   │   ├── server.js
-│   │   └── worker.js
-│   │
+│   ├── scripts/
 │   ├── sql/
-│   └── scripts/
-│
+│   └── src/
+│       ├── app.js
+│       ├── server.js
+│       ├── worker.js
+│       ├── config/
+│       ├── lib/
+│       ├── middlewares/
+│       ├── modules/
+│       ├── routes/
+│       ├── services/
+│       └── utils/
 ├── dashboard/
-│
-├── postgres-init/
-│
-├── config/
-│
+│   └── src/
 ├── docs/
-│
+├── postgres-init/
 ├── docker-compose.yml
-│
+├── CODEX_CONTINUITY.md
 └── README.md
 ```
 
----
+## Modulos Relevantes
 
-## 🔄 Fluxo Geral
+O backend hoje cobre dominios que vao muito alem de upload e publicacao:
 
-De forma simplificada, uma publicação percorre o seguinte fluxo:
+- `auth/`
+- `accounts/`
+- `posts/`
+- `scheduler/`
+- `publisher/`
+- `history/`
+- `metrics/`
+- `inbox/`
+- `conversations/`
+- `realtime/`
+- `media-templates/`
+- `ai-credentials/`
+- `users/`
 
-```text
-Usuário
-   │
-   ▼
-Dashboard
-   │
-   ▼
-Backend / API
-   │
-   ├── PostgreSQL
-   │
-   ├── Upload de mídia
-   │
-   └── Fila de processamento
-           │
-           ▼
-        BullMQ
-           │
-           ▼
-         Worker
-           │
-           ▼
-   Automação / Integração
-           │
-           ▼
-       Instagram
+Isso reflete um sistema interno de operacao com responsabilidades reais de produto, e nao apenas uma API isolada.
+
+## Banco De Dados
+
+O modelo atual contempla:
+
+- `workspaces`
+- `instagram_accounts`
+- `uploads`
+- `posts`
+- `post_media_items`
+- `post_events`
+- usuarios administrativos, sessoes e permissoes
+- templates de midia e variantes de texto
+
+Na evolucao multi-tipo, ja estao presentes:
+
+- `posts.publish_type`
+- `posts.media_type`
+- `posts.carousel_children`
+- `posts.cover_image_filename`
+- `posts.publish_options`
+- tabela `post_media_items`
+
+As migrations SQL ficam em `backend/sql/` e o bootstrap inicial do banco em `postgres-init/000_socialbot_init.sql`.
+
+## O Que Este Projeto Demonstra
+
+Como portfolio, o SocialBot evidencia experiencia pratica em:
+
+- arquitetura full stack orientada a operacao;
+- modularizacao de backend em sistema crescente;
+- evolucao de schema com compatibilidade retroativa;
+- filas, workers e processamento assincrono;
+- integracao com APIs externas;
+- autenticacao e autorizacao por permissoes;
+- dashboard interno em React;
+- automacao com n8n;
+- desenho de feature flags para rollout seguro;
+- cuidado com separacao entre desenvolvimento local e producao.
+
+## Execucao Em Desenvolvimento
+
+### Infraestrutura local
+
+```bash
+docker compose up -d postgres redis n8n
 ```
 
-Essa separação permite que tarefas demoradas ou dependentes de APIs externas sejam processadas fora do fluxo principal da aplicação.
-
----
-
-## 🎬 Publicações
-
-O projeto começou com foco na publicação automática de **Reels**.
-
-O fluxo existente mantém compatibilidade com publicações de vídeo enquanto a estrutura de dados evolui para suportar outros formatos.
-
-O modelo atualmente prevê:
-
-```text
-reel
-feed_image
-feed_carousel
-story_image
-story_video
-```
-
-Para publicações com múltiplos arquivos, o projeto possui estrutura específica para itens de mídia associados à publicação.
-
----
-
-## ⚙️ Backend
-
-O backend é responsável por:
-
-- API da aplicação
-- Upload de arquivos
-- Gestão de publicações
-- Gestão de contas
-- Agendamento
-- Comunicação com PostgreSQL
-- Integração com Redis
-- Enfileiramento de tarefas
-- Processamento através de workers
-
-Execução em desenvolvimento:
+### Backend
 
 ```bash
 cd backend
@@ -218,155 +223,38 @@ npm install
 npm run dev
 ```
 
-Execução normal:
+### Worker
 
 ```bash
-npm start
-```
-
-Worker:
-
-```bash
+cd backend
 npm run worker
 ```
 
----
+### Dashboard
 
-## 🗄️ Banco de Dados
-
-O SocialBot utiliza **PostgreSQL** para persistência.
-
-A estrutura contempla informações relacionadas a:
-
-- contas;
-- workspaces;
-- publicações;
-- uploads;
-- itens de mídia;
-- agendamentos;
-- status de publicação;
-- informações operacionais.
-
-As alterações estruturais do banco são controladas através de scripts SQL e migrations versionadas.
-
----
-
-## 📬 Filas e Processamento Assíncrono
-
-O projeto utiliza:
-
-**BullMQ + Redis**
-
-para separar o processamento de tarefas do fluxo principal da API.
-
-Essa arquitetura permite controlar melhor processos como:
-
-- publicações agendadas;
-- processamento de jobs;
-- tentativas de execução;
-- workers independentes;
-- tarefas que dependem de serviços externos.
-
----
-
-## 🤖 Automação
-
-O projeto utiliza **n8n** como parte da infraestrutura de automação.
-
-A arquitetura permite integrar fluxos da aplicação com processos externos sem concentrar toda a lógica de automação diretamente no backend.
-
----
-
-## 🐳 Infraestrutura
-
-O repositório possui configuração com Docker Compose para os serviços utilizados pelo projeto.
-
-Os ambientes local e de produção são tratados separadamente para evitar que configurações específicas de desenvolvimento sejam propagadas indevidamente para a infraestrutura de produção.
-
----
-
-## 🔐 Configuração e Segurança
-
-Credenciais, tokens, senhas e configurações específicas de ambiente não devem ser armazenados diretamente no código.
-
-A aplicação utiliza variáveis de ambiente para configurações sensíveis.
-
-Antes de publicar ou clonar o projeto, configure corretamente os arquivos de ambiente necessários.
-
----
-
-## 🧭 Evolução para múltiplos formatos
-
-Uma das evoluções arquiteturais do SocialBot é permitir que o sistema deixe de trabalhar exclusivamente com Reels.
-
-A estrutura está sendo preparada para suportar:
-
-```text
-Reels
-   ↓
-Feed Image
-   ↓
-Feed Carousel
-   ↓
-Story Image
-   ↓
-Story Video
+```bash
+cd dashboard
+npm install
+npm run dev
 ```
 
-Essa evolução é realizada sem remover o fluxo já funcional de publicação de Reels.
+## Estado Atual Em 13 De Agosto De 2026
 
----
+Em 13 de agosto de 2026, o banco local ja estava validado com as fases 1 e 2 da evolucao multi-posts aplicadas, incluindo colunas de `publish_type` e a tabela `post_media_items`.
 
-## 📖 Documentação
+O sistema atual ja cobre operacao administrativa, publicacao, historico, inbox e preparacao para formatos multi-midia, mantendo Reels como fluxo mais consolidado.
 
-O projeto mantém documentação complementar na pasta:
+## Documentacao Complementar
 
-```text
-docs/
-```
+- [docs/](/mnt/c/Projetos/auto-reels-n8n/docs/)
+- [CODEX_CONTINUITY.md](/mnt/c/Projetos/auto-reels-n8n/CODEX_CONTINUITY.md)
+- [docs/0006-mult-posts.md](/mnt/c/Projetos/auto-reels-n8n/docs/0006-mult-posts.md)
+- [docs/0007-auth-users.md](/mnt/c/Projetos/auto-reels-n8n/docs/0007-auth-users.md)
+- [docs/features/001-permissoes-granulares.md](/mnt/c/Projetos/auto-reels-n8n/docs/features/001-permissoes-granulares.md)
+- [docs/features/002-modelos-midias-ia-tags.md](/mnt/c/Projetos/auto-reels-n8n/docs/features/002-modelos-midias-ia-tags.md)
 
-Também existem documentos de continuidade utilizados para registrar decisões técnicas, estado atual e próximas etapas do desenvolvimento.
+## Autor
 
----
+Harlem Afonso Claumann Silva
 
-## 🎯 Conhecimentos Demonstrados
-
-O SocialBot demonstra na prática conhecimentos em:
-
-- Node.js
-- Express
-- APIs REST
-- PostgreSQL
-- Redis
-- BullMQ
-- Processamento assíncrono
-- Workers
-- Filas
-- Upload de arquivos
-- Automação de processos
-- n8n
-- Integração com APIs externas
-- Docker
-- Linux
-- Arquitetura de sistemas
-- Integração entre serviços
-- Git e GitHub
-
----
-
-## 📌 Status
-
-**Em desenvolvimento ativo.**
-
-O fluxo de Reels é preservado enquanto a plataforma evolui para uma arquitetura mais ampla de gerenciamento e publicação de conteúdo.
-
----
-
-## 👨‍💻 Autor
-
-**Harlem Afonso Claumann Silva**
-
-Analista de Sistemas | Desenvolvedor de Software | Integrações
-
-GitHub:
-https://github.com/harlemsilvas
+- GitHub: https://github.com/harlemsilvas

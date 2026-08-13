@@ -1,6 +1,6 @@
 # SocialBot — Contexto de Continuidade para Codex
 
-Atualizado em: 2026-07-14
+Atualizado em: 2026-08-13
 
 ## Objetivo
 
@@ -283,6 +283,89 @@ retomada, não como substituto de revisão de código.
 - Reels continuam obrigatoriamente pelo fluxo n8n.
 - Não habilitar multi-publicação na VPS sem teste controlado e escolha explícita
   de um post alvo.
+
+## Retomada em 2026-08-13 — verificação real do banco local
+
+A checagem pendente das fases 1 e 2 foi executada hoje diretamente no
+PostgreSQL local, sem alterar dados nem schema, usando o script:
+
+- `backend/sql/006-mult-posts-phase-1-2-verify.sql`
+
+### Ambiente confirmado na verificação
+
+- Container `socialbot_postgres` ativo no Docker local.
+- PostgreSQL publicado em `127.0.0.1:55532`.
+- Banco acessado: `n8n`.
+- Usuário acessado: `n8n`.
+- Versão retornada: PostgreSQL `15.18`.
+
+### Resultado da verificação
+
+- `posts` contém as colunas `publish_type`, `media_type`,
+  `carousel_children`, `cover_image_filename` e `publish_options`.
+- `post_media_items` existe com a estrutura esperada das fases 1 e 2.
+- Constraints de domínio e integridade estão presentes e validadas.
+- Índices `idx_posts_publish_type`, `idx_post_media_items_post_id`,
+  `idx_post_media_items_workspace_id` e
+  `uq_post_media_items_post_sort_active` estão presentes.
+- Não há `posts` com `publish_type` nulo.
+- Não há `posts` com `publish_type` inválido.
+- Não há itens órfãos em `post_media_items`.
+- Não há divergência de `workspace_id` entre `posts` e `post_media_items`.
+
+### Contagens observadas em 2026-08-13
+
+- `posts_total = 19`
+- `reel_posts = 5`
+- `media_items_total = 28`
+
+### Decisão após a verificação
+
+- As fases 1 e 2 estão efetivamente aplicadas no banco local atual.
+- Não é necessário reaplicar a migration localmente neste ambiente.
+- Para VPS, continuar tratando a migration como etapa separada, com backup,
+  inspeção do banco real e execução idempotente.
+
+## Retomada em 2026-08-13 — README alinhado ao estado real do sistema
+
+O `README.md` foi revisado para servir melhor como apresentação pública e
+portfolio técnico do repositório.
+
+### Ajustes realizados
+
+- descrição atualizada do escopo full stack do projeto;
+- stack real do backend e dashboard refletida no documento;
+- arquitetura do repositório corrigida para a estrutura atual;
+- funcionalidades existentes expostas com mais precisão:
+  - autenticação administrativa;
+  - permissões;
+  - inbox;
+  - métricas;
+  - templates de mídia;
+  - credenciais de IA;
+  - worker;
+  - publicações multi-tipo;
+- status do fluxo legado de Reels e da feature flag
+  `MULTI_PUBLISH_ENABLED` documentados de forma explícita;
+- remoção de seções vagas ou imprecisas que não representavam mais o sistema.
+
+### Validação
+
+- `git diff --check -- README.md CODEX_CONTINUITY.md`
+
+### Observação
+
+- O README agora está mais fiel ao sistema real para uso no GitHub, mas ainda
+  pode receber screenshots finais quando o usuário quiser publicar uma versão
+  visual do portfolio.
+
+### Refinamento posterior no mesmo dia
+
+- O `README.md` foi reescrito novamente com foco mais forte em recrutador.
+- A abertura passou a enfatizar proposta de valor, escopo full stack e
+  responsabilidades de engenharia.
+- O texto agora destaca impacto, decisoes arquiteturais e competencias
+  demonstradas, reduzindo o tom de inventario tecnico cru.
 
 ### Ambiente local usado no teste
 
