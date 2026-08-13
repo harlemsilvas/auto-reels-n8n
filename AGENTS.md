@@ -4,9 +4,10 @@ Antes de trabalhar neste repositório:
 
 1. Usar a skill `$auto-reels-continuity` quando estiver disponível.
 2. Ler completamente `CODEX_CONTINUITY.md`.
-3. Ler `docs/0006-mult-posts.md` para tarefas de publicação, upload, banco,
+3. Ler completamente `CLAUDE.md`.
+4. Ler `docs/0006-mult-posts.md` para tarefas de publicação, upload, banco,
    worker ou frontend.
-4. Executar `git status --short` e preservar alterações não relacionadas.
+5. Executar `git status --short` e preservar alterações não relacionadas.
 
 Regras essenciais:
 

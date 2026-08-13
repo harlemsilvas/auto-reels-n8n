@@ -367,6 +367,29 @@ portfolio técnico do repositório.
 - O texto agora destaca impacto, decisoes arquiteturais e competencias
   demonstradas, reduzindo o tom de inventario tecnico cru.
 
+## Retomada em 2026-08-13 — alinhamento de instrucoes do agente
+
+Foi revisado o arquivo `CLAUDE.md` e alinhado o bootstrap documental do
+repositório.
+
+### Ajustes realizados
+
+- `AGENTS.md` agora exige leitura completa de `CLAUDE.md` antes do trabalho.
+- `CLAUDE.md` foi ajustado para refletir este projeto, removendo referencia
+  indevida a "sistema financeiro".
+- A secao de banco em `CLAUDE.md` deixou de conflitar com o uso atual do
+  schema `public`.
+- Foram reforcadas em `CLAUDE.md` as regras locais deste projeto:
+  - preservar o fluxo de Reels;
+  - manter o endpoint legado de upload;
+  - separar ambiente local e VPS;
+  - nao inferir mudancas de infra na VPS.
+
+### Estado no Git
+
+- `AGENTS.md` ficou modificado.
+- `CLAUDE.md` permanece como arquivo novo nao rastreado no worktree local.
+
 ### Ambiente local usado no teste
 
 - PostgreSQL Docker local publicado em `127.0.0.1:55532`.
