@@ -3,7 +3,9 @@
 Antes de trabalhar neste repositório:
 
 1. Usar a skill `$auto-reels-continuity` quando estiver disponível.
-2. Ler completamente `CODEX_CONTINUITY.md`.
+2. Ler completamente `CODEX_CONTINUITY.md`; localizar a TAG de retomada mais recente
+   e informar ao usuário a TAG, o último estado confirmado, commit/deploy e pendências.
+   Distinguir validações registradas de verificações feitas na sessão atual.
 3. Ler completamente `CLAUDE.md`.
 4. Ler `docs/0006-mult-posts.md` para tarefas de publicação, upload, banco,
    worker ou frontend.

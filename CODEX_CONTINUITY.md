@@ -2,6 +2,21 @@
 
 Atualizado em: 2026-10-03
 
+## TAG de retomada: RETOMADA-2026-10-03
+
+Data local: 2026-10-03 (America/Sao_Paulo). Esta TAG resume o último estado confirmado; registros anteriores abaixo são históricos.
+
+- Projeto oficial: `/home/harlem/projetos/auto-reels-n8n`.
+- Commit publicado na main e implantado na VPS: `cecd3d686b46e21f1853d5734f6e9c471f09260e`.
+- Execução de deploy: https://github.com/harlemsilvas/auto-reels-n8n/actions/runs/37169476403 — concluída com sucesso.
+- Backend atualizado e reiniciado via PM2; API retornou HTTP 200 e `ok=true` em três verificações posteriores. Dashboard respondeu HTTP 200.
+- Health check imediato da Action recebeu 502 durante o reinício; as verificações posteriores passaram. O workflow atualmente tolera falhas no health check; seu sucesso sozinho não comprova a saúde da API.
+- Dashboard não republicado; migrations não executadas na VPS. Migration 012 aplicada e validada somente no banco local de simulação.
+- Local: migrations 006–012 aplicadas, 23 posts preservados; worker não iniciado e flags de enqueue, insights e multi-publish desativadas. Mídias permanecem como apontamentos, conforme decisão do usuário.
+- Pasta `auto-reels-n8n-orig` removida após verificar ausência de mounts Docker e preservar arquivo completo em `backups/orig-removido-20261003/auto-reels-n8n-orig.tar.gz` (permissão 0600, ignorado pelo Git).
+- Relatório do deploy: `backups/deploy-20261004T0155Z/RELATORIO.md`.
+- Na próxima retomada: informar esta TAG, o último commit implantado e as validações acima; conferir Git e saúde atual antes de afirmar que os serviços continuam disponíveis. Não aplicar migration 012 na VPS sem verificar necessidade no schema real.
+
 ## Objetivo
 
 Este documento é o ponto de retomada para sessões do Codex no VS Code e no
