@@ -9,8 +9,8 @@ async function recoverStuckPosts() {
   const result = await query(`
     UPDATE posts
        SET status             = CASE
-                                  WHEN retry_count >= 1 THEN 'error'
-                                  ELSE 'retrying'
+                                  WHEN retry_count >= 1 THEN 'error'::post_status
+                                  ELSE 'retrying'::post_status
                                 END,
            next_retry_at      = CASE
                                   WHEN retry_count >= 1 THEN NULL

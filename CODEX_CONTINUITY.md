@@ -1,6 +1,6 @@
 # SocialBot — Contexto de Continuidade para Codex
 
-Atualizado em: 2026-08-13
+Atualizado em: 2026-10-03
 
 ## Objetivo
 
@@ -12,6 +12,10 @@ O objetivo atual é evoluir o SocialBot para publicações Instagram de múltipl
 tipos sem quebrar o fluxo existente de Reels.
 
 ## Repositório e execução
+
+Local atual de desenvolvimento: `/home/harlem/projetos/auto-reels-n8n`.
+Os caminhos Windows/WSL abaixo são registros do ambiente anterior.
+
 
 - Repositório Windows: `C:\Projetos\auto-reels-n8n`
 - Repositório no WSL: `/mnt/c/Projetos/auto-reels-n8n`
@@ -3003,3 +3007,121 @@ por modelo/TAG.
 Validação local:
 
 - `npm run build` no dashboard.
+
+
+## Migração local em 2026-10-02
+
+- Clone atualizado de `harlemsilvas/auto-reels-n8n`, branch `main`, criado em
+  `/home/harlem/projetos/auto-reels-n8n`.
+- Origem preservada em `/mnt/dados-docker/projetos/auto-reels-n8n`.
+- Base Git: `796c43437ab16b839ab6b5964bd30509eb6ed6ad`.
+- Arquivos exclusivos de documentação, configuração e mídia copiados com
+  verificação SHA-256; arquivos do GitHub não foram sobrescritos.
+- 54 versões locais correspondem a blobs históricos do Git.
+- Duas versões locais divergentes preservadas para revisão:
+  `dashboard/src/modules/dashboard/hooks/useDashboardData.ts` e
+  `dashboard/src/modules/dashboard/services/dashboard.service.ts`.
+  Elas usam overview operacional, enquanto a versão atual usa fila e top posts;
+  sua incorporação exige decisão funcional e revisão conjunta de tipos e página.
+- Nove chats `auto-reels-n8n 01` a `09` associados ao novo caminho.
+- PostgreSQL, Redis e n8n permanecem na origem; dados persistidos não foram
+  copiados nem migrations aplicadas. Validar backup lógico e ambiente antes
+  de migrar serviços. Configurações .env foram preservadas, mas ainda devem
+  ser revisadas para hosts, URLs, caminhos e variáveis requeridas pelo código atual.
+- node_modules e builds antigos não foram reutilizados.
+- Nenhum serviço/worker iniciado, postagem disparada ou alteração aplicada na VPS.
+- Documento `docs/0006-mult-posts.md` não foi encontrado no Git nem na origem.
+
+### Validação da migração
+
+- Dependências de backend e dashboard instaladas com `npm ci`.
+- Sintaxe dos 97 arquivos JavaScript de backend/src e backend/scripts aprovada.
+- `npm run build --prefix dashboard` aprovado (TypeScript e Vite).
+- `git diff --check` aprovado; única alteração rastreada: este documento.
+- Instalação reportou 9 alertas de dependências no backend (7 high) e 11
+  no dashboard (8 high); revisão de dependências pendente, sem correção
+  automática ou alteração dos lockfiles durante a migração.
+- Extensão nativa opcional msgpackr-extract teve script de instalação bloqueado
+  pela política npm; validar sua necessidade ao testar as filas localmente.
+- Relatório e versões preservadas:
+  `/home/harlem/projetos/historico_codex/migracao-auto-reels/20261003T012851Z`.
+
+
+## Docker local restaurado em 2026-10-02
+
+- Daemon ativo; Docker Engine 29.8.2 e Compose 5.5.1.
+- Falhas identificadas: .env ausente, mounts de dados ausentes na nova pasta
+  e backup SQL da migração contendo erro de pg_dump.
+- PostgreSQL e chave/config n8n recuperados de cópias da origem preservada;
+  Redis restaurado do RDB de 30/09/2026.
+- PostgreSQL 15.18 e Redis 7 saudáveis; n8n 2.20.9 acessível em localhost:5678,
+  com healthz/readiness HTTP 200. Portas locais PG 55432 e Redis 56379.
+- Criado .env local e override não versionado; Compose compartilhado intacto.
+- Dump PostgreSQL válido criado antes de iniciar n8n, com catálogo/hash verificados.
+- Banco: 23 posts e um workflow v3 (Safe); dois registros Redis.
+- Dados PostgreSQL antigos de junho: migrations e contrato n8n v4 ainda precisam
+  revisão antes de executar o backend/worker atuais.
+- Nenhum backend, coletor ou worker foi iniciado; nada aplicado na VPS.
+- Relatório detalhado: `backups/docker-restauracao-20261003T013912Z/RESTAURACAO.md`.
+
+
+## Validação de Docker e chaves locais em 2026-10-03
+
+- .env completo incorporado pelo usuário foi comparado ao .env.old e backend/.env.
+- Corrigidas senha PostgreSQL e porta local 55432 usando configuração anteriormente
+  validada, preservando o restante do arquivo e backup anterior.
+- N8N_ENCRYPTION_KEY restaurada; igualdade com config persistida e container
+  verificada sem revelar valores.
+- AI_CREDENTIALS_ENCRYPTION_KEY validada em roundtrip AES-256-GCM; nenhuma
+  credencial de provedor externo foi consultada ou alterada.
+- Referências ngrok removidas do .env da raiz; WEBHOOK_URL ajustada para localhost.
+- .env recebeu permissão 0600; Compose validado e autenticação PostgreSQL TCP aprovada.
+- PostgreSQL e Redis saudáveis; n8n editor e readiness HTTP 200.
+- Sem restart, publicação, início de backend/worker ou mudança na VPS.
+- AUTO_ENQUEUE_READY_ENABLED permanece true nos arquivos existentes: revisar
+  filas e posts antes de iniciar backend. INSIGHTS_JOB_ENABLED efetivo continua
+  false no backend/.env, que tem precedência sobre a raiz.
+- Migrations e workflow v3 versus contrato atual continuam pendentes.
+- Backup: backups/env-validacao-20261004T012020Z/.env.anterior.
+
+
+## Validação restante em 2026-10-03
+
+- App Meta e dois tokens validados via consultas GET; nenhuma publicação enviada.
+- Migrations 006–011 e verificadores passaram em banco isolado, inclusive segunda
+  execução idempotente, preservando os 23 posts. Banco principal não alterado.
+- listPosts falhou por video_filename ausente. Migration 012 e verificador
+  preparados para quatro colunas legadas de mídia do bootstrap, sem backfill.
+- 012 validada duas vezes na cópia; consultas posts/métricas passaram.
+- 13 testes HTTP de autenticação, troca obrigatória, CSRF, posts, dashboard,
+  modelos e logout passaram. Servidor, usuário/banco de teste e fila temporária removidos.
+- Quatro posts queued/scheduled antigos exigem decisão antes do coletor.
+- Só 2 de 23 mídias encontradas localmente; caminhos antigos inexistentes.
+- Pendentes: aplicar migrations locais, preparar admin real, revisar MEDIA_ROOT,
+  webhook local (backend/.env prevalece), workflow v3/v4 e credenciais Gemini.
+- Sem início de backend/worker oficial e sem alterações na VPS.
+- Relatório: `backups/validacao-restante-20261004T012346Z/RELATORIO.md`.
+
+
+## Simulação local preparada em 2026-10-03
+
+- Usuário confirmou uso do banco local como simulação e dispensa de copiar mídias.
+- Migrations 006–012 aplicadas no banco local com backup e sete verificadores.
+- 23 posts preservados, sem alterar estados queued/scheduled históricos.
+- Corrigida conversão enum em recover-stuck-posts.js; resultados retrying/error
+  testados com rollback. Backend real iniciou corretamente depois da correção.
+- Backend local localhost:3101, dashboard localhost:5181 e n8n localhost:5678
+  respondem HTTP 200. Administrador admin-local criado com senha temporária
+  em arquivo 0600 no backup; troca obrigatória e logout validados.
+- AUTO_ENQUEUE_READY_ENABLED, INSIGHTS_JOB_ENABLED e MULTI_PUBLISH_ENABLED
+  desativados na raiz e backend. Worker não iniciado.
+- MEDIA_ROOT alinhado à pasta local, sem recuperar arquivos nem mudar apontamentos
+  históricos do banco. Webhook backend alinhado ao n8n local.
+- Nenhuma mudança aplicada na VPS.
+- Relatório: /home/harlem/projetos/auto-reels-n8n/backups/simulacao-local-20261004T013702Z/RELATORIO.md.
+
+### Validação dos arquivos pendentes em 2026-10-03
+
+- Migration 012 validada em banco temporário, aplicada duas vezes com sucesso; verificador rejeitou tipo incompatível.
+- Recuperação de posts validada: primeira tentativa agenda retry, segunda encerra com erro e processamento recente é preservado; ROLLBACK confirmado.
+- JavaScript passou em `node --check`. Banco temporário removido; nenhum commit ou push realizado nesta etapa.
