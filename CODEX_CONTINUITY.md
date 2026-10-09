@@ -4,20 +4,30 @@ Atualizado em: 2026-10-09
 
 ## TAG de retomada: RETOMADA-2026-10-09
 
-### Publicacao da correcao do Inbox autorizada em 2026-10-09
+### Publicacao da correcao do Inbox concluida em 2026-10-09
 
 - Usuario confirmou aceite do convite de testador e autorizou push/deploy.
 - Escopo: cliente Inbox (cookies/CSRF), teste de regressao e documentacao.
   Arquivos .env, override Docker e scripts da simulacao local excluidos do commit.
 - Teste Axios simulado, build TypeScript/Vite e lint do servico repetidos e aprovados.
-- Workflow `Deploy VPS` sera executado com dashboard=true, restart_backend=false,
+- Workflow `Deploy VPS` executado com dashboard=true, restart_backend=false,
   run_migrations=false e migration_set=none. Nao altera portas/configuracao Nginx;
   usa o script existente que valida e recarrega Nginx apos publicar os arquivos.
 - Backup do frontend anterior verificado na VPS em
   `/home/socialbot/backups/dashboard-pre-inbox-20261009/frontend-anterior.tar.gz`.
   Alteracoes remotas em scripts existentes preservadas.
-- Push/deploy ainda em preparacao neste registro. Confirmar SHA, Action e saude
-  publica apos a publicacao. Recebimento de uma nova DM ainda precisa de teste.
+- Commit enviado e implantado: `c4f3cbce3d72a32d69da71bd8c8ba471f1033168`.
+- Action concluida com sucesso:
+  https://github.com/harlemsilvas/auto-reels-n8n/actions/runs/37979762493
+- Checkout VPS confirmado em `c4f3cbc`. Bundle publico `index-tYXkkmOS.js`
+  respondeu HTTP 200 e seu SHA-256 confere com o arquivo publicado na VPS.
+  Cliente Inbox compilado contem cookies e CSRF; API de producao configurada,
+  sem URLs da API local. Dashboard e health da API HTTP 200 apos deploy.
+- Backend e worker permanecem online; nao reiniciados por este workflow.
+  Sem migrations ou alteracao de tokens/webhooks. Recebimento de uma nova DM e
+  validacao autenticada no navegador ainda precisam de teste pelo usuario.
+
+### Estado local antes da publicacao
 
 - Base local permanece em `63f90d3`; ultimo checkout/deploy VPS registrado em
   `cecd3d6`, sem revalidacao remota nesta sessao. Alteracoes locais anteriores preservadas.
