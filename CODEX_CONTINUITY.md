@@ -1,6 +1,111 @@
 # SocialBot — Contexto de Continuidade para Codex
 
-Atualizado em: 2026-10-03
+Atualizado em: 2026-10-09
+
+## TAG de retomada: RETOMADA-2026-10-09
+
+### Publicacao da correcao do Inbox autorizada em 2026-10-09
+
+- Usuario confirmou aceite do convite de testador e autorizou push/deploy.
+- Escopo: cliente Inbox (cookies/CSRF), teste de regressao e documentacao.
+  Arquivos .env, override Docker e scripts da simulacao local excluidos do commit.
+- Teste Axios simulado, build TypeScript/Vite e lint do servico repetidos e aprovados.
+- Workflow `Deploy VPS` sera executado com dashboard=true, restart_backend=false,
+  run_migrations=false e migration_set=none. Nao altera portas/configuracao Nginx;
+  usa o script existente que valida e recarrega Nginx apos publicar os arquivos.
+- Backup do frontend anterior verificado na VPS em
+  `/home/socialbot/backups/dashboard-pre-inbox-20261009/frontend-anterior.tar.gz`.
+  Alteracoes remotas em scripts existentes preservadas.
+- Push/deploy ainda em preparacao neste registro. Confirmar SHA, Action e saude
+  publica apos a publicacao. Recebimento de uma nova DM ainda precisa de teste.
+
+- Base local permanece em `63f90d3`; ultimo checkout/deploy VPS registrado em
+  `cecd3d6`, sem revalidacao remota nesta sessao. Alteracoes locais anteriores preservadas.
+- Primeira etapa do roteiro aplicada somente localmente: cliente Axios do Inbox
+  envia cookies e consulta o CSRF atual em sessionStorage antes de cada escrita.
+  Erros Axios permanecem disponiveis para as telas, sem alterar contratos dos endpoints.
+- Teste `node --test dashboard/tests/inbox-service.test.mjs` aprovado com transporte
+  Axios simulado: sete operacoes, cookies, CSRF nas escritas, renovacao/remocao do
+  token e preservacao do erro da API. Nenhuma chamada Meta ou mensagem real enviada.
+- Build TypeScript/Vite, lint do servico alterado e `git diff --check` aprovados.
+  Lint completo e teste visual/autenticado no navegador nao repetidos nesta sessao.
+- API e dashboard estavam indisponiveis no inicio da verificacao HTTP. Iniciados
+  apenas launcher de simulacao e Vite, ligados ao loopback. API 3101, dashboard 5181
+  e readiness n8n 5678 retornaram HTTP 200 nesta sessao. Worker nao iniciado.
+- Proximos passos: validar permissoes admin/operator e sessao/CSRF no backend;
+  testar envio/persistencia com Meta simulado; revisar falha do typing indicator;
+  definir escopo de testers e validar webhook/SSE. Credenciais Meta locais continuam
+  removidas. Nenhum commit, push, migration ou deploy realizado.
+- Roteiro atualizado em `project-docs/retomada-2026-10-09.md`.
+
+### Diagnostico somente-leitura de DM na VPS em 2026-10-09
+
+- Usuario relata DM de `harleysilvasaulo` ausente no local e na producao.
+  Aceite do convite confirmado pelo usuario; @ destinatario ainda nao confirmado.
+- Checkout VPS revalidado em `cecd3d6`; backend/worker online no PM2.
+  API health e dashboard publicos HTTP 200. GET do callback sem parametros de
+  verificacao retornou 403, resultado esperado para requisicao nao verificada.
+- Banco VPS: 191 eventos, duas conversas e cinco mensagens. Ultimo evento em
+  `2026-10-08T09:49:09.398Z`; ultima mensagem salva em `2026-06-17T14:03:33.633Z`.
+  Os cinco eventos mais recentes possuem `read`/`timestamp`, sem mensagem de texto.
+  Nao foi encontrada DM recente persistida; causa do nao recebimento ainda aberta.
+- GETs na Meta: token valido, tipo PAGE, pertence ao app configurado e inclui
+  `instagram_manage_messages`, `pages_messaging` e `pages_manage_metadata`.
+  Pagina assinada para `messages`, `messaging_postbacks`, `messaging_optins` e
+  `message_deliveries`. App possui assinatura Instagram ativa no callback publico.
+  A consulta do app nao retornou seus campos, mesmo com selecao explicita;
+  verificar `messages` no painel Meta antes de concluir que esta ativo ou ausente.
+  Consulta de subscribed_apps no ID Instagram via Facebook Graph retornou code 100;
+  nao interpretar como ausencia de assinatura, considerando fluxo Facebook Login.
+- Bundle publicado do dashboard datado de 2026-07-16; checkout VPS ainda sem
+  cookies/CSRF no cliente Inbox. Deploy do frontend pendente, mas nao ha evidencia
+  de que essa correcao resolva o recebimento dos webhooks.
+- Local permanece copia de teste sem sincronizacao de novas DMs da VPS.
+- Nenhum deploy, restart, alteracao de assinatura/token, envio Meta ou modificacao
+  de banco/infraestrutura realizada nesta investigacao. Apenas consultas de leitura.
+
+## TAG de retomada: RETOMADA-2026-10-08
+
+Data local: 2026-10-08 (America/Sao_Paulo). A restauracao local da VPS registrada abaixo e o estado mais recente desta TAG. Os itens iniciais descrevem a reconciliacao anterior a essa restauracao.
+
+- Main local reconciliada por fast-forward com `origin/main`, commit `63f90d3a6e3b8f63d7bf1f2abd8ae46c4eee5f3b`.
+- Backup protegido: `backups/reconciliacao-20261009T003826Z/`. Inclui checkout anterior, patch e bundle completo do Git; os 58 arquivos modificados e quatro configuracoes locais foram conferidos contra o arquivo compactado antes da restauracao.
+- Configuracoes locais e override preservados. Dados persistentes nao foram alterados; o volume PostgreSQL foi excluido do arquivo compactado e permanece no mesmo local. Dependencias, build e logs de runtime tambem foram excluidos; o historico Git foi preservado no bundle.
+- README e dois arquivos de dashboard divergentes preservados no backup; adotados os contratos coerentes da main remota. SQLs 012 locais anteriores preservados em `sql-locais/`, usando agora os SQLs rastreados do remoto.
+- Validacoes desta sessao: sintaxe dos 97 arquivos JavaScript aprovada; build TypeScript/Vite do dashboard aprovado; permissoes, hash/verificacao de senha, selecao dos cinco tipos de publicacao e cinco contratos HTTP aprovados em servidor temporario.
+- Testes HTTP usaram autenticacao ativa e automacoes desativadas somente no processo de teste. A configuracao local efetiva preservada diverge do registro anterior: autenticacao desativada e enqueue automatico habilitado. Nao iniciar o backend oficial antes de revisar essas flags.
+- Lint completo do dashboard: 23 erros e 3 avisos na base remota, principalmente regras de hooks React e tipos `any`. Build aprovado nao significa lint aprovado.
+- Validacao de consultas de banco bloqueada: PostgreSQL local responde `42501`, `could not open file "global/pg_filenode.map": Permission denied`. Mount confirmado em `/home/harlem/projetos/auto-reels-n8n/postgres`; diretorio raiz com owner `1000:1000` e modo `0700`. Nenhuma permissao foi alterada nesta sessao.
+- Nenhum worker/coletor iniciado, publicacao enviada, migration aplicada ou deploy realizado. VPS nao foi revalidada; ultimo deploy registrado permanece `cecd3d6`.
+- Pendencias: corrigir acesso ao volume PostgreSQL local, revisar flags locais, repetir consultas e testes autenticados com banco real e tratar os debitos de lint. `docs/0006-mult-posts.md` continua ausente.
+- Acesso SSH preparado em 2026-10-08: documentacao aponta `socialbot@187.77.61.83`. Nova chave local dedicada em `~/.ssh/socialbot_vps_ed25519`, criada sem passphrase, com alias `socialbot-vps`. Chave publica ainda precisa ser instalada em `authorized_keys` por acesso existente (senha ou console do provedor); conexao e fingerprint do servidor ainda nao validados. Nenhuma chave antiga foi substituida e nenhum acesso remoto foi realizado nesta etapa.
+- SSH local apresentou `Bad owner or permissions on /etc/ssh/ssh_config.d/20-systemd-ssh-proxy.conf`. Configuracao do sistema preservada; usar `ssh -F ~/.ssh/config socialbot-vps` para carregar explicitamente a configuracao do usuario.
+- Usuario confirmou cadastro/teste da chave. Acesso SSH sem senha revalidado nesta sessao como `socialbot` no host `srv1433055`; consultas somente leitura confirmaram checkout VPS em `cecd3d686b46e21f1853d5734f6e9c471f09260e`, backend e worker online no PM2, PostgreSQL 15.17 com 20 posts, Redis 7.4.9 e n8n 2.20.7-exp.0. Midias em `/home/socialbot/media/reels` ocupam aproximadamente 1,1 GB. Alteracoes remotas existentes em tres scripts e `scripts/sql/005-atualizacao.sql` preservadas. Nenhum backup remoto ou download executado ainda; proximo passo e copiar dados de forma consistente, mantendo automacoes locais desligadas.
+
+### Restauracao da VPS para simulacao local em 2026-10-08
+
+- Usuario autorizou backup/importacao, dispensou midias reais e confirmou que o local e apenas para testes, sem publicacao oficial.
+- Backup consistente via `pg_dump -Fc --no-owner --no-privileges` da VPS em `cecd3d6`; banco restaurado em volume local novo, em transacao unica. Nao foram executadas migrations adicionais.
+- Backup protegido: `backups/vps-local-20261009T005652Z/`; contem `postgres-vps.dump`, `n8n-vps.tar.gz`, `redis-vps.rdb`, hashes em `manifesto.json`, configuracoes locais anteriores e copia fisica dos volumes locais parados. Nenhuma midia da VPS foi baixada.
+- Imagens PostgreSQL, Redis e n8n fixadas nos mesmos digests da VPS em `docker-compose.override.yml`. Novos volumes `socialbot_simulation_postgres_20261009`, `socialbot_simulation_redis_20261009` e `socialbot_simulation_n8n_20261009`; volumes/pastas anteriores preservados. Os tres containers locais estao ativos; PostgreSQL/Redis saudaveis e readiness do n8n HTTP 200.
+- Restaurados 20 posts publicados, 37 itens de midia e um workflow; nenhum item orfao. Caminhos de midia adaptados para `media/reels/pending` local, sem arquivos reais. URL local de midia e apenas apontamento de teste; nao existe servidor de midia nem preview real.
+- Redis da VPS preservado apenas como backup: nao importado, evitando jobs reais. Todos os seis contadores da fila local retornaram zero.
+- Apenas na copia local: tokens Meta esvaziados, sessoes de producao revogadas, estados OAuth removidos, credenciais IA desabilitadas/invalidadas e usuarios administrativos originais desativados. Workflow do n8n desativado e webhooks locais removidos antes de iniciar o n8n.
+- Configuracoes locais geradas com novas senhas/chaves locais, autenticacao habilitada, enqueue/insights/multi-publish desabilitados e webhook de publicacao apontando para destino local inoperante. Nenhuma credencial de producao foi incorporada aos arquivos .env locais.
+- Login do n8n reinicializado somente localmente para permitir cadastro de usuario de testes. Dados do workflow permanecem no PostgreSQL; filesystem/config original do n8n preservado no backup, sem reaproveitar sua chave de producao.
+- API em `http://localhost:3101`, iniciada por `node scripts/dev_local_simulation.cjs`, que carrega somente app.js e nao inicia bootstrap de recuperacao, manutencao, coletores ou worker. Dashboard em `http://localhost:5181`; n8n em `http://localhost:5678`.
+- Administrador `admin-local` criado apenas localmente; login, troca de senha e logout validados. Acesso atual em `backups/vps-local-20261009T005652Z/acesso-local.txt`, permissao 0600. O arquivo da simulacao de 03/10 nao corresponde ao banco atual.
+- Validacoes atuais: oito APIs retornaram HTTP 200 (health, usuario, posts, dashboard, overview, capabilities, modelos e usuarios); dashboard/readiness n8n HTTP 200; build TypeScript/Vite aprovado; consultas de banco e integridade aprovadas. Lint preexistente continua pendente.
+- VPS permaneceu operacional: nenhum restart, importacao, migration ou alteracao das configuracoes de producao. Somente leitura/backups, incluindo arquivo temporario de snapshot Redis.
+- Proximo passo: testar visualmente as telas com admin-local. Usar o launcher de simulacao, manter worker desligado e nao ativar workflows importados. Para midias reais/previews, criar arquivos locais de teste; posts historicos possuem apenas apontamentos.
+
+### Proxima evolucao planejada para 2026-10-09: Testers DM
+
+- Usuario decidiu retomar amanha, priorizando Testers DM. Roteiro em `project-docs/retomada-2026-10-09.md`.
+- Defeito de autenticacao confirmado no cliente Axios do Inbox: nao configura cookies nem CSRF, diferentemente dos helpers compartilhados. Requisicoes locais: GET sem cookie 401; GET com admin 200 e duas conversas; POST vazio com cookie sem CSRF 403; POST vazio com cookie/CSRF 400 de validacao. Nenhuma DM enviada e nenhuma chamada Meta executada.
+- Outras verificacoes para a proxima sessao: falha do typing indicator bloqueia envio principal; listagem de testers inclui todas as conversas; revisar webhook, atualizacao de conversas e SSE. Diagnostico externo de token/permissoes/endpoint Meta permanece pendente, sem causa de producao confirmada.
+- Corrigir e testar primeiro cookies/CSRF localmente; seguir com cliente Meta simulado e validacao de permissoes. Teste real na VPS requer alvo e autorizacao explicita. Tokens locais devem continuar removidos.
+- Pendencias secundarias: validacao visual das telas, lint preexistente, revisao dos artefatos locais antes de commit e documento multi-posts ausente. Nenhuma correcao funcional do Inbox aplicada hoje.
 
 ## TAG de retomada: RETOMADA-2026-10-03
 

@@ -24,10 +24,25 @@ import type {
 
 const api = axios.create({
   baseURL: getApiBaseUrl(),
+  withCredentials: true,
 
   headers: {
     "Content-Type": "application/json",
   },
+});
+
+api.interceptors.request.use((config) => {
+  const method = (config.method ?? "get").toLowerCase();
+
+  if (!["get", "head", "options"].includes(method)) {
+    const csrfToken = sessionStorage.getItem("socialbot.admin.csrf");
+
+    if (csrfToken) {
+      config.headers.set("X-CSRF-Token", csrfToken);
+    }
+  }
+
+  return config;
 });
 
 /**
