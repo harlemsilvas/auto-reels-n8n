@@ -4,6 +4,30 @@ Atualizado em: 2026-10-10
 
 ## TAG de retomada: RETOMADA-2026-10-10
 
+### Deploy Inbox e migration 013 concluido em 2026-10-10
+
+- Commit implantado: 982b3b7b89003acbcf4f2b4f59e220b1d1852756.
+  Action concluida com sucesso:
+  https://github.com/harlemsilvas/auto-reels-n8n/actions/runs/38074150243
+- Backup PostgreSQL anterior: /home/socialbot/backups/socialbot-postgres/n8n_20261010_180218.dump
+  (384677 bytes, modo 0600, catalogo pg_restore e SHA-256 conferidos).
+  Backup frontend/backend anterior mantido em inbox-pre-deploy-20261010T175912Z.
+- Migration 013 aplicada com COMMIT e verificador aprovado antes do restart.
+  Coluna testers_hidden_at confirmada na VPS como timestamptz nullable.
+- Checkout remoto confirmado no SHA acima; alteracoes remotas de scripts
+  preservadas. Backend online (contador restart 2 -> 3); worker online, restart 0.
+  Worker/n8n/portas/tokens/configuracoes nao alterados por esta publicacao.
+- API health HTTP 200, ok=true; dashboard e asset index-CFgLuXRk.js HTTP 200.
+  Hash do bundle publico igual ao build dashboard/dist da VPS. Leitura direta
+  /var/www negada por EACCES; nao foram alteradas permissoes para contornar.
+- Listagem do servico Testers executada em leitura: quatro registros, tres com
+  username, um com nome e quatro com ultima mensagem. Token interno ausente.
+  Quatro conversas preservadas; zero ocultadas automaticamente. Nenhuma DM enviada.
+- UI Inbox, ocultacao Testers, enriquecimento de perfil/resumo e filtro de recibos
+  agora aplicados na VPS. Usuario deve atualizar navegador e validar nova DM,
+  resposta e botao Ocultar; teste visual autenticado de producao nao feito pelo agente.
+- Documentacao de resultado sera enviada em commit separado, sem novo deploy.
+
 ### Deploy Inbox e migration 013 autorizado em 2026-10-10
 
 - Usuario confirmou teste visual e autorizou deploy/migration. Preflight VPS
