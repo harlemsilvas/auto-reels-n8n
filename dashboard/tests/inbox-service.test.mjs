@@ -42,8 +42,11 @@ test("Inbox envia cookies e CSRF atual sem alterar erros da API", async () => {
     await service.markConversationAsRead("conversation-test");
     await service.sendInstagramMessage("conversation-test", "test", "account-test", "recipient-test");
     await service.sendTesterDm({ conversationId: "conversation-test", message: "test" });
+    await service.hideTesterConversation("conversation-test");
 
-    assert.equal(requests.length, 7);
+    assert.equal(requests.length, 8);
+    assert.equal(requests.at(-1).method, "delete");
+    assert.equal(requests.at(-1).url, "/api/internal/testers-dm/conversations/conversation-test");
     for (const request of requests) {
       assert.equal(request.withCredentials, true);
       assert.equal(

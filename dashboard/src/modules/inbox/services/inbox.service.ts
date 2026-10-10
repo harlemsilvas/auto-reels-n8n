@@ -142,6 +142,13 @@ export async function sendTesterDm(payload: SendTesterDmPayload) {
   return response.data;
 }
 
+export async function hideTesterConversation(conversationId: string) {
+  const response = await api.delete(
+    `/api/internal/testers-dm/conversations/${encodeURIComponent(conversationId)}`,
+  );
+  return response.data;
+}
+
 export default {
   listConversations,
   listMessages,
@@ -150,4 +157,5 @@ export default {
   sendInstagramMessage,
   listTesterConversations,
   sendTesterDm,
+  hideTesterConversation,
 };

@@ -103,7 +103,12 @@ async function processMessagingEvent(event) {
 
     const recipientId = event?.recipient?.id ?? null;
 
-    const message = event?.message ?? {};
+    const message = event?.message;
+
+    if (!message || typeof message !== "object" || Array.isArray(message)) {
+      log("Ignoring non-message event");
+      return;
+    }
 
     const metaMessageId = message?.mid ?? null;
 

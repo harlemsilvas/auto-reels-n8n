@@ -183,7 +183,24 @@ async function markSeen({ accessToken, recipientId }) {
   });
 }
 
+async function getUserProfile({ accessToken, instagramUserId }) {
+  const response = await axios.get(
+    `${GRAPH_BASE_URL}/${encodeURIComponent(instagramUserId)}`,
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      params: { fields: "name,username" },
+      timeout: 3000,
+    },
+  );
+
+  return {
+    name: typeof response.data?.name === "string" ? response.data.name : null,
+    username: typeof response.data?.username === "string" ? response.data.username : null,
+  };
+}
+
 module.exports = {
+  getUserProfile,
   sendTextMessage,
   sendQuickReplies,
   sendImageMessage,

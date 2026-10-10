@@ -29,6 +29,7 @@ on:
           - "010"
           - "009_010"
           - "011"
+          - "013"
           - "010_011"
           - "009_010_011"
 
@@ -107,11 +108,17 @@ jobs:
               fi
 
               log "Backup PostgreSQL antes das migrations"
+              umask 077
               cd "$APP_DIR"
               bash scripts/backup_postgres_db.sh
 
               cd "$APP_DIR/backend"
               case "$MIGRATION_SET" in
+                "013")
+                  run_migration \
+                    "sql/013-testers-dm-visibility.sql" \
+                    "sql/013-testers-dm-visibility-verify.sql"
+                  ;;
                 "009")
                   run_migration \
                     "sql/009-post-title-immediate-queue.sql" \

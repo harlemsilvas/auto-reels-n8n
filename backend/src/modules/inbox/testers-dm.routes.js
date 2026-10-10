@@ -4,6 +4,14 @@ const service = require("./testers-dm.service");
 
 const router = express.Router();
 
+router.delete("/conversations/:id", async (req, res, next) => {
+  try {
+    return res.json(await service.hideTesterConversation(req.params.id));
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get("/conversations", async (_req, res, next) => {
   try {
     const result = await service.listTesterConversations();

@@ -35,6 +35,7 @@ export default function TestersDmPage() {
   const [loading, setLoading] = useState(true);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [flowingId, setFlowingId] = useState<string | null>(null);
+  const [hidingId, setHidingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [messageDrafts, setMessageDrafts] = useState<Record<string, string>>({});
@@ -158,6 +159,26 @@ export default function TestersDmPage() {
     }
   }
 
+  async function handleHide(conversation: TesterConversation) {
+    const label = conversation.instagramUsername
+      ? `@${conversation.instagramUsername}` : conversation.instagramUserId;
+    if (!window.confirm(`Ocultar ${label} desta pagina? O historico do Inbox sera preservado. Esta acao nao remove o testador da Meta.`)) return;
+
+    setHidingId(conversation.id);
+    setError(null);
+    setSuccess(null);
+    try {
+      await inboxService.hideTesterConversation(conversation.id);
+      setConversations((current) => current.filter((item) => item.id !== conversation.id));
+      setSuccess(`${label} ocultado desta pagina.`);
+    } catch (hideError: unknown) {
+      const failure = hideError as { response?: { data?: { message?: string } }; message?: string };
+      setError(failure?.response?.data?.message || failure?.message || "Falha ao ocultar conversa.");
+    } finally {
+      setHidingId(null);
+    }
+  }
+
   return (
     <section className="dashboard-grid">
       <article className="panel-card full-width">
@@ -229,7 +250,8 @@ export default function TestersDmPage() {
                 {conversations.map((conversation) => {
                   const isSending = sendingId === conversation.id;
                   const isFlowing = flowingId === conversation.id;
-                  const isBusy = isSending || isFlowing;
+                  const isHiding = hidingId === conversation.id;
+                  const isBusy = isSending || isFlowing || isHiding;
 
                   return (
                     <tr key={conversation.id} style={{ borderBottom: "1px solid #e4e4e7" }}>
@@ -284,6 +306,15 @@ export default function TestersDmPage() {
                             style={secondaryButtonStyle}
                           >
                             {isFlowing ? "Enviando fluxo..." : "Enviar fluxo teste"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void handleHide(conversation)}
+                            disabled={isBusy}
+                            title="Ocultar apenas desta pagina"
+                            style={secondaryButtonStyle}
+                          >
+                            {isHiding ? "Ocultando..." : "Ocultar"}
                           </button>
                         </div>
                       </td>

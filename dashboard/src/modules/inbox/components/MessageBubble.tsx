@@ -1,57 +1,13 @@
+import { Clock3 } from "lucide-react";
 import type { Message } from "../types/inbox.types";
 
-/**
- * ======================================
- * PROPS
- * ======================================
- */
-
-interface Props {
-  message: Message;
-}
-
-/**
- * ======================================
- * COMPONENT
- * ======================================
- */
-
-export default function MessageBubble({ message }: Props) {
-  const isBot = message.sentBy === "bot";
-
-  return (
-    <div
-      className={`
-        flex
-        ${isBot ? "justify-end" : "justify-start"}
-      `}
-    >
-      <div
-        className={`
-          max-w-[75%] rounded-2xl px-4 py-3 shadow-sm
-          ${isBot ? "bg-blue-600 text-white" : "bg-white text-zinc-800"}
-        `}
-      >
-        {/* MESSAGE */}
-
-        <div className="whitespace-pre-wrap break-words text-sm">
-          {message.messageText}
-        </div>
-
-        {/* TIME */}
-
-        <div
-          className={`
-            mt-2 text-right text-[11px]
-            ${isBot ? "text-blue-100" : "text-zinc-400"}
-          `}
-        >
-          {new Date(message.createdAt).toLocaleTimeString("pt-BR", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </div>
-      </div>
+export default function MessageBubble({ message }: { message: Message }) {
+  const outgoing = message.sentBy === "bot";
+  const date = new Date(message.createdAt);
+  return <div className={`inbox-message-row ${outgoing ? "is-outgoing" : ""}`}>
+    <div className="inbox-message-bubble">
+      <div className="inbox-message-text">{message.messageText || "[Mensagem sem texto]"}</div>
+      <div className="inbox-message-time">{String(message.id).startsWith("temp-") ? <Clock3 size={12} aria-label="Envio pendente" /> : null}<time dateTime={message.createdAt} title={date.toLocaleString("pt-BR")}>{Number.isNaN(date.getTime()) ? "-" : date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</time></div>
     </div>
-  );
+  </div>;
 }

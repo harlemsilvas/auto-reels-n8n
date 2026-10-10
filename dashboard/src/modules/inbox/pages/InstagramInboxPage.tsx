@@ -1,8 +1,8 @@
 import "../styles/inbox.css";
 import { useEffect, useState } from "react";
+import { ArrowLeft, Camera } from "lucide-react";
 import { useConversations } from "../hooks/useConversations";
 import { useMessages } from "../hooks/useMessages";
-
 import ConversationSidebar from "../components/ConversationSidebar";
 import ConversationMessages from "../components/ConversationMessages";
 import MessageComposer from "../components/MessageComposer";
@@ -10,179 +10,38 @@ import EmptyConversation from "../components/EmptyConversation";
 import useRealtimeInbox from "../hooks/useRealtimeInbox";
 import { useAuth } from "../../auth/context/AuthContext";
 
-/**
- * ======================================
- * PAGE
- * ======================================
- */
-
 export default function InstagramInboxPage() {
   const { can } = useAuth();
-  const canReply = can("inbox.reply");
-
-  /**
-   * ======================================
-   * CONVERSATIONS
-   * ======================================
-   */
-
-  const {
-    loading: conversationsLoading,
-    conversations,
-    selectedConversation,
-    setSelectedConversation,
-    refresh: refreshConversations,
-  } = useConversations();
-
-  /**
-   * ======================================
-   * MESSAGES
-   * ======================================
-   */
-
-  const {
-    loading: messagesLoading,
-    sending,
-    messages,
-    sendMessage,
-  } = useMessages(selectedConversation);
-
+  const { loading: conversationsLoading, error: conversationsError, conversations, selectedConversation, setSelectedConversation, refresh: refreshConversations } = useConversations();
+  const { loading: messagesLoading, error: messagesError, sending, messages, sendMessage } = useMessages(selectedConversation);
   const [realtimeMessages, setRealtimeMessages] = useState(messages);
-
-  useEffect(() => {
-    setRealtimeMessages(messages);
-  }, [messages]);
-
+  const [mobileChat, setMobileChat] = useState(false);
+  useEffect(() => { setRealtimeMessages(messages); }, [messages]);
   useRealtimeInbox({
     selectedConversation,
-
-    /**
-     * ======================================
-     * NEW MESSAGE
-     * ======================================
-     */
-
     onNewMessage(message) {
-      setRealtimeMessages((prev) => {
-        /**
-         * Avoid duplicates
-         */
-
-        const exists = prev.some((m) => m.id === message.id);
-
-        if (exists) {
-          return prev;
-        }
-
-        return [...prev, message];
-      });
+      setRealtimeMessages((previous) => previous.some((item) => item.id === message.id) ? previous : [...previous, message]);
     },
-
-    /**
-     * ======================================
-     * CONVERSATION UPDATE
-     * ======================================
-     */
-
-    onConversationUpdate(conversationId, message) {
-      console.log("[Realtime] conversation updated", conversationId, message);
-      void refreshConversations();
-    },
+    onConversationUpdate() { void refreshConversations(); },
   });
-
-  /**
-   * ======================================
-   * RENDER
-   * ======================================
-   */
-
-  return (
-    <div className="flex h-screen w-full overflow-hidden bg-zinc-100">
-      {/* ======================================
-          SIDEBAR
-      ====================================== */}
-
-      <div className="w-[360px] border-r border-zinc-200 bg-white">
-        <ConversationSidebar
-          loading={conversationsLoading}
-          conversations={conversations}
-          selectedConversation={selectedConversation}
-          onSelectConversation={setSelectedConversation}
-        />
-      </div>
-
-      {/* ======================================
-          CHAT AREA
-      ====================================== */}
-
-      <div className="flex flex-1 flex-col">
-        {!selectedConversation ? (
-          <EmptyConversation />
-        ) : (
-          <>
-            {/* ======================================
-                HEADER
-            ====================================== */}
-
-            <div className="flex items-center gap-3 border-b border-zinc-200 bg-white px-4 py-3">
-              <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-zinc-200">
-                {selectedConversation.profilePictureUrl ? (
-                  <img
-                    src={selectedConversation.profilePictureUrl}
-                    alt={
-                      selectedConversation.instagramUsername || "Instagram User"
-                    }
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <span className="text-sm font-semibold text-zinc-600">
-                    {selectedConversation.instagramUsername
-                      ?.charAt(0)
-                      ?.toUpperCase() || "U"}
-                  </span>
-                )}
-              </div>
-
-              <div className="flex flex-col">
-                <span className="font-medium text-zinc-800">
-                  {selectedConversation.instagramName ||
-                    selectedConversation.instagramUsername}
-                </span>
-
-                <span className="text-xs text-zinc-500">
-                  @{selectedConversation.instagramUsername}
-                </span>
-              </div>
-            </div>
-
-            {/* ======================================
-                MESSAGES
-            ====================================== */}
-
-            <div className="flex-1 overflow-hidden">
-              <ConversationMessages
-                loading={messagesLoading}
-                messages={realtimeMessages}
-              />
-            </div>
-
-            {/* ======================================
-                COMPOSER
-            ====================================== */}
-
-            <div className="border-t border-zinc-200 bg-white">
-              {canReply ? (
-                <MessageComposer sending={sending} onSend={sendMessage} />
-              ) : (
-                <p className="inbox-readonly-notice">
-                  Acesso somente para leitura. Seu perfil não pode responder
-                  mensagens.
-                </p>
-              )}
-            </div>
-          </>
-        )}
+  const name = selectedConversation?.instagramName || selectedConversation?.instagramUsername || `ID ${selectedConversation?.instagramUserId}`;
+  return <section className={`instagram-inbox ${mobileChat ? "is-chat-open" : ""}`} aria-label="Instagram Inbox">
+    {conversationsError ? <p className="inbox-error" role="alert">{conversationsError}</p> : null}
+    <div className="inbox-workspace">
+      <ConversationSidebar loading={conversationsLoading} conversations={conversations} selectedConversation={selectedConversation} onRefresh={() => void refreshConversations()} onSelectConversation={(conversation) => { setSelectedConversation(conversation); setMobileChat(true); }} />
+      <div className="inbox-chat">
+        {!selectedConversation ? <EmptyConversation /> : <>
+          <header className="inbox-chat-header">
+            <button className="inbox-icon-button inbox-back" aria-label="Voltar para conversas" title="Voltar para conversas" onClick={() => setMobileChat(false)}><ArrowLeft size={20} /></button>
+            <div className="inbox-avatar">{selectedConversation.profilePictureUrl ? <img src={selectedConversation.profilePictureUrl} alt="" /> : name.charAt(0).toUpperCase()}</div>
+            <div className="inbox-chat-identity"><strong>{name}</strong><span>{selectedConversation.instagramUsername ? `@${selectedConversation.instagramUsername}` : selectedConversation.instagramUserId}</span></div>
+            <span className="inbox-channel"><Camera size={16} /><span>{selectedConversation.accountName || "Instagram"}</span></span>
+          </header>
+          {messagesError ? <p className="inbox-error" role="alert">{messagesError}</p> : null}
+          <ConversationMessages loading={messagesLoading} messages={realtimeMessages} />
+          {can("inbox.reply") ? <MessageComposer key={selectedConversation.id} sending={sending} onSend={sendMessage} /> : <p className="inbox-readonly-notice">Acesso somente para leitura.</p>}
+        </>}
       </div>
     </div>
-  );
+  </section>;
 }

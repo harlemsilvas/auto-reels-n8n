@@ -1,6 +1,175 @@
 # SocialBot — Contexto de Continuidade para Codex
 
-Atualizado em: 2026-10-09
+Atualizado em: 2026-10-10
+
+## TAG de retomada: RETOMADA-2026-10-10
+
+### Deploy Inbox e migration 013 autorizado em 2026-10-10
+
+- Usuario confirmou teste visual e autorizou deploy/migration. Preflight VPS
+  confirmou c4f3cbc, backend/worker online e coluna testers_hidden_at ausente.
+  Alteracoes remotas em scripts preservadas; arquivos locais de simulacao excluidos.
+- Backup anterior de frontend/backend validado (catalogo tar e SHA-256) em
+  /home/socialbot/backups/inbox-pre-deploy-20261010T175912Z/.
+- Workflow ampliado apenas com migration_set=013; backup PostgreSQL com umask 077,
+  migration/verificador antes do restart. Nenhuma migration anterior selecionada.
+- Nove testes servico/SQL local, dez webhook, teste cookies/CSRF e build dashboard
+  repetidos e aprovados. Deploy sera acionado com dashboard=true,
+  restart_backend=true, run_migrations=true, migration_set=013.
+- Esta entrada registra preparacao; resultado/commit/Action e verificacoes de
+  producao devem ser registrados depois. Worker, n8n, portas e tokens nao alterados.
+
+### UI do Instagram Inbox modernizada somente localmente
+
+- Substituidas classes Tailwind sem framework configurado por CSS isolado inbox-*,
+  sem alterar tema global, endpoints, banco, hooks de envio/polling ou Reels.
+- Lista pesquisavel por nome, username, ID e resumo; filtro Todas/Nao lidas,
+  contadores existentes, atualizar, selecao destacada e fallback ID sem @undefined.
+- Chat com mensagens recebidas/enviadas distintas, separadores de data, horarios,
+  erro visivel e compositor com icone, bloqueio de texto vazio e suporte IME.
+  No celular alterna lista/chat com botao Voltar; layout com scroll interno.
+- Adicionada dependencia lucide-react e lockfile atualizado. npm reportou 12
+  alertas de dependencias (nove high); nao executado audit fix automatico.
+- Build TypeScript/Vite, teste do cliente cookies/CSRF e diff --check aprovados.
+  Playwright com APIs totalmente interceptadas validou desktop 1440x1000 e
+  celular 390x844: busca, nao lidas, datas, compositor, voltar e ausencia de overflow
+  horizontal/erros JS. Capturas inspecionadas em /tmp/socialbot-inbox-*.png.
+- Teste dashboard/tests/inbox-ui.mjs usa Playwright externo instalado em
+  /tmp/socialbot-ui-check; executar com PLAYWRIGHT_MODULE apontando para esse
+  node_modules/playwright, ou instalar Playwright no ambiente de testes.
+- Nenhuma mensagem real enviada ou dado de producao consultado. API/dashboard
+  locais continuam 3101/5181. Sem commit/push/deploy; VPS permanece no ultimo
+  estado registrado c4f3cbc. Mudancas de perfil anteriores sao da pagina Testers DM,
+  nao enriquecem automaticamente o Inbox geral. Validacao com sessao/dados reais
+  e deploy continuam pendentes, incluindo migration 013 da etapa anterior.
+
+### Ocultacao de conversas da pagina Testers DM preparada localmente
+
+- Usuario confirmou Enviar DM de teste e Enviar fluxo teste funcionando e pediu
+  remover registros ficticios/desconhecidos da pagina. Nao inferir invalidade
+  apenas por falha de consulta de perfil; nao remover funcoes na Meta.
+- Botao Ocultar com confirmacao e estado de carregamento. DELETE
+  `/api/internal/testers-dm/conversations/:id` valida UUID, retorna 400/404 quando
+  aplicavel e marca somente testers_hidden_at. Repeticao idempotente; listagem
+  ignora marcados. Preserva deleted_at, mensagens, Inbox e processamento webhook.
+- Rota herda sessao, CSRF e inbox.manage_testers do mount existente. Cliente
+  DELETE usa cookies e CSRF. Nenhum registro ocultado automaticamente.
+- Schema local inspecionado antes da mudanca. Migration 013 e verificador
+  preparados; executada duas vezes em transacao com ROLLBACK nos testes.
+  Depois aplicada e verificada somente no banco local, sem backfill.
+- Nove testes do servico/listagem aprovados, incluindo idempotencia e preservacao
+  de mensagens/Inbox no PostgreSQL local; dez testes webhook e teste Axios
+  cookies/CSRF aprovados. Build dashboard, sintaxe JS e git diff --check aprovados.
+- API de simulacao e Vite iniciados; health local 3101 e dashboard 5181 HTTP 200.
+  Launcher seguro usado, sem worker ou publicacao. Teste visual autenticado do
+  botao ainda pendente; Playwright nao instalado no dashboard.
+- Sem commit, push ou deploy nesta etapa. VPS nao consultada/alterada; ultimo
+  checkout registrado c4f3cbc. Deploy exige backup/inspecao do schema VPS,
+  aplicar/verificar 013 ANTES de carregar backend novo, restart somente backend
+  e publicacao do dashboard. Workflow atual nao oferece migration_set=013;
+  nao executar deploy ignorando esse requisito nem reaplicar 012 por conveniencia.
+- Consulta de nome/username por ID scoped continua preparada localmente; dados
+  ausentes na Meta permanecem vazios. Documento docs/0006-mult-posts.md ausente.
+
+### Campos da pagina Testers DM corrigidos somente localmente
+
+- Usuario relatou Nome, Username e Ultima mensagem vazios. Leitura VPS confirmou
+  quatro conversas, zero nomes/usernames/resumos preenchidos e nenhum trigger
+  em instagram_messages para atualizar a conversa. Tela apenas exibe esses campos.
+- GET de perfis por ID scoped com token PAGE existente retornou 200 para os dois
+  testadores recentes. Meta retornou username nos dois casos e nome em um deles;
+  nome nao fornecido deve continuar vazio, sem inventar a partir do username.
+- listTesterConversations agora deriva ultimo texto/data de instagram_messages
+  via LATERAL, desconsiderando textos nulos/vazios e ordenando por atividade real.
+  Inclui respostas enviadas, sem considerar recibos legados como ultima mensagem.
+- Campos de perfil ausentes complementados por GET name,username no cliente Meta
+  existente. Consulta tem timeout de tres segundos e lotes de ate cinco; falha
+  externa nao bloqueia listagem. Sem token ou ID ficticio, nao consulta perfil.
+  Token interno removido da resposta da API em todos os caminhos.
+- Enriquecimento acontece apenas na resposta da listagem, sem gravar campos na
+  conversa ou fazer backfill. Nenhuma migration ou alteracao de dados realizada.
+  Inbox geral/unread/SSE nao alterados por esta correcao da pagina Testers DM.
+- Seis testes da listagem aprovados, incluindo SELECT PostgreSQL com CTEs ficticias
+  no banco local e nenhuma escrita. Dez testes do filtro de webhook continuam
+  aprovados. Sintaxe dos arquivos modificados e git diff --check aprovados.
+- Comandos: `node backend/scripts/test-testers-dm-list.js --database` e
+  `node backend/scripts/test-instagram-webhook.js`.
+- Correcao apenas no codigo local, sem reinicio da API ou deploy. VPS permanece
+  c4f3cbc. Campos so aparecerao na pagina de producao apos publicacao autorizada
+  do backend e teste visual; frontend nao exige mudanca para esse contrato.
+
+### Resposta validada e filtro de recibos preparado localmente
+
+- Usuario confirmou resposta pelo painel entregue ao testador. Consulta de leitura
+  na VPS confirmou outbound em `2026-10-10T17:26:07.541Z` (14h26min07s BRT),
+  com texto e ID Meta. Recebimento, resposta, persistencia e entrega ao usuario
+  validados por consultas e relato do usuario; esta sessao nao enviou mensagens.
+- Corrigido somente no codigo local processMessagingEvent: eventos sem objeto
+  message valido sao ignorados antes de consultar conta/criar conversa/salvar.
+  Historico bruto de webhook preservado. Nao trata recibos como mensagens novas.
+- Testes com db, repository e emissor realtime simulados: defeito reproduzido
+  antes da correcao (seis falhas); dez casos aprovados depois. Cobrem read,
+  delivery, reaction, postback, message invalida, lote recibo+texto, anexo, echo,
+  formato changes e conta desconhecida. Nenhum acesso a banco ou Meta nos testes.
+- Comando: `node backend/scripts/test-instagram-webhook.js`.
+  `node --check` dos dois arquivos e `git diff --check` aprovados.
+- Sem reinicio da API local ou deploy da correcao. VPS permanece em c4f3cbc com
+  handler anterior; commit/push/restart do backend dependem de nova autorizacao.
+  Nenhum registro historico removido, migration ou mudanca no fluxo Reels.
+- Proximos passos: implantar filtro com autorizacao e validar nova DM/read/echo;
+  revisar nomes/username e atualizacao da conversa/unread/SSE. Testes mockados
+  nao substituem verificacao de SSE no navegador ou transacoes no banco.
+
+### Recebimento real confirmado apos publicacao do app
+
+- Usuario publicou o app Meta e confirmou duas mensagens aparecendo no painel.
+- Consulta VPS em `2026-10-10T17:21:16.122Z` (14h21 BRT): 200 webhooks e nove
+  mensagens. Antes da publicacao/teste eram 193 webhooks e cinco mensagens.
+- Duas mensagens de usuario com texto persistidas em `2026-10-10T17:20:04.613Z`
+  e `2026-10-10T17:20:19.276Z`; ambas correlacionadas aos webhooks por meta_message_id.
+  Entrega Meta, persistencia e exibicao no painel confirmadas para esse teste.
+  Publicacao do app destravou o recebimento observado; nao requer outro deploy.
+- Ha tambem mensagem outbound registrada as 14h20min44s; esta sessao nao enviou
+  DM nem acionou endpoint de envio, apenas realizou consultas de leitura.
+- Defeito adicional confirmado: aviso read com sender/recipient em
+  `2026-10-10T17:20:46.299Z` criou mensagem de usuario sem texto e sem ID Meta
+  em `2026-10-10T17:20:46.306Z`. Handler processMessagingEvent nao exige message
+  antes de criar conversa/salvar. Proximo ajuste: distinguir mensagens de recibos
+  e preservar eventos brutos; testar texto, anexos, echo e read sem alterar Reels.
+- Nomes/username da conversa continuam nulos. Revisar identificacao e atualizacao
+  da conversa/unread/SSE nas proximas etapas. Nao apagar registros por conveniencia.
+- Nenhuma mudanca de codigo, infraestrutura, token ou assinatura na VPS nesta
+  verificacao. Estado do app foi alterado pelo usuario no painel Meta.
+
+### Investigacao antes da publicacao
+
+- Retomada focada na entrega de eventos e no estado do app, sem alteracoes de
+  producao. Checkout VPS revalidado em `c4f3cbc`; deploy do frontend permanece
+  o da Action 37979762493. Alteracoes locais existentes preservadas.
+- Consulta em `2026-10-10T15:22:29.312Z` (12h22 BRT): 193 webhooks e cinco
+  mensagens. Evento adicional de `2026-10-09T21:17:02.417Z` (18h17 BRT) e read,
+  sem mensagem. Ultima mensagem salva continua em 17/06/2026.
+- GETs Meta atuais aprovados: pagina assinada para messages, messaging_postbacks,
+  messaging_optins e message_deliveries no app configurado; assinatura do objeto
+  Instagram ativa com callback https://api.hrmmotos.com.br/api/webhooks/instagram.
+- Confirmacoes anteriores mantidas: dois remetentes aparecem nas conversas Meta,
+  teste sintetico chegou ao banco, conta hrmmotos inscrita no painel e convite
+  Instagram de harleysilvasaulo aceito. Nao repetir essas pendencias.
+- Principal bloqueio a verificar: estado Nao publicado mostrado nos prints de
+  09/10. O proprio painel Meta informa que o app precisa estar publicado para
+  receber webhooks. Hipotese forte, ainda nao comprovada com mudanca de estado
+  e nova DM real. Estado atual de publicacao nao consultado por API nesta sessao.
+- Documentacao oficial consultada por navegador retornou 429/indisponivel;
+  nao usar relatos secundarios como confirmacao da causa raiz. Aviso de publicacao
+  utilizado como evidencia direta do painel fornecido pelo usuario.
+- Backend usa Facebook Login, token PAGE e permissoes instagram_manage_messages;
+  painel fornecido usa Instagram Login e instagram_business_manage_messages.
+  Preservar fluxo de Reels e nao trocar token/host/scopes por tentativa.
+- Proximo passo: usuario abrir Publicar e mostrar pendencias/requisitos sem
+  confirmar publicacao. Revisar requisitos e alcance; alteracao do estado exige
+  autorizacao explicita. Depois correlacionar DM real, webhook e mensagem salva.
+- Nenhum deploy, restart, migration, envio DM ou alteracao de token/assinatura
+  realizado. Logs protegidos Nginx continuam sem leitura confirmada nesta sessao.
 
 ## TAG de retomada: RETOMADA-2026-10-09
 
@@ -26,6 +195,57 @@ Atualizado em: 2026-10-09
 - Backend e worker permanecem online; nao reiniciados por este workflow.
   Sem migrations ou alteracao de tokens/webhooks. Recebimento de uma nova DM e
   validacao autenticada no navegador ainda precisam de teste pelo usuario.
+
+### Teste do usuario apos deploy: historico verificado em 2026-10-09
+
+- Teste de outro remetente confirmado na Meta: conversa hrmmotos com
+  abccenterdistribuidora atualizada em `2026-10-09T20:21:27+0000` (17h21min27s BRT).
+  Participantes da conversa de 17h12min26s confirmados: hrmmotos/harleysilvasaulo.
+- Consulta VPS em `2026-10-09T20:22:06.706Z` (17h22 BRT): continuam 192 eventos
+  e cinco mensagens. Nenhum webhook novo persistido para os dois testes reais.
+  Falha observada nao restrita a um testador. Investigar entrega real/estado do
+  app e assinatura por fluxo; callback sintetico funciona. Causa raiz nao confirmada.
+
+- Print de Convites do testador confirma `socialbot-IG` autorizado em 09/10:
+  aceite do convite Instagram confirmado. Nao repetir essa pendencia.
+- Consulta VPS em `2026-10-09T20:15:27.176Z` (17h15 BRT): 192 webhooks e cinco
+  mensagens, sem novos registros. GET da identidade Instagram retorna hrmmotos.
+- GET Facebook Graph de conversas da pagina, platform=instagram, respondeu 200:
+  duas conversas, uma atualizada em `2026-10-09T20:12:26+0000` (17h12min26s BRT).
+  API enxerga conversa recente, enquanto a VPS nao possui webhook correspondente.
+  Texto/remetente dessa conversa ainda nao correlacionados com o teste informado.
+  Investigar entrega/configuracao de webhooks e compatibilidade dos fluxos
+  Facebook Login/Instagram Login sem substituir tokens ou publicar app por tentativa.
+
+- Prints posteriores mostram app nao publicado e diferenca entre funcoes Facebook
+  e Instagram. `harleysilvasaulo` inicialmente ausente dos testadores Instagram;
+  print mais recente confirma inclusao como Testador do Instagram. Aceite desse
+  novo convite Instagram nao foi confirmado pelo print (status vazio).
+- Usuario enviou nova mensagem de teste. Consulta em `2026-10-09T20:13:01.435Z`
+  (17h13 BRT): permanecem 192 webhooks e cinco mensagens, sem mensagem nova.
+  Ultimo evento ainda e o teste sintetico Meta das 16h50. Confirmar aceite do
+  convite especifico do Instagram antes de atribuir o problema a outra causa.
+
+- Teste manual Meta `messages v25.0` confirmado pelo usuario as 16h50.
+  Evento registrado na VPS em `2026-10-09T19:50:07.182Z` (16h50min07s BRT):
+  total passou de 191 para 192. Payload usa entry.changes, campo messages,
+  com remetente/destinatario presentes; destinatario nao corresponde a nenhuma
+  conta Instagram ativa cadastrada. Conversas permanecem duas e mensagens cinco.
+- Teste confirma entrega ao callback e persistencia do evento bruto, nao o fluxo
+  completo de DM real. Prints do painel confirmam messages assinado v25.0.
+  Proximo foco: vinculo/assinatura da conta profissional no produto configurado;
+  expandir etapa Gerar tokens de acesso sem expor ou substituir tokens.
+
+- Usuario informou novos testes. Consulta VPS em `2026-10-09T19:27:38.549Z`
+  (16h27 America/Sao_Paulo): contagens permanecem 191 webhooks, duas conversas
+  e cinco mensagens. Nenhum registro novo dos testes encontrado.
+- Ultimo webhook segue em 08/10 (evento read); ultima mensagem salva em 17/06.
+  Cauda dos logs do backend sem novos marcadores de recebimento de webhook.
+- Logs protegidos de acesso Nginx nao puderam ser lidos, inclusive via sudo
+  nao interativo. Nao concluir ausencia de entrega HTTP apenas pela ausencia no banco.
+- Proximo passo: confirmar @ destinatario e verificar no painel Meta a assinatura
+  messages e o resultado de entrega de webhook para o teste. Deploy do frontend
+  confirmado, mas recebimento de DM ainda nao resolvido. Nenhuma mudanca na VPS.
 
 ### Estado local antes da publicacao
 
