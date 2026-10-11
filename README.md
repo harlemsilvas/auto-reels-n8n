@@ -334,11 +334,12 @@ Historico anterior permanece sem badges retroativos, pois sua leitura era descon
 Workflow oferece a migration 014 e bloqueia publicacao sem o schema exigido.
 Nova DM real, leitura e badges pos-deploy ainda precisam de validacao do usuario.
 
-### Proximas Etapas
+### Links E Imagens No Inbox
 
-#### Links E Imagens: Implementacao Local
-
-Novo incremento preparado e testado localmente, ainda nao publicado na VPS:
+Publicado na VPS em 11/10/2026, commit `7f01376`,
+[deploy validado](https://github.com/harlemsilvas/auto-reels-n8n/actions/runs/38160575371).
+Testes locais simulados aprovados; envio/recebimento de imagem real com Meta
+ainda precisa ser confirmado pelo usuario.
 
 - Links HTTP/HTTPS clicaveis, com abertura segura em outra aba.
 - Imagens recebidas exibidas no historico e via SSE, com fallback quando indisponiveis.
@@ -356,10 +357,10 @@ Rotas novas: `POST /api/internal/conversations/:id/images` (multipart, campo ima
 `GET /api/inbox/media/:token` (somente capacidade temporaria, sem upload publico).
 Nenhuma migration nova: metadados da imagem ficam no payload existente.
 
-Antes do futuro deploy: instalar dependencias backend (`npm ci`, inclui sharp),
-configurar `INBOX_PUBLIC_BASE_URL` como URL HTTPS externa da API, e garantir
-armazenamento privado persistente em `INBOX_MEDIA_DIR` (default backend/storage/inbox).
-Nao copiar URL localhost para VPS nem publicar codigo sem instalar sharp.
+O deploy instala dependencias backend pelo lockfile (inclui sharp), valida a
+conversao nativa e configura URL HTTPS externa e armazenamento persistente privado.
+Backup protegido de release/dependencias/configuracao precede o restart da API;
+worker e proxy preservados. Nenhuma migration nova; schema 014 verificado.
 URL de entrega em memoria exige que a instancia permaneça ativa durante o envio;
 multiplas instancias precisarao armazenamento compartilhado das capacidades.
 URLs de imagens recebidas podem expirar; nao fazemos download/arquivo permanente
@@ -369,6 +370,8 @@ Videos, audio, documentos e anexos antigos sem URL nao fazem parte deste increme
 Testes: `node backend/scripts/test-inbox-images.js` e
 `PLAYWRIGHT_MODULE=... node dashboard/tests/inbox-images.mjs`; banco/Meta simulados,
 arquivos temporarios e desktop/mobile. Nenhuma DM real enviada nestes testes.
+
+### Proximas Etapas
 
 Em 11/10, o primeiro incremento de confiabilidade foi implementado e testado
 localmente: rascunho preservado em falha, typing nao bloqueante, isolamento

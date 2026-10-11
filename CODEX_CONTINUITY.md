@@ -4,6 +4,35 @@ Atualizado em: 2026-10-11
 
 ## TAG de retomada: RETOMADA-2026-10-11
 
+### Deploy links/imagens concluido em 2026-10-11
+
+- Release confirmada na VPS: 7f01376fdbce7082eb1d06c981d0c260d23f154d.
+  Action concluida com sucesso, dashboard/backend habilitados, migrations desligadas:
+  https://github.com/harlemsilvas/auto-reels-n8n/actions/runs/38160575371
+- Backup anterior validado por catalogo tar e SHA-256, arquivo 0600/4690504 bytes:
+  /home/socialbot/backups/inbox-images-pre-deploy-20261011T173951Z/release-anterior.tar.gz.
+  Inclui codigo/dependencias/build/workflow; copia de configuracao anterior 0600
+  preservada no mesmo diretorio, sem registrar conteudo. Sem mudanca de banco.
+- npm ci backend instalado; sharp 0.35.5 converteu PNG na VPS. Multer 2.4.0 e
+  proxy-addr 2.0.8 confirmados. URL HTTPS de entrega e armazenamento persistente
+  privado configurados; diretorio 0700 e arquivo de configuracao 0600 verificados.
+  Nenhuma mudanca de proxy/portas/worker/n8n/tokens/fluxo Reels.
+- Backend online, restart 4 -> 5, PID 3808101; worker online, restart 0,
+  PID 1653 preservado. Scripts remotos sujos mantidos. Schema 014 passou novamente.
+- Verificacoes desta sessao: API health/dashboard HTTP 200; Inbox, upload e
+  imagem privada anonimos HTTP 401; capacidade invalida HTTP 404. Asset publico
+  /assets/index-CR7byaW4.js HTTP 200 e SHA-256 igual ao build da release na VPS.
+  Nenhuma sessao autenticada, DM real ou registro de mensagem criado por nos.
+- Auditoria npm ci producao backend: quatro alertas (dois high, um moderate,
+  um low), zero critical. Dashboard reportou doze (nove high). Revisao pontual
+  restante pendente, sem audit fix amplo. Validacoes simuladas descritas abaixo
+  nao comprovam a entrega de imagem real pela Meta.
+- Proximo teste do usuario: nova DM com imagem de testador para conta conectada;
+  confirmar exibicao, responder com JPG/PNG e link pelo Inbox e conferir Instagram.
+  Pendentes politica de retencao/limpeza e capacidades compartilhadas multi-instancia;
+  videos/audio/documentos ainda fora do escopo. Resultado documental sera enviado
+  em commit separado, sem novo deploy.
+
 ### Deploy de links/imagens autorizado: preparacao
 
 - Usuario autorizou publicar na VPS. Preflight desta sessao confirmou a7101b6,
