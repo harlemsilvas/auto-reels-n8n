@@ -333,10 +333,10 @@ O estado de leitura e compartilhado pelo Inbox, nao individual por operador.
 Historico anterior permanece sem badges retroativos, pois sua leitura era desconhecida.
 Workflow oferece a migration 014 e bloqueia publicacao sem o schema exigido.
 Em 11/10, o usuario relatou que o badge nao atualizava. Consultas na VPS confirmaram
-nao lidas persistidas e retornadas pelo servico. Correcao de sincronizacao preparada
-somente localmente: polling da lista a cada cinco segundos, reconciliacao ao voltar
+nao lidas persistidas e retornadas pelo servico. Correcao de sincronizacao publicada
+na VPS em `151d235`: polling da lista a cada cinco segundos, reconciliacao ao voltar
 ao painel/reconectar SSE e protecao por conversa contra respostas atrasadas.
-Ainda precisa de deploy e nova validacao real dos badges/leitura.
+Ainda precisa de nova validacao real dos badges/leitura pelo usuario.
 
 ### Links E Imagens No Inbox
 
@@ -378,25 +378,32 @@ arquivos temporarios e desktop/mobile. Nenhuma DM real enviada nestes testes.
 
 ### Proximas Etapas
 
-Modelos (11/10, somente local): confirmar a criacao na Fase 5 mostra resumo de
+Deploy Inbox/Modelos concluido em 11/10/2026, release `151d235`,
+[Action validada](https://github.com/harlemsilvas/auto-reels-n8n/actions/runs/38172633374).
+Dashboard/API HTTP 200 e bundle publico conferidos; backup validado, somente API
+reiniciada, worker preservado e nenhuma migration nova. Teste autenticado das
+novas correcoes em producao ainda depende do usuario.
+
+Modelos (11/10, publicado na VPS): confirmar a criacao na Fase 5 mostra resumo de
 sucesso com titulo, TAG, ID e data salva pela API, acesso a Agenda e opcao de criar
 outra postagem. Erros preservam o formulario; retorno pendente nao e tratado como
 agendamento confirmado. Teste `dashboard/tests/media-templates-scheduling.mjs`
-desktop/mobile com APIs simuladas e build aprovados; sem migration/deploy.
+desktop/mobile com APIs simuladas e build aprovados; sem migration nova.
 
-Correcao local em Modelos (11/10): criar/abrir modelo passa a atualizar a Fase 2
+Correcao em Modelos (11/10, publicada): criar/abrir modelo passa a atualizar a Fase 2
 sem respostas antigas sobrescreverem a selecao. Detalhes/midias de outro modelo
 nao permanecem durante carregamento ou falha. Testes simulados desktop/mobile
-e build aprovados; ainda nao aplicada na VPS, junto da sincronizacao dos badges.
+e build aprovados; aplicada na VPS junto da sincronizacao dos badges.
 
 Gemini local validado em 11/10 as 17:13 (America/Sao_Paulo), apos o usuario
 cadastrar nova credencial para "Modelos de midia / textos". Evento request_success
 e variacao com origem gemini/modelo gemini-flash-lite-latest confirmados no banco.
 Variacao salva e aprovada; nenhuma publicacao Instagram foi validada neste teste.
-Melhoria local: Fase 4 mostra progresso e erros no contexto da geracao, e uma
+Melhoria publicada: Fase 4 mostra progresso e erros no contexto da geracao, e uma
 sugestao salva abre para revisao automaticamente. Falha Gemini nao vira sugestao
 local silenciosamente. Testes desktop/mobile simulados e geracao real local
-aprovados; deploy desta melhoria continua pendente.
+aprovados; UI publicada na VPS. Credencial/geracao Gemini real da VPS ainda
+precisa de validacao propria; nenhuma chave local foi copiada no deploy.
 
 Em 11/10, o primeiro incremento de confiabilidade foi implementado e testado
 localmente: rascunho preservado em falha, typing nao bloqueante, isolamento

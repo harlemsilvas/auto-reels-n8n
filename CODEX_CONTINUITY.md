@@ -4,6 +4,42 @@ Atualizado em: 2026-10-11
 
 ## TAG de retomada: RETOMADA-2026-10-11
 
+### Deploy Inbox/Modelos concluido em 2026-10-11
+
+- Release confirmada na VPS: 151d235d695a9af8ecd6c8dc614c1c0f49668d49.
+  Action 38172633374 concluida com sucesso em 11/10 as 17:33 (America/Sao_Paulo):
+  https://github.com/harlemsilvas/auto-reels-n8n/actions/runs/38172633374
+  Dashboard publicado e somente API reiniciada; migrations desligadas.
+- Aplicadas sincronizacao dos badges Inbox/SSE, selecao/Fase 2 de Modelos,
+  feedback/revisao de Gemini e confirmacao de criacao/agendamento na Fase 5.
+  Estes itens nao estao mais pendentes de deploy; entradas locais abaixo sao historicas.
+- API online restart 5 -> 6/PID 3918851. Worker online restart 0/PID 1653
+  preservados. Scripts remotos sujos mantidos; nenhuma alteracao de portas,
+  proxy, n8n, tokens ou fluxo de Reels. Configuracao Inbox existente compativel,
+  sharp nativo validado e schema 014 verificado sem nova migration.
+- Backup anterior de 7f01376 validado por catalogo/commit/SHA-256, modo 0600,
+  12805130 bytes: /home/socialbot/backups/inbox-images-pre-deploy-20261011T203236Z/release-anterior.tar.gz.
+  SHA-256 f4c36e0d5bbae5585498867ddb3ef037044ddfc1f81f9bdbf5514ce88627a9dc.
+  Inclui codigo/dependencias/build/workflow; backup de configuracao 0600
+  preservado sem consultar seu conteudo. Sem mudanca de schema/banco neste deploy.
+- Verificacoes atuais: health API/dashboard HTTP 200; conversas e SSE anonimos
+  HTTP 401. Bundle publico /assets/index-CUYZwy9R.js igual ao dist da VPS,
+  SHA-256 136e10243709abd28301db9854b86c1af2827718b255477d4c1a4195b88a6083.
+  Playwright publico desktop/mobile carregou login/bundle sem erro JavaScript;
+  nenhuma sessao autenticada, DM, agendamento ou chamada Gemini real executada.
+- Antes do deploy passaram oito testes backend de confiabilidade e Playwright
+  sincronizacao, badges/leitura, imagens, selecao, geracao e agendamento; APIs
+  simuladas. Build, lint Inbox, sintaxe e diff-check passaram. Lint Modelos
+  permanece com cinco problemas preexistentes. npm ci reportou quatro alertas
+  backend (dois high) e doze dashboard (nove high); revisao pontual pendente.
+- Proximo aceite do usuario na VPS: selecionar/criar modelo e conferir Fase 2;
+  gerar texto com credencial propria da VPS; confirmar agendamento e abrir Agenda;
+  testar badge com outra conversa selecionada e leitura ao abrir. Geracao Gemini
+  real registrada abaixo foi local e nao comprova credenciais da VPS.
+- README/roteiro atualizados; resultado segue em commit documental separado,
+  sem disparar outro deploy. Arquivos locais de simulacao e midias do usuario
+  continuam fora dos commits e da VPS.
+
 ### Deploy Inbox/Modelos autorizado: preflight em 2026-10-11
 
 - Usuario autorizou publicar o pacote local. Inspecao atual confirmou VPS em
