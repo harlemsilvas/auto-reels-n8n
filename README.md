@@ -265,10 +265,11 @@ npm run dev
 
 ## Estado Atual Em 11 De Outubro De 2026
 
-Ultimo deploy confirmado em 10/10/2026: commit `982b3b7`, com backend e dashboard
-atualizados e migration `013` aplicada na VPS apos backup PostgreSQL. O registro
-de resultado foi enviado no commit documental `fb979ae`, sem novo deploy.
-[Execucao do deploy](https://github.com/harlemsilvas/auto-reels-n8n/actions/runs/38074150243).
+Ultimo deploy confirmado em 11/10/2026: commit `a7101b6`, com backend e dashboard
+atualizados e migration `014` aplicada/verificada na VPS apos backup PostgreSQL.
+Inclui confiabilidade Inbox e contadores de nao lidas. A migration `013` permanece
+aplicada desde o deploy anterior.
+[Execucao do deploy](https://github.com/harlemsilvas/auto-reels-n8n/actions/runs/38142591308).
 
 ### Funcionalidades testadas
 
@@ -291,7 +292,8 @@ de resultado foi enviado no commit documental `fb979ae`, sem novo deploy.
 
 Na verificacao apos o deploy, API/dashboard responderam HTTP 200 e o hash do
 bundle publico correspondeu ao build da VPS. Worker permaneceu online sem reinicio.
-Esses sao resultados registrados em 10/10, nao uma nova verificacao em 11/10.
+Esses resultados foram novamente verificados em 11/10 apos o deploy da migration 014.
+Vinte mensagens/quatro conversas preservadas; nova DM/badge exige teste do usuario.
 Nenhuma conversa foi ocultada automaticamente pelo deploy.
 
 A pagina Testers DM lista conversas recebidas, nao uma lista de funcoes validada
@@ -319,9 +321,9 @@ temporario: cobre migration idempotente, concorrencia, deduplicacao e leitura
 parcial. `dashboard/tests/inbox-unread.mjs` valida badges/filtro e leitura mobile
 com APIs interceptadas; requer Playwright e dashboard local ativo.
 
-### Contadores De Nao Lidas (Local)
+### Contadores De Nao Lidas
 
-Implementados e testados localmente em 11/10, com migration
+Implementados e testados localmente em 11/10, publicados na VPS com migration
 `014-inbox-unread.sql` aplicada apos backup. Novas DMs recebidas incrementam
 o contador; respostas enviadas e webhooks repetidos com o mesmo ID Meta nao.
 A API calcula o contador pelo estado das mensagens, sem zero fixo.
@@ -329,16 +331,16 @@ O painel reconhece somente os IDs carregados na conversa visivel, sem apagar
 mensagens posteriores. No celular, apenas exibir a lista nao marca como lida.
 O estado de leitura e compartilhado pelo Inbox, nao individual por operador.
 Historico anterior permanece sem badges retroativos, pois sua leitura era desconhecida.
-Ainda nao publicado: aplicar/verificar a migration 014 na VPS antes do restart
-do backend. O workflow atual precisa oferecer essa migration no proximo deploy.
+Workflow oferece a migration 014 e bloqueia publicacao sem o schema exigido.
+Nova DM real, leitura e badges pos-deploy ainda precisam de validacao do usuario.
 
 ### Proximas Etapas
 
 Em 11/10, o primeiro incremento de confiabilidade foi implementado e testado
-somente localmente: rascunho preservado em falha, typing nao bloqueante, isolamento
-de respostas atrasadas e SSE/polling sem duplicacao nos cenarios simulados. Ainda
-nao esta na VPS. Contadores de nao lidas tambem corrigidos localmente, com migration
-014; reconciliacao de envio e validacao em producao continuam pendentes.
+localmente: rascunho preservado em falha, typing nao bloqueante, isolamento
+de respostas atrasadas e SSE/polling sem duplicacao nos cenarios simulados.
+Foi publicado junto dos contadores de nao lidas/migration 014; reconciliacao
+de envio e validacao funcional autenticada em producao continuam pendentes.
 
 1. Consolidar confiabilidade do Inbox: testes de permissao/sessao/CSRF, falhas de
    envio, typing indicator, polling/SSE, nao lidas e troca de conversa.

@@ -4,6 +4,35 @@ Atualizado em: 2026-10-11
 
 ## TAG de retomada: RETOMADA-2026-10-11
 
+### Deploy controlado Inbox/014 concluido em 2026-10-11
+
+- Commit implantado: a7101b629e246c043b3b0ee2dadeb172acf042b5.
+  Action concluida com sucesso:
+  https://github.com/harlemsilvas/auto-reels-n8n/actions/runs/38142591308
+- Backup PostgreSQL validado por catalogo pg_restore/SHA-256, modo 0600,
+  386083 bytes: /home/socialbot/backups/socialbot-postgres/deploy-20261011T131747Z/n8n_20261011_131747.dump.
+  Backup de release anterior em inbox-unread-pre-deploy-20261011T131510Z preservado.
+- Migration 014 executada com BEGIN/COMMIT e verificador antes do restart.
+  Coluna inbox_unread boolean NOT NULL DEFAULT false e indice parcial confirmados
+  na VPS. Vinte mensagens/quatro conversas preservadas; zero badges historicos,
+  conforme politica de leitura desconhecida. Nenhum registro removido/ocultado.
+- Backend online, restart 3 -> 4; worker online, restart 0, mesmo PID 1653.
+  Checkout VPS confirmado em a7101b6; scripts remotos sujos preservados.
+  Sem mudanca em worker/n8n/portas/tokens/configuracoes de infraestrutura.
+  Script frontend existente validou/recarregou Nginx sem mudar configuracao.
+- Health API HTTP 200 ok=true, dashboard e asset index-BpIX3Gg6.js HTTP 200.
+  SHA-256 do bundle publico igual ao build dashboard/dist na VPS.
+  GET Inbox anonimo HTTP 401; listagem do servico em leitura retornou quatro
+  conversas com contadores numericos. Sem sessao autenticada nem envio de DM.
+- Correcoes de confiabilidade e contadores agora aplicadas localmente e na VPS.
+  Pendente teste real pelo usuario: enviar nova DM sem conversa aberta, observar
+  badge/filtro, abrir conversa e confirmar leitura/resposta. Historico nao deve
+  ganhar badges retroativos. Testes simulados nao comprovam entrega real pos-deploy.
+- npm ci remoto reportou 12 alertas (nove high), sem audit fix. Nginx mostrou
+  avisos de OCSP e nomes duplicados de outro dominio; teste de sintaxe aprovado.
+  Nenhuma tentativa de corrigir infra/dependencias fora do escopo.
+- Resultado sera enviado em commit documental separado, sem novo deploy.
+
 ### Deploy controlado Inbox/014 autorizado: preparacao
 
 - Usuario autorizou deploy das correcoes locais de confiabilidade e nao lidas.
