@@ -134,8 +134,28 @@ export function useMessages(conversation?: Conversation | null, onRead?: (id: st
     }
   }
 
+  async function sendImage(image: File) {
+    if (!id || sendPending.current) return;
+    const version = generation.current;
+    sendPending.current = true;
+    setSending(true);
+    setError(null);
+    try {
+      const created = await inboxService.sendImage(id, image);
+      if (version === generation.current) update((items) => unique([...items, created]));
+    } catch (failure: unknown) {
+      if (version === generation.current) setError(errorMessage(failure, "Falha ao enviar imagem."));
+      throw failure;
+    } finally {
+      if (version === generation.current) {
+        sendPending.current = false;
+        setSending(false);
+      }
+    }
+  }
+
   return { loading, sending, error, messages: state.id === id ? state.items : [],
-    sendMessage, receiveMessage, refresh: loadMessages };
+    sendMessage, sendImage, receiveMessage, refresh: loadMessages };
 }
 
 export default useMessages;

@@ -91,7 +91,7 @@ export interface Message {
 
   createdAt: string;
 
-  payload?: any;
+  payload?: unknown;
 }
 
 /**

@@ -91,6 +91,10 @@ const MEDIA_ERROR_DIR =
 
 const MEDIA_PUBLIC_BASE_URL = process.env.MEDIA_PUBLIC_BASE_URL ?? "";
 
+const INBOX_MEDIA_DIR = process.env.INBOX_MEDIA_DIR ?? path.resolve(__dirname, "../../storage/inbox");
+const INBOX_PUBLIC_BASE_URL = process.env.INBOX_PUBLIC_BASE_URL ??
+  (process.env.NODE_ENV === "production" ? "" : `http://127.0.0.1:${API_PORT}`);
+
 /**
  * ======================================
  * CORS
@@ -224,6 +228,8 @@ module.exports = {
   MEDIA_PUBLISHED_DIR,
   MEDIA_ERROR_DIR,
   MEDIA_PUBLIC_BASE_URL,
+  INBOX_MEDIA_DIR,
+  INBOX_PUBLIC_BASE_URL,
 
   getAllowedOrigins,
 

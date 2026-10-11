@@ -64,6 +64,7 @@ backups/
 *.pid
 *.seed
 .dev-run/
+backend/storage/inbox/
 
 # Artefatos antigos que nao serao mais utilizados
 /nao_usaremos/

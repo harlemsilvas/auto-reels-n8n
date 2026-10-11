@@ -19,6 +19,7 @@ const instagramSendInternalRoutes = require("./modules/instagram/instagram-send.
 const instagramConversationsRoutes = require("./modules/conversations/instagram-conversations.routes");
 const instagramSendMessageRoutes = require("./modules/inbox/instagram-send-message.routes");
 const testersDmRoutes = require("./modules/inbox/testers-dm.routes");
+const { imageSendRoutes, serveDeliveryImage, serveConversationImage } = require("./modules/inbox/inbox-images.routes");
 const usersRoutes = require("./modules/users/users.routes");
 
 const realtimeRoutes = require("./modules/realtime/realtime.routes");
@@ -59,6 +60,8 @@ if (allowedOrigins === "*") {
 app.use(express.json());
 
 app.use("/api/webhooks/instagram", instagramMessagesRoutes);
+// Short-lived capability URL used only by Meta to fetch an outbound image.
+app.get("/api/inbox/media/:token", serveDeliveryImage);
 
 app.use("/api/auth", adminAuthRoutes);
 app.use("/api/auth/meta", metaOAuthRoutes);
@@ -109,6 +112,11 @@ app.use(
     : []),
   instagramConversationsRoutes,
 );
+
+app.get("/api/internal/conversations/:conversationId/messages/:messageId/image",
+  ...(ADMIN_AUTH_ENABLED ? [requirePermission(PERMISSIONS.INBOX_VIEW)] : []), serveConversationImage);
+app.use("/api/internal/conversations",
+  ...(ADMIN_AUTH_ENABLED ? [requirePermission(PERMISSIONS.INBOX_REPLY)] : []), imageSendRoutes);
 
 app.use(
   "/api/inbox/send-message",

@@ -109,7 +109,8 @@ async function saveMessage({
         SELECT id::text AS id, conversation_id::text AS "conversationId",
           sender_id AS "senderId", recipient_id AS "recipientId",
           COALESCE(to_jsonb(m)->>'sender_type', to_jsonb(m)->>'sent_by') AS "sentBy",
-          message_text AS "messageText", meta_message_id AS "metaMessageId", created_at AS "createdAt"
+          message_text AS "messageText", meta_message_id AS "metaMessageId", created_at AS "createdAt",
+          COALESCE(to_jsonb(m)->'payload', to_jsonb(m)->'raw_payload') AS payload
         FROM instagram_messages m WHERE conversation_id = $1::uuid AND meta_message_id = $2 LIMIT 1
       `, [conversationId, metaMessageId]);
       if (existing.rowCount) {
@@ -129,7 +130,7 @@ async function saveMessage({
           RETURNING id::text AS id, conversation_id::text AS "conversationId",
             sender_id AS "senderId", recipient_id AS "recipientId",
             ${attempt.senderColumn} AS "sentBy", message_text AS "messageText",
-            meta_message_id AS "metaMessageId", created_at AS "createdAt"
+            meta_message_id AS "metaMessageId", created_at AS "createdAt", ${attempt.payloadColumn} AS payload
         `, [conversationId, senderId, recipientId, sentBy, messageText,
           metaMessageId, JSON.stringify(payload), sentBy === "user"]);
         await client.query(`

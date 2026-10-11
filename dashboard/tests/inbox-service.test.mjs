@@ -62,6 +62,12 @@ test("Inbox envia cookies e CSRF atual sem alterar erros da API", async () => {
     assert.deepEqual(JSON.parse(requests.at(-1).data), { messageIds: ["message-test"] });
     await service.markConversationAsRead("conversation-test", []);
     assert.deepEqual(JSON.parse(requests.at(-1).data), { messageIds: [] });
+    const image = new File(["fake-image"], "foto.png", { type: "image/png" });
+    await service.sendImage("conversation-test", image);
+    assert.equal(requests.at(-1).headers.get("X-CSRF-Token"), "csrf-renewed");
+    assert.equal(requests.at(-1).withCredentials, true);
+    assert.ok(requests.at(-1).data instanceof FormData);
+    assert.equal(requests.at(-1).data.get("image").name, "foto.png");
 
     csrfToken = null;
     await service.markConversationAsRead("conversation-test");

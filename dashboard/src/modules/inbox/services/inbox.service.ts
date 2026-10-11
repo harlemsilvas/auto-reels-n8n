@@ -92,6 +92,16 @@ export async function sendMessage(payload: SendMessagePayload) {
   return response.data;
 }
 
+export async function sendImage(conversationId: string, image: File) {
+  const form = new FormData();
+  form.append("image", image);
+  const response = await api.post<Message>(
+    `/api/internal/conversations/${encodeURIComponent(conversationId)}/images`, form,
+    { headers: { "Content-Type": undefined } },
+  );
+  return response.data;
+}
+
 /**
  * ======================================
  * MARK AS READ
@@ -154,6 +164,7 @@ export default {
   listConversations,
   listMessages,
   sendMessage,
+  sendImage,
   markConversationAsRead,
   sendInstagramMessage,
   listTesterConversations,

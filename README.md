@@ -336,6 +336,40 @@ Nova DM real, leitura e badges pos-deploy ainda precisam de validacao do usuario
 
 ### Proximas Etapas
 
+#### Links E Imagens: Implementacao Local
+
+Novo incremento preparado e testado localmente, ainda nao publicado na VPS:
+
+- Links HTTP/HTTPS clicaveis, com abertura segura em outra aba.
+- Imagens recebidas exibidas no historico e via SSE, com fallback quando indisponiveis.
+- Selecao/previa/remocao e envio de uma JPG/PNG por vez, ate 8 MB; texto e imagem
+  sao mensagens separadas, sem repetir texto ja enviado quando a imagem falha.
+- Upload protegido por sessao, CSRF e inbox.reply; conversa/conta/destinatario
+  resolvidos pelo backend. Sharp valida/recodifica pixels, limita 20 megapixels
+  e remove metadados. Armazenamento privado fora das pastas de publicacao.
+- GET privado de imagem exige inbox.view. Para a Meta, URL opaca valida por
+  quinze minutos; esse acesso temporario nao usa token de sessao nem token Meta.
+  Entrega incerta nao provoca retry automatico e remove a imagem selecionada.
+
+Rotas novas: `POST /api/internal/conversations/:id/images` (multipart, campo image),
+`GET /api/internal/conversations/:id/messages/:messageId/image` (autenticada) e
+`GET /api/inbox/media/:token` (somente capacidade temporaria, sem upload publico).
+Nenhuma migration nova: metadados da imagem ficam no payload existente.
+
+Antes do futuro deploy: instalar dependencias backend (`npm ci`, inclui sharp),
+configurar `INBOX_PUBLIC_BASE_URL` como URL HTTPS externa da API, e garantir
+armazenamento privado persistente em `INBOX_MEDIA_DIR` (default backend/storage/inbox).
+Nao copiar URL localhost para VPS nem publicar codigo sem instalar sharp.
+URL de entrega em memoria exige que a instancia permaneça ativa durante o envio;
+multiplas instancias precisarao armazenamento compartilhado das capacidades.
+URLs de imagens recebidas podem expirar; nao fazemos download/arquivo permanente
+dos anexos recebidos. Retencao/limpeza de imagens locais ainda precisa de politica.
+Videos, audio, documentos e anexos antigos sem URL nao fazem parte deste incremento.
+
+Testes: `node backend/scripts/test-inbox-images.js` e
+`PLAYWRIGHT_MODULE=... node dashboard/tests/inbox-images.mjs`; banco/Meta simulados,
+arquivos temporarios e desktop/mobile. Nenhuma DM real enviada nestes testes.
+
 Em 11/10, o primeiro incremento de confiabilidade foi implementado e testado
 localmente: rascunho preservado em falha, typing nao bloqueante, isolamento
 de respostas atrasadas e SSE/polling sem duplicacao nos cenarios simulados.

@@ -21,7 +21,7 @@ export default function InstagramInboxPage() {
     media.addEventListener("change", changed);
     return () => media.removeEventListener("change", changed);
   }, []);
-  const { loading: messagesLoading, error: messagesError, sending, messages, sendMessage, receiveMessage } = useMessages(selectedConversation, updateUnreadCount, !narrowScreen || mobileChat);
+  const { loading: messagesLoading, error: messagesError, sending, messages, sendMessage, sendImage, receiveMessage } = useMessages(selectedConversation, updateUnreadCount, !narrowScreen || mobileChat);
   useRealtimeInbox({
     selectedConversation,
     onNewMessage: receiveMessage,
@@ -42,7 +42,7 @@ export default function InstagramInboxPage() {
           </header>
           {messagesError ? <p className="inbox-error" role="alert">{messagesError}</p> : null}
           <ConversationMessages conversationId={selectedConversation.id} loading={messagesLoading} messages={messages} />
-          {can("inbox.reply") ? <MessageComposer key={selectedConversation.id} sending={sending} onSend={sendMessage} /> : <p className="inbox-readonly-notice">Acesso somente para leitura.</p>}
+          {can("inbox.reply") ? <MessageComposer key={selectedConversation.id} sending={sending} onSend={sendMessage} onSendImage={sendImage} /> : <p className="inbox-readonly-notice">Acesso somente para leitura.</p>}
         </>}
       </div>
     </div>

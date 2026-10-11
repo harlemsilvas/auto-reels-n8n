@@ -84,6 +84,22 @@ jobs:
             git status --short
             git rev-parse --short HEAD
 
+            if [[ "$RESTART_BACKEND" == "true" ]]; then
+              log "Backup protegido da release, dependencias e configuracao"
+              umask 077
+              RELEASE_BACKUP="$HOME/backups/inbox-images-pre-deploy-$(date -u +%Y%m%dT%H%M%SZ)"
+              mkdir -p "$RELEASE_BACKUP"
+              git rev-parse HEAD > "$RELEASE_BACKUP/commit.txt"
+              tar -czf "$RELEASE_BACKUP/release-anterior.tar.gz" \
+                backend/src backend/package.json backend/package-lock.json \
+                backend/node_modules dashboard/dist .github/workflows/deploy-vps.yml
+              cp -p backend/.env "$RELEASE_BACKUP/backend.env"
+              chmod 600 "$RELEASE_BACKUP/backend.env" "$RELEASE_BACKUP/release-anterior.tar.gz"
+              tar -tzf "$RELEASE_BACKUP/release-anterior.tar.gz" > /dev/null
+              sha256sum "$RELEASE_BACKUP/release-anterior.tar.gz"
+              log "Backup: $RELEASE_BACKUP"
+            fi
+
             log "Atualizando main"
             git fetch origin main
             git checkout main
@@ -107,6 +123,43 @@ jobs:
             node --check src/modules/webhooks/instagram-messages.service.js
             node --check src/modules/instagram/instagram-send.service.js
             node --check src/modules/inbox/testers-dm.service.js
+            node --check src/modules/inbox/inbox-images.service.js
+            node --check src/modules/inbox/inbox-images.routes.js
+
+            if [[ "$RESTART_BACKEND" == "true" ]]; then
+              log "Instalando dependencias backend pelo lockfile"
+              npm ci --omit=dev --no-fund
+              log "Validando sharp nativo e configuracao privada Inbox"
+              node <<'NODE'
+            const fs = require('node:fs');
+            const dotenv = require('dotenv');
+            const sharp = require('sharp');
+            const settings = {
+              INBOX_PUBLIC_BASE_URL: 'https://api.hrmmotos.com.br',
+              INBOX_MEDIA_DIR: '/home/socialbot/storage/inbox',
+            };
+            const current = dotenv.parse(fs.readFileSync('.env'));
+            for (const [key, value] of Object.entries(settings)) {
+              if (current[key] && current[key] !== value) {
+                throw new Error(`Configuracao Inbox divergente: ${key}; revisar antes do deploy`);
+              }
+            }
+            const directory = settings.INBOX_MEDIA_DIR;
+            fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
+            if (!fs.lstatSync(directory).isDirectory() || fs.realpathSync(directory) !== directory) {
+              throw new Error('Armazenamento Inbox deve ser diretorio privado sem symlinks');
+            }
+            fs.chmodSync(directory, 0o700);
+            const additions = Object.entries(settings).filter(([key]) => !current[key]);
+            if (additions.length) {
+              fs.appendFileSync('.env', '\n' + additions.map(([key, value]) => `${key}=${value}`).join('\n') + '\n');
+            }
+            fs.chmodSync('.env', 0o600);
+            sharp({ create: { width: 1, height: 1, channels: 3, background: '#ffffff' } })
+              .png().toBuffer().then(() => console.log('Sharp e armazenamento Inbox OK'))
+              .catch(error => { console.error(error.message); process.exitCode = 1; });
+            NODE
+            fi
 
             if [[ "$RUN_MIGRATIONS" == "true" ]]; then
               if [[ "$MIGRATION_SET" == "none" ]]; then

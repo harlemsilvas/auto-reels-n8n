@@ -58,8 +58,10 @@ async function saveOutboundMessage({
   accountInstagramId,
   messageText,
   response,
+  imageMetadata,
 }) {
-  return repository.saveMessage({
+  const payload = imageMetadata ? { ...response, inboxImage: imageMetadata } : response;
+  const saved = await repository.saveMessage({
     conversationId,
 
     metaMessageId: response?.message_id || response?.messageId || null,
@@ -70,10 +72,11 @@ async function saveOutboundMessage({
 
     messageText,
 
-    payload: response,
+    payload,
 
     sentBy: "bot",
   });
+  return imageMetadata ? { ...saved, payload } : saved;
 }
 
 /**
@@ -153,7 +156,7 @@ async function sendTextMessage({ accountId, recipientId, messageText }) {
  * ======================================
  */
 
-async function sendImageMessage({ accountId, recipientId, imageUrl }) {
+async function sendImageMessage({ accountId, recipientId, conversationId, imageUrl, imageMetadata }) {
   log("SEND IMAGE MESSAGE");
 
   const account = await findAccount(accountId);
@@ -162,26 +165,25 @@ async function sendImageMessage({ accountId, recipientId, imageUrl }) {
     throw new Error("Instagram account not found.");
   }
 
-  const conversation = await getConversation({
-    accountId,
-    recipientId,
-  });
+  if (!account.accessToken) throw new Error("Instagram access token not found.");
 
-  const response = await apiClient.sendImageMessage({
-    accessToken: account.accessToken,
-    recipientId,
-    imageUrl,
-  });
+  const conversation = conversationId ? { id: conversationId } : await getConversation({ accountId, recipientId });
 
-  const savedMessage = await saveOutboundMessage({
-    conversationId: conversation.id,
-    recipientId,
-    accountInstagramId: account.instagramId,
-    messageText: "[image]",
-    response,
-  });
-
-  return savedMessage;
+  let delivered = false;
+  try {
+    const response = await apiClient.sendImageMessage({
+      accessToken: account.accessToken, recipientId, imageUrl,
+    });
+    delivered = true;
+    return await saveOutboundMessage({
+      conversationId: conversation.id, recipientId, accountInstagramId: account.instagramId,
+      messageText: "[image]", response, imageMetadata,
+    });
+  } catch (error) {
+    // Never retry a send automatically when delivery succeeded or its outcome is unknown.
+    error.deliveryMayHaveSucceeded = delivered || !error.status || error.status >= 500;
+    throw error;
+  }
 }
 
 /**

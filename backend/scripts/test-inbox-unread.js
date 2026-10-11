@@ -66,13 +66,17 @@ async function main() {
       const rows = (await service.listConversations({})).items;
       return rows.find((item) => item.id === id).unreadCount;
     }
-    const save = (mid, sentBy = "user") => repo.saveMessage({ conversationId: id,
+    const save = (mid, sentBy = "user", payload = { test: true }) => repo.saveMessage({ conversationId: id,
       senderId: "tester", recipientId: "account", messageText: mid, metaMessageId: mid,
-      payload: { test: true }, sentBy });
+      payload, sentBy });
     assert.equal(await count(), 0);
-    const first = await save("inbound1");
+    const imagePayload = { message: { attachments: [{ type: "image", payload: { url: "https://example.test/image.png" } }] } };
+    const first = await save("inbound1", "user", imagePayload);
+    assert.deepEqual(first.payload, imagePayload, "Payload de imagem disponivel para SSE");
     assert.equal(await count(), 1);
-    assert.equal((await save("inbound1")).wasDuplicate, true);
+    const duplicate = await save("inbound1");
+    assert.equal(duplicate.wasDuplicate, true);
+    assert.deepEqual(duplicate.payload, imagePayload);
     assert.equal(await count(), 1);
     await save("outbound", "bot");
     assert.equal(await count(), 1);

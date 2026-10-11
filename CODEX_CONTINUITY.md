@@ -4,6 +4,78 @@ Atualizado em: 2026-10-11
 
 ## TAG de retomada: RETOMADA-2026-10-11
 
+### Deploy de links/imagens autorizado: preparacao
+
+- Usuario autorizou publicar na VPS. Preflight desta sessao confirmou a7101b6,
+  Node 20.20.2, migration 014 valida, backend online restart 4 e worker online
+  restart 0/PID 1653. Scripts remotos nao relacionados preservados.
+- Nginx API inspecionado: proxy existente e limite de corpo suficientes;
+  nenhuma alteracao de proxy/portas necessaria. Configuracao Inbox ainda ausente.
+- Workflow passa a preservar release/dependencias/configuracao em backup protegido,
+  instalar backend via npm ci e testar sharp nativo antes de reiniciar somente API.
+  Configuracao privada Inbox adicionada apenas quando ausente, divergencias abortam.
+  Nenhuma migration nova; nenhuma DM real sera enviada durante verificacoes.
+- Atualizacao pontual do lockfile para proxy-addr e multer antes de publicar;
+  repetir testes e registrar versoes/auditoria e resultado real ao concluir.
+- Versoes validadas: proxy-addr 2.0.8, multer 2.4.0 e sharp 0.35.5. Auditoria
+  local: oito alertas (seis high, um moderate, um low), zero critical. Revisao
+  restante de dependencias pendente; sem audit fix generalizado.
+- Nesta sessao passaram quatro testes imagens, sete confiabilidade, onze webhook,
+  teste cookies/CSRF/multipart, PostgreSQL isolado de nao lidas, Playwright imagens
+  desktop/mobile, build dashboard, sintaxe de oito arquivos e YAML/bash do workflow.
+- Esta entrada registra preparacao, nao deploy concluido.
+
+### Links e imagens Inbox: novo incremento somente local
+
+- Usuario autorizou comecar links/imagens no envio e recebimento, nao novo deploy.
+  Ultimo deploy registrado permanece a7101b6, Action 38142591308, migration 014;
+  HEAD documental 59081d9. Nenhuma consulta/mudanca VPS nesta implementacao.
+- UI renderiza links HTTP/HTTPS seguros e imagens recebidas do payload.message.
+  attachments, inclusive SSE: repository agora retorna payload na insercao.
+  URLs javascript/data e credenciais na URL nao viram links; imagem inbound so HTTPS.
+  Imagem abre em outra aba; indisponibilidade tem fallback. Payload frontend unknown.
+- Compositor seleciona/mostra previa/remove JPG/PNG ate 8 MB. Texto/imagem enviados
+  separadamente; falha na imagem nao repete texto entregue. Sem retry automatico;
+  resultado incerto remove selecao e orienta conferir o Instagram antes de reenviar.
+- POST multipart conversations/:id/images herda sessao/CSRF e inbox.reply;
+  backend resolve conta/destinatario pela conversa ativa, rejeita campos extras.
+  Multer limita upload, sharp decodifica/recodifica, remove metadados e limita
+  20 megapixels. Arquivos privados 0600, diretorio 0700, fora das pastas Reels.
+- Historico de imagens outbound usa payload.inboxImage e GET privado por conversa/
+  mensagem, com inbox.view. URL de leitura Meta usa capacidade aleatoria de 256 bits,
+  quinze minutos em memoria, sem token Meta/sessao; GET publico separado sem listagem.
+  Erro definitivo remove arquivo; entrega incerta preserva arquivo e nao reenvia.
+  Log de requisicao Meta nao imprime payload/URL de capacidade; timeout 30s.
+- Configuracoes novas: INBOX_PUBLIC_BASE_URL (HTTPS da API obrigatoria em producao;
+  local default 127.0.0.1:API_PORT) e INBOX_MEDIA_DIR (default backend/storage/inbox,
+  ignorado Git). Arquivos .env reais preservados. Adicionada dependencia sharp
+  0.35.5/lockfile; carregamento nativo local aprovado. Nenhuma migration nova.
+- Testes novos backend/scripts/test-inbox-images.js: JPG/PNG, metadados, tamanho,
+  corrupcao/dimensoes, multipart/permissoes/CSRF, conversa inexistente, arquivo
+  privado/escopo, capacidade/expiracao, limpeza em rejeicao e resultado incerto.
+  Meta/banco simulados, arquivos temporarios removidos. Servico real de envio
+  testado com mocks: imagem persistida, token ausente, Meta rejeitando e falha DB.
+- Playwright dashboard/tests/inbox-images.mjs desktop/mobile aprovado: preview,
+  multipart com boundary/CSRF, links/XSS, imagem inbound/SSE, falha/retry sem repetir
+  texto, entrega incerta e sem overflow. Capturas inspecionadas /tmp/inbox-images-*.
+  Regressao confiabilidade, nao lidas e UI Playwright anteriores aprovadas; onze
+  webhook, teste cookies/CSRF com FormData e PostgreSQL isolado de nao lidas aprovados.
+- Documentacao Meta direta indisponivel (429); exemplos oficiais de fbsamples/
+  messenger-platform-samples consultados por GitHub. Mantido cliente existente
+  Facebook Login com token PAGE, envio image/url; nao mudar host/scopes/token.
+  Nenhuma imagem/DM real enviada e nenhum registro de producao criado.
+- npm reportou dez alertas backend (sete high, um critical em proxy-addr, indireto).
+  Sem audit fix/refactor fora do escopo; revisar dependencias antes de ampliar uso.
+- Futuro deploy precisa npm ci backend (workflow atual nao instala dependencias
+  backend), URL HTTPS API e diretorio persistente privado antes do restart.
+  Nao copiar configuracao local. Retencao/limpeza dos arquivos e capacidade
+  compartilhada em multiplas instancias pendentes; anexos recebidos usam URLs Meta
+  temporarias, sem download permanente. Videos/audio/documentos fora do incremento.
+- API local reiniciada pelo launcher protegido: health 3101 HTTP 200, capacidade
+  invalida 404 e upload anonimo 401; dashboard 5181 HTTP 200. Nenhum worker iniciado.
+  Quatro testes backend de imagens aprovados; sintaxe de oito arquivos, build
+  TypeScript/Vite, lint focado e git diff --check aprovados. Sem commit/push/deploy.
+
 ### Deploy controlado Inbox/014 concluido em 2026-10-11
 
 - Commit implantado: a7101b629e246c043b3b0ee2dadeb172acf042b5.

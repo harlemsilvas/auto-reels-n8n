@@ -22,10 +22,11 @@ async function sendApiRequest({ accessToken, payload }) {
 
     log({
       url,
-      payload,
+      hasAttachment: Boolean(payload.message?.attachment),
     });
 
     const response = await axios.post(url, payload, {
+      timeout: 30000,
       params: {
         access_token: accessToken,
       },
@@ -43,9 +44,9 @@ async function sendApiRequest({ accessToken, payload }) {
       error?.message ||
       "Falha ao enviar mensagem para a Meta.";
 
-    console.error("[INSTAGRAM API ERROR]", responseData || error.message);
+    console.error("[INSTAGRAM API ERROR]", payload.message?.attachment ? { status: responseStatus } : responseData || error.message);
 
-    const normalizedError = new Error(metaMessage);
+    const normalizedError = new Error(payload.message?.attachment ? "A Meta nao confirmou o envio da imagem." : metaMessage);
     normalizedError.status = responseStatus;
     normalizedError.details = responseData;
 
