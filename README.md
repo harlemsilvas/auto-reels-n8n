@@ -332,14 +332,19 @@ mensagens posteriores. No celular, apenas exibir a lista nao marca como lida.
 O estado de leitura e compartilhado pelo Inbox, nao individual por operador.
 Historico anterior permanece sem badges retroativos, pois sua leitura era desconhecida.
 Workflow oferece a migration 014 e bloqueia publicacao sem o schema exigido.
-Nova DM real, leitura e badges pos-deploy ainda precisam de validacao do usuario.
+Em 11/10, o usuario relatou que o badge nao atualizava. Consultas na VPS confirmaram
+nao lidas persistidas e retornadas pelo servico. Correcao de sincronizacao preparada
+somente localmente: polling da lista a cada cinco segundos, reconciliacao ao voltar
+ao painel/reconectar SSE e protecao por conversa contra respostas atrasadas.
+Ainda precisa de deploy e nova validacao real dos badges/leitura.
 
 ### Links E Imagens No Inbox
 
 Publicado na VPS em 11/10/2026, commit `7f01376`,
 [deploy validado](https://github.com/harlemsilvas/auto-reels-n8n/actions/runs/38160575371).
-Testes locais simulados aprovados; envio/recebimento de imagem real com Meta
-ainda precisa ser confirmado pelo usuario.
+Testes locais simulados aprovados. Em 11/10/2026, o usuario confirmou em producao
+o envio e recebimento de imagens por DM e a permanencia no historico apos recarregar
+o painel. Essa confirmacao funcional nao inclui videos, audio ou documentos.
 
 - Links HTTP/HTTPS clicaveis, com abertura segura em outra aba.
 - Imagens recebidas exibidas no historico e via SSE, com fallback quando indisponiveis.
@@ -372,6 +377,26 @@ Testes: `node backend/scripts/test-inbox-images.js` e
 arquivos temporarios e desktop/mobile. Nenhuma DM real enviada nestes testes.
 
 ### Proximas Etapas
+
+Modelos (11/10, somente local): confirmar a criacao na Fase 5 mostra resumo de
+sucesso com titulo, TAG, ID e data salva pela API, acesso a Agenda e opcao de criar
+outra postagem. Erros preservam o formulario; retorno pendente nao e tratado como
+agendamento confirmado. Teste `dashboard/tests/media-templates-scheduling.mjs`
+desktop/mobile com APIs simuladas e build aprovados; sem migration/deploy.
+
+Correcao local em Modelos (11/10): criar/abrir modelo passa a atualizar a Fase 2
+sem respostas antigas sobrescreverem a selecao. Detalhes/midias de outro modelo
+nao permanecem durante carregamento ou falha. Testes simulados desktop/mobile
+e build aprovados; ainda nao aplicada na VPS, junto da sincronizacao dos badges.
+
+Gemini local validado em 11/10 as 17:13 (America/Sao_Paulo), apos o usuario
+cadastrar nova credencial para "Modelos de midia / textos". Evento request_success
+e variacao com origem gemini/modelo gemini-flash-lite-latest confirmados no banco.
+Variacao salva e aprovada; nenhuma publicacao Instagram foi validada neste teste.
+Melhoria local: Fase 4 mostra progresso e erros no contexto da geracao, e uma
+sugestao salva abre para revisao automaticamente. Falha Gemini nao vira sugestao
+local silenciosamente. Testes desktop/mobile simulados e geracao real local
+aprovados; deploy desta melhoria continua pendente.
 
 Em 11/10, o primeiro incremento de confiabilidade foi implementado e testado
 localmente: rascunho preservado em falha, typing nao bloqueante, isolamento

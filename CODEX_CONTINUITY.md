@@ -4,6 +4,142 @@ Atualizado em: 2026-10-11
 
 ## TAG de retomada: RETOMADA-2026-10-11
 
+### Deploy Inbox/Modelos autorizado: preflight em 2026-10-11
+
+- Usuario autorizou publicar o pacote local. Inspecao atual confirmou VPS em
+  7f01376, Node 20.20.2, API online restart 5/PID 3808101 e worker online
+  restart 0/PID 1653. Scripts remotos nao relacionados permanecem preservados.
+- Configuracao existente de imagens compativel com workflow e schema 014
+  verificado sem aplicar migration. Nenhum deploy concorrente no GitHub Actions.
+- Oito testes backend de confiabilidade/SSE, Playwright sincronizacao/nao lidas/
+  imagens e selecao/geracao/agendamento de modelos aprovados com APIs simuladas.
+  Build, lint focado Inbox, sintaxe do controller e diff-check aprovados.
+  Modelos mantem os cinco problemas de lint preexistentes registrados acima.
+- Publicar dashboard e reiniciar somente API pelo workflow existente, com backup
+  protegido de release/dependencias/configuracao antes do pull. Migrations
+  desligadas; nao copiar segredos locais, alterar proxy/portas ou reiniciar worker.
+  Esta entrada registra preparacao; resultado real sera registrado apos deploy.
+
+### Modelos: confirmacao de agendamento na Fase 5
+
+- Usuario relatou falta de confirmacao apos agendar pelo modelo 174GT. O sucesso
+  anterior aparecia somente no topo da pagina, longe do formulario da Fase 5.
+- Sucesso agora substitui o formulario por resumo com titulo, TAG, ID e data
+  efetivamente retornados pela API, com rolagem para a confirmacao, Abrir Agenda
+  e Criar outra postagem. Sem redirecionamento automatico; Agenda abre sua lista
+  operacional existente, sem filtro por ID. Retorno pending nao e exibido como
+  agendamento confirmado; nao mantemos previa vazia pendente ao lado do sucesso.
+- Progresso/erro ficam na Fase 5; falha preserva formulario. Submit simultaneo
+  bloqueado no frontend e resposta de outro modelo nao altera a selecao atual.
+  Nao ha retry automatico nem mudanca no endpoint/worker/publicacao.
+- Teste media-templates-scheduling.mjs aprovado desktop/mobile com APIs simuladas:
+  data retornada, resumo/ID, navegacao Agenda, nova postagem, submit repetido,
+  erro preservando dados e retorno pending. Capturas desktop/mobile inspecionadas.
+  Regressao de selecao e geracao passou; build aprovado. Lint comparado ao HEAD
+  mantem os cinco problemas preexistentes. Nenhum post real criado nos testes.
+- Aplicado somente localmente, sem migration, commit/push ou deploy. VPS segue
+  na release registrada 7f01376, nao consultada nesta tarefa. Melhorias anteriores
+  de Inbox, selecao e Gemini permanecem pendentes de deploy e foram preservadas.
+
+### Gemini local: geracao real confirmada em 2026-10-11
+
+- Usuario cadastrou nova chave no local; metadados confirmaram credencial ativa
+  para media_templates_text, chave criptografada presente e descriptografia valida,
+  no mesmo workspace do modelo. Credencial antiga desativada preservada.
+- Apos teste feito pelo usuario, consultas somente leitura confirmaram evento
+  request_success/success=true sem erro em 11/10 as 17:13:28 (America/Sao_Paulo).
+  Variacao Potenza - Pastilha Metalica Kevlar Carbono registra mode/provider gemini,
+  modelo gemini-flash-lite-latest e status approved. Nao foi sugestao local/fallback.
+- Agente nao consultou texto/prompt/chave nem fez nova chamada ao provedor,
+  geracao, aprovacao ou publicacao. Este teste confirma geracao/salvamento local,
+  nao publicacao Instagram nem validacao da configuracao Gemini na VPS.
+- README/roteiro atualizados apenas localmente. Deploy das correcoes de Modelos,
+  feedback de geracao e sincronizacao Inbox continua pendente, sem commit/push.
+
+### Modelos/Gemini: diagnostico local e feedback de geracao
+
+- Usuario relatou criacao confusa e Gemini sem funcionar. Consultas somente
+  leitura no banco local confirmaram uma credencial Gemini para media_templates_text,
+  status disabled, disabled_at preenchido e chave criptografada ausente. Bloqueio
+  coerente com a simulacao local sem segredos de producao; nenhuma credencial
+  alterada, copiada ou reativada. Eventos de uso consultados apenas por tipo/codigo/data.
+- Fase 4 agora mostra progresso/erro/sucesso da geracao no contexto do modelo;
+  falha Gemini oferece link para Credenciais ao usuario com ai_credentials.view.
+  Mantido allowLocalFallback false; sem chamada Gemini real nem custo externo.
+- Sugestao local/Gemini bem-sucedida abre automaticamente a variacao salva para
+  revisao. Falha de refresh posterior informa que o texto ja foi salvo, sem
+  reenviar geracao automaticamente. Retorno de outra selecao nao altera o editor atual.
+- Teste media-templates-generation.mjs desktop/mobile aprovado com APIs simuladas:
+  credencial indisponivel, progresso/botoes, erro contextual, link de configuracao,
+  ausencia de fallback silencioso, revisao automatica local/Gemini e falha de refresh.
+  Regressao de selecao/Fase 2 passou; build aprovado e capturas inspecionadas.
+  Lint comparado ao HEAD permanece com cinco problemas preexistentes.
+- Para habilitar Gemini local, usuario deve cadastrar chave propria pelo painel
+  /ia/credenciais, tarefa Modelos de midia / textos, status ativo. Nao pedir chaves
+  no chat nem recuperar token da VPS. Teste real com provedor ainda pendente.
+- Alteracoes somente locais, sem commit/push/deploy, migration ou publicacao.
+  Correcoes pendentes de selecao Modelos e contadores Inbox preservadas;
+  arquivos de midia novos do usuario permanecem fora deste escopo.
+
+### Modelos: selecao e Fase 2 corrigidas somente localmente
+
+- Usuario relatou selecao 192XT-Traseira mantendo detalhes do modelo 380XT.
+  Causa no frontend: createTemplate selecionava o ID criado, mas refreshSelected
+  ainda usava selectedId da renderizacao anterior; loadSelected nao protegia
+  respostas antigas e podia sobrescrever os detalhes do modelo novo.
+- Selecao centralizada, detalhes antigos limpos durante carregamento, resposta
+  aplicada somente se ID/revisao continuam atuais. Criacao atualiza a lista sem
+  recarregar detalhes do ID anterior; refresh posterior usa selecao atual.
+- Troca de modelo limpa selecao de texto/post e editor de variacao anterior;
+  navegacao para Fase 2 aguarda o modelo correto. Abrir permite repetir consulta
+  apos falha sem manter dados do modelo anterior. Endpoint/banco nao alterados.
+- Playwright media-templates-selection.mjs aprovado desktop/mobile com APIs
+  simuladas: criar modelo, Fase 2/midias, troca rapida, resposta atrasada, falha
+  e reabertura. Build TypeScript/Vite aprovado. Lint comparado ao HEAD: mesmos
+  cinco problemas preexistentes, sem novos apontamentos; limpeza fora do escopo.
+- Correcao apenas local. Sem commit/push/deploy, migration ou publicacao real.
+  VPS permanece na release registrada 7f01376 (nao consultada nesta correcao).
+  Correcao local de contadores Inbox continua pendente e foi preservada.
+
+### Contadores Inbox: sincronizacao corrigida somente localmente
+
+- Usuario relatou badge nao atualizando apos validar imagens. Consulta somente
+  leitura nesta sessao confirmou VPS em 7f01376: duas mensagens inbox_unread true,
+  em duas conversas; servico listConversations retorna unreadCount 1 para cada.
+  Nao houve mudanca de leitura/dados, envio de DM ou restart em producao.
+- Frontend dependia do SSE para atualizar a lista; so mensagens da conversa
+  selecionada tinham polling. Cada confirmacao de leitura invalidava respostas
+  pendentes da lista inteira, descartando tambem contadores de outras conversas.
+- useConversations agora reconcilia a lista a cada cinco segundos com pagina
+  visivel, ao recuperar foco/visibilidade e reconectar SSE. Polling de fundo nao
+  pisca loading nem sobrepoe outra requisicao pendente. Selecao preservada.
+- Confirmacoes de leitura recebem revisao por conversa: resposta antiga da lista
+  preserva badge mais recente daquela conversa, sem descartar outras atualizacoes.
+- Resposta SSE passa a incluir X-Accel-Buffering: no. Nenhum arquivo/configuracao
+  Nginx alterado; buffering real do proxy nao foi confirmado nesta sessao.
+- Novo teste inbox-unread-sync.mjs desktop/mobile passou com APIs simuladas:
+  badges sem SSE, lista atrasada concorrente com leitura e reconciliacao ao conectar.
+  Teste badges/filtro/leitura mobile existente, oito testes backend incluindo SSE,
+  build TypeScript/Vite, lint focado e sintaxe do controller aprovados.
+- Correcoes apenas locais, sem commit/push/deploy nem nova migration. VPS ainda
+  usa release 7f01376. Para aplicar, publicar dashboard e reiniciar somente API
+  em deploy autorizado; depois validar DM com outra conversa selecionada/fechada.
+  Conversa aberta e visivel continua reconhecendo automaticamente mensagens lidas;
+  filtro Nao lidas conta conversas, enquanto badge individual conta mensagens.
+
+### Imagens DM: validacao real confirmada pelo usuario
+
+- Em 11/10/2026, apos o deploy 7f01376/Action 38160575371, o usuario confirmou
+  recebimento de anexos enviados via DM, envio pelo Inbox chegando ao testador
+  e permanencia da imagem no historico apos recarregar o painel.
+- Trata-se de confirmacao funcional relatada pelo usuario, nao nova verificacao
+  autenticada executada pelo agente. Nenhuma DM enviada pelo agente nesta etapa.
+- README e roteiro atualizados somente localmente; sem novo commit/push/deploy,
+  migration, restart ou mudanca de configuracao na VPS.
+- Links reais e badges/leitura ainda sem confirmacao explicita nesta rodada.
+  Pendentes retencao/limpeza de imagens, revisao de dependencias e capacidades
+  compartilhadas multi-instancia; videos/audio/documentos nao implementados.
+
 ### Deploy links/imagens concluido em 2026-10-11
 
 - Release confirmada na VPS: 7f01376fdbce7082eb1d06c981d0c260d23f154d.

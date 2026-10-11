@@ -25,6 +25,7 @@ export default function InstagramInboxPage() {
   useRealtimeInbox({
     selectedConversation,
     onNewMessage: receiveMessage,
+    onConnected() { void refreshConversations(); },
     onConversationUpdate() { void refreshConversations(); },
   });
   const name = selectedConversation?.instagramName || selectedConversation?.instagramUsername || `ID ${selectedConversation?.instagramUserId}`;

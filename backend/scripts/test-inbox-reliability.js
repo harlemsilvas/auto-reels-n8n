@@ -35,6 +35,23 @@ function sendService({ token = "fake", account = true, typingFails = false, send
   return { service, calls };
 }
 
+test("SSE desativa buffering por resposta e remove cliente ao desconectar", () => {
+  const calls = [];
+  const gateway = { registerClient: () => calls.push("register"), removeClient: () => calls.push("remove") };
+  const controller = load("modules/realtime/realtime.controller.js", { "./realtime.gateway": gateway });
+  const headers = {};
+  let close;
+  controller.inboxStream({ on: (event, callback) => { assert.equal(event, "close"); close = callback; } }, {
+    setHeader: (key, value) => { headers[key] = value; },
+    flushHeaders: () => calls.push("flush"),
+    write: (chunk) => { assert.match(chunk, /event: connected/); },
+  });
+  close();
+  assert.equal(headers["Content-Type"], "text/event-stream");
+  assert.equal(headers["X-Accel-Buffering"], "no");
+  assert.deepEqual(calls, ["register", "flush", "remove"]);
+});
+
 for (const typingFails of [false, true]) {
   test(`Texto persiste mesmo com typing falhando=${typingFails}`, async () => {
     const { service, calls } = sendService({ typingFails });

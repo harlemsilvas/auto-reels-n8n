@@ -15,6 +15,7 @@ interface Props {
   onNewMessage?: (message: Message) => void;
 
   onConversationUpdate?: (conversationId: string, message: Message) => void;
+  onConnected?: () => void;
 }
 
 /**
@@ -27,6 +28,7 @@ export function useRealtimeInbox({
   selectedConversation,
   onNewMessage,
   onConversationUpdate,
+  onConnected,
 }: Props) {
   /**
    * ======================================
@@ -35,11 +37,11 @@ export function useRealtimeInbox({
    */
 
   const eventSourceRef = useRef<EventSource | null>(null);
-  const handlers = useRef({ selectedConversation, onNewMessage, onConversationUpdate });
+  const handlers = useRef({ selectedConversation, onNewMessage, onConversationUpdate, onConnected });
 
   useEffect(() => {
-    handlers.current = { selectedConversation, onNewMessage, onConversationUpdate };
-  }, [selectedConversation, onNewMessage, onConversationUpdate]);
+    handlers.current = { selectedConversation, onNewMessage, onConversationUpdate, onConnected };
+  }, [selectedConversation, onNewMessage, onConversationUpdate, onConnected]);
 
   /**
    * ======================================
@@ -74,6 +76,7 @@ export function useRealtimeInbox({
 
     eventSource.onopen = () => {
       console.log("[Realtime Inbox] connected");
+      handlers.current.onConnected?.();
     };
 
     /**

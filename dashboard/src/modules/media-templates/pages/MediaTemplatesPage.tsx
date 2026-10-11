@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -6,6 +7,7 @@ import {
   type FormEvent,
 } from "react";
 import { Link } from "react-router-dom";
+import { CalendarDays, Plus } from "lucide-react";
 import { useAuth } from "../../auth/context/AuthContext";
 import { scheduleService } from "../../schedule/services/schedule.service";
 import {
@@ -17,6 +19,7 @@ import {
   type PublishType,
   type TextVariant,
   type TextVariantStatus,
+  type TemplatePost,
 } from "../services/mediaTemplates.service";
 
 const TEMPLATE_INITIAL_FORM = {
@@ -153,12 +156,23 @@ export function MediaTemplatesPage() {
   const [selectedId, setSelectedId] = useState("");
   const [selectedTemplate, setSelectedTemplate] =
     useState<MediaTemplate | null>(null);
+  const selectedIdRef = useRef("");
+  const detailsVersion = useRef(0);
+  const [isDetailsLoading, setIsDetailsLoading] = useState(false);
   const [templateForm, setTemplateForm] = useState(TEMPLATE_INITIAL_FORM);
   const [variantForm, setVariantForm] = useState(VARIANT_INITIAL_FORM);
   const [editingVariantId, setEditingVariantId] = useState("");
   const [editingVariantForm, setEditingVariantForm] =
     useState<VariantFormState>(VARIANT_INITIAL_FORM);
   const [postForm, setPostForm] = useState(POST_INITIAL_FORM);
+  const postCreationPending = useRef(false);
+  const postFeedbackRef = useRef<HTMLDivElement>(null);
+  const [postFeedback, setPostFeedback] = useState<{
+    templateId: string;
+    status: "pending" | "success" | "error";
+    message: string;
+    post?: TemplatePost;
+  } | null>(null);
   const [availableSlots, setAvailableSlots] =
     useState<string[]>(FIXED_TIME_SLOTS);
   const [mediaForm, setMediaForm] = useState(MEDIA_INITIAL_FORM);
@@ -169,6 +183,13 @@ export function MediaTemplatesPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [generationFeedback, setGenerationFeedback] = useState<{
+    templateId: string;
+    mode: "local" | "gemini";
+    status: "pending" | "success" | "error";
+    message: string;
+    credentialHelp?: boolean;
+  } | null>(null);
   const searchSectionRef = useRef<HTMLElement | null>(null);
   const detailsSectionRef = useRef<HTMLElement | null>(null);
   const mediaSectionRef = useRef<HTMLElement | null>(null);
@@ -229,6 +250,24 @@ export function MediaTemplatesPage() {
     [editingVariantId, selectedVariants],
   );
 
+  const selectTemplate = useCallback((templateId: string) => {
+    if (selectedIdRef.current === templateId) return;
+    selectedIdRef.current = templateId;
+    detailsVersion.current += 1;
+    setSelectedId(templateId);
+    setSelectedTemplate(null);
+    setIsDetailsLoading(Boolean(templateId));
+    setEditingVariantId("");
+    setPostForm(POST_INITIAL_FORM);
+    setPostFeedback(null);
+  }, []);
+
+  useEffect(() => {
+    if (postFeedback?.status === "success" && postFeedback.templateId === selectedTemplate?.id) {
+      postFeedbackRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [postFeedback, selectedTemplate?.id]);
+
   async function loadList() {
     const result = await mediaTemplatesService.list({
       q: q || undefined,
@@ -237,8 +276,8 @@ export function MediaTemplatesPage() {
     });
     setTemplates(result.items);
 
-    if (!selectedId && result.items[0]) {
-      setSelectedId(result.items[0].id);
+    if (!selectedIdRef.current && result.items[0]) {
+      selectTemplate(result.items[0].id);
     }
   }
 
@@ -255,10 +294,20 @@ export function MediaTemplatesPage() {
       .catch(() => null);
   }, []);
 
-  async function loadSelected(templateId: string) {
-    const template = await mediaTemplatesService.get(templateId);
-    setSelectedTemplate(template);
-  }
+  const loadSelected = useCallback(async (templateId: string) => {
+    const version = ++detailsVersion.current;
+    setIsDetailsLoading(true);
+    try {
+      const template = await mediaTemplatesService.get(templateId);
+      if (version === detailsVersion.current && selectedIdRef.current === templateId) {
+        setSelectedTemplate(template);
+      }
+    } finally {
+      if (version === detailsVersion.current && selectedIdRef.current === templateId) {
+        setIsDetailsLoading(false);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -274,8 +323,8 @@ export function MediaTemplatesPage() {
       .then((result) => {
         if (!active) return;
         setTemplates(result.items);
-        if (!selectedId && result.items[0]) {
-          setSelectedId(result.items[0].id);
+        if (!selectedIdRef.current && result.items[0]) {
+          selectTemplate(result.items[0].id);
         }
       })
       .catch((loadError) => {
@@ -294,7 +343,7 @@ export function MediaTemplatesPage() {
     return () => {
       active = false;
     };
-  }, [q, selectedId, status]);
+  }, [q, selectTemplate, status]);
 
   useEffect(() => {
     if (!selectedId) {
@@ -303,11 +352,7 @@ export function MediaTemplatesPage() {
     }
 
     let active = true;
-    mediaTemplatesService
-      .get(selectedId)
-      .then((template) => {
-        if (active) setSelectedTemplate(template);
-      })
+    loadSelected(selectedId)
       .catch((loadError) => {
         if (active) {
           setError(
@@ -320,11 +365,12 @@ export function MediaTemplatesPage() {
 
     return () => {
       active = false;
+      detailsVersion.current += 1;
     };
-  }, [selectedId]);
+  }, [selectedId, loadSelected]);
 
   useEffect(() => {
-    if (!selectedTemplate || !pendingAnchor) return;
+    if (!selectedTemplate || selectedTemplate.id !== selectedId || !pendingAnchor) return;
 
     const anchor = pendingAnchor;
     setPendingAnchor(null);
@@ -334,12 +380,12 @@ export function MediaTemplatesPage() {
         block: "start",
       });
     });
-  }, [pendingAnchor, selectedTemplate]);
+  }, [pendingAnchor, selectedTemplate, selectedId]);
 
   async function refreshSelected() {
     await loadList();
-    if (selectedId) {
-      await loadSelected(selectedId);
+    if (selectedIdRef.current) {
+      await loadSelected(selectedIdRef.current);
     }
   }
 
@@ -364,7 +410,16 @@ export function MediaTemplatesPage() {
   }
 
   function openTemplate(templateId: string) {
-    setSelectedId(templateId);
+    if (selectedIdRef.current === templateId) {
+      setSelectedTemplate(null);
+      void loadSelected(templateId).catch((loadError: unknown) => {
+        if (selectedIdRef.current === templateId) {
+          setError(loadError instanceof Error ? loadError.message : "Falha ao carregar detalhes do modelo.");
+        }
+      });
+    } else {
+      selectTemplate(templateId);
+    }
     setPendingAnchor("details");
     setMessage("Modelo aberto. Próximo passo: confira status, mídias e textos.");
     setError(null);
@@ -485,9 +540,10 @@ export function MediaTemplatesPage() {
     try {
       const created = await mediaTemplatesService.create(input);
       setTemplateForm(TEMPLATE_INITIAL_FORM);
-      setSelectedId(created.id);
+      selectTemplate(created.id);
+      setPendingAnchor("details");
       setMessage("Modelo criado.");
-      await refreshSelected();
+      await loadList();
     } catch (createError) {
       setError(
         createError instanceof Error ? createError.message : "Erro ao criar.",
@@ -533,14 +589,18 @@ export function MediaTemplatesPage() {
   }
 
   async function generateVariantDraft(generationMode: "local" | "gemini" = "local") {
-    if (!selectedId) return;
+    if (!selectedId || isSaving) return;
+    const templateId = selectedId;
+    let generated: TextVariant | null = null;
 
     setIsSaving(true);
     setError(null);
     setMessage(null);
+    setGenerationFeedback({ templateId, mode: generationMode, status: "pending",
+      message: generationMode === "gemini" ? "Gerando texto com Gemini..." : "Gerando sugestão local..." });
 
     try {
-      await mediaTemplatesService.generateTextVariant(selectedId, {
+      generated = await mediaTemplatesService.generateTextVariant(templateId, {
         publishType: variantForm.publishType,
         tone: variantForm.tone || undefined,
         objective: variantForm.objective || undefined,
@@ -550,18 +610,31 @@ export function MediaTemplatesPage() {
         useLocalFallback: generationMode === "local",
         allowLocalFallback: false,
       });
-      setMessage(
-        generationMode === "gemini"
+      if (selectedIdRef.current !== templateId) return;
+      const successMessage = generationMode === "gemini"
           ? "Sugestão com Gemini gerada. Revise e aprove antes de usar."
-          : "Sugestão local de texto gerada. Revise e aprove antes de usar.",
-      );
+          : "Sugestão local de texto gerada. Revise e aprove antes de usar.";
+      setMessage(successMessage);
+      setGenerationFeedback({ templateId, mode: generationMode, status: "success", message: successMessage });
+      const variant = generated;
+      setSelectedTemplate((current) => current?.id === templateId ? {
+        ...current,
+        textVariants: [...(current.textVariants ?? []).filter((item) => item.id !== variant.id), variant],
+        textVariantsCount: current.textVariantsCount + 1,
+      } : current);
+      setVariantForm(VARIANT_INITIAL_FORM);
+      startEditVariant(variant);
       await refreshSelected();
     } catch (generateError) {
-      setError(
-        generateError instanceof Error
+      if (selectedIdRef.current !== templateId) return;
+      const failureMessage = generated
+        ? "Texto gerado e salvo, mas a atualização do modelo falhou. Não gere novamente; confira a variação salva."
+        : generateError instanceof Error
           ? generateError.message
-          : "Erro ao gerar sugestão.",
-      );
+          : "Erro ao gerar sugestão.";
+      setError(failureMessage);
+      setGenerationFeedback({ templateId, mode: generationMode, status: "error", message: failureMessage,
+        credentialHelp: !generated && generationMode === "gemini" });
     } finally {
       setIsSaving(false);
     }
@@ -692,30 +765,37 @@ export function MediaTemplatesPage() {
 
   async function createPostFromTag(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selectedTemplate) return;
+    if (!selectedTemplate || isSaving || postCreationPending.current) return;
+    const templateId = selectedTemplate.id;
+    function reportError(message: string) {
+      setError(message);
+      setPostFeedback({ templateId, status: "error", message });
+    }
 
     const variant = selectedPostVariant;
 
     if (!variant) {
-      setError("Aprove uma variação de texto antes de criar a postagem.");
+      reportError("Aprove uma variação de texto antes de criar a postagem.");
       return;
     }
 
     if (!postPreview?.canCreate) {
-      setError(
+      reportError(
         "Revise a prévia: o modelo precisa estar ativo, com mídia cadastrada e variação aprovada.",
       );
       return;
     }
 
     if (!!postForm.scheduleDate !== !!postForm.scheduleSlot) {
-      setError("Para agendar, informe o dia e o horário.");
+      reportError("Para agendar, informe o dia e o horário.");
       return;
     }
 
+    postCreationPending.current = true;
     setIsSaving(true);
     setError(null);
     setMessage(null);
+    setPostFeedback({ templateId, status: "pending", message: "Confirmando postagem..." });
 
     try {
       const post = await mediaTemplatesService.createPostFromTag(
@@ -727,17 +807,26 @@ export function MediaTemplatesPage() {
           scheduledAt: postScheduleAt || undefined,
         },
       );
+      if (selectedIdRef.current !== templateId) return;
       setPostForm(POST_INITIAL_FORM);
+      setPostFeedback({
+        templateId,
+        status: "success",
+        message: post.status === "scheduled" ? "Agendamento confirmado!" : "Postagem criada!",
+        post,
+      });
       setMessage(
         `Postagem criada pela TAG (${post.status}) com ${post.mediaItemsCount} mídia(s).`,
       );
     } catch (createError) {
-      setError(
+      if (selectedIdRef.current !== templateId) return;
+      reportError(
         createError instanceof Error
           ? createError.message
           : "Erro ao criar postagem pela TAG.",
       );
     } finally {
+      postCreationPending.current = false;
       setIsSaving(false);
     }
   }
@@ -1130,7 +1219,7 @@ export function MediaTemplatesPage() {
             <p>Confira se a TAG está ativa e siga para mídias, textos e post.</p>
           </div>
         </div>
-        {selectedTemplate ? (
+        {!selectedTemplate && isDetailsLoading ? <p role="status">Carregando modelo...</p> : selectedTemplate ? (
           <>
             <dl className="stat-list">
               <div>
@@ -1437,6 +1526,15 @@ export function MediaTemplatesPage() {
               <p>Crie, gere ou revise textos. Só variações aprovadas viram post.</p>
             </div>
           </div>
+          {generationFeedback?.templateId === selectedTemplate.id ? (
+            <div role={generationFeedback.status === "error" ? "alert" : "status"}
+              className={generationFeedback.status === "error" ? "error-text" : "upload-success-text"}>
+              <p>{generationFeedback.message}</p>
+              {generationFeedback.credentialHelp && can("ai_credentials.view") ? (
+                <Link className="link-button" to="/ia/credenciais">Configurar credencial Gemini</Link>
+              ) : null}
+            </div>
+          ) : null}
           <div className="model-helper-card">
             <strong>O que preencher aqui?</strong>
             <p>
@@ -1564,7 +1662,7 @@ export function MediaTemplatesPage() {
                   onClick={() => generateVariantDraft("local")}
                   disabled={isSaving}
                 >
-                  Gerar sugestão local
+                  {generationFeedback?.templateId === selectedTemplate.id && generationFeedback.status === "pending" && generationFeedback.mode === "local" ? "Gerando sugestão local..." : "Gerar sugestão local"}
                 </button>
                 <button
                   type="button"
@@ -1572,7 +1670,7 @@ export function MediaTemplatesPage() {
                   onClick={() => generateVariantDraft("gemini")}
                   disabled={isSaving}
                 >
-                  Gerar com Gemini
+                  {generationFeedback?.templateId === selectedTemplate.id && generationFeedback.status === "pending" && generationFeedback.mode === "gemini" ? "Gerando com Gemini..." : "Gerar com Gemini"}
                 </button>
               </>
             ) : null}
@@ -1606,6 +1704,7 @@ export function MediaTemplatesPage() {
             postagem será criada no fluxo atual; sem data futura, entra como
             pendente.
           </p>
+          {postFeedback?.templateId === selectedTemplate.id && postFeedback.status === "success" ? null : (
           <form className="upload-form" onSubmit={createPostFromTag}>
             <label>
               Variação aprovada
@@ -1778,9 +1877,41 @@ export function MediaTemplatesPage() {
               type="submit"
               disabled={isSaving || !postPreview?.canCreate}
             >
-              Confirmar criação da postagem
+              {postFeedback?.templateId === selectedTemplate.id && postFeedback.status === "pending"
+                ? "Confirmando postagem..."
+                : "Confirmar criação da postagem"}
             </button>
           </form>
+          )}
+            {postFeedback?.templateId === selectedTemplate.id ? (
+              <div
+                ref={postFeedbackRef}
+                role={postFeedback.status === "error" ? "alert" : "status"}
+                className={postFeedback.status === "error" ? "error-text" : "upload-success-text"}
+                style={{ overflowWrap: "anywhere" }}
+              >
+                <p><strong>{postFeedback.message}</strong></p>
+                {postFeedback.post ? (
+                  <>
+                    <p>{postFeedback.post.title ?? selectedTemplate.name}</p>
+                    <p>
+                      {postFeedback.post.status === "scheduled" && postFeedback.post.scheduledAt
+                        ? `Agendado para ${formatDate(postFeedback.post.scheduledAt)}.`
+                        : `Status: ${postFeedback.post.status === "pending" ? "Pendente" : postFeedback.post.status}.`}
+                    </p>
+                    <p>TAG: {postFeedback.post.tag} · ID: {postFeedback.post.id}</p>
+                    <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
+                      <Link to="/agendamentos" style={{ display: "inline-flex", gap: "0.4rem", alignItems: "center" }}>
+                        <CalendarDays size={16} aria-hidden="true" /> Abrir Agenda
+                      </Link>
+                      <button type="button" className="link-button" onClick={() => setPostFeedback(null)}>
+                        <Plus size={16} aria-hidden="true" /> Criar outra postagem
+                      </button>
+                    </div>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
         </article>
       ) : null}
 
