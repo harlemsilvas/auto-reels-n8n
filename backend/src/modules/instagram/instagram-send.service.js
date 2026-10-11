@@ -109,10 +109,14 @@ async function sendTextMessage({ accountId, recipientId, messageText }) {
    * Typing indicator
    */
 
-  await apiClient.sendTypingIndicator({
-    accessToken: account.accessToken,
-    recipientId,
-  });
+  try {
+    await apiClient.sendTypingIndicator({
+      accessToken: account.accessToken,
+      recipientId,
+    });
+  } catch {
+    log("Typing indicator unavailable; continuing text send.");
+  }
 
   /**
    * Send message

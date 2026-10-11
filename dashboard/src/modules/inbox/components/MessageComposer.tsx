@@ -1,13 +1,21 @@
-import { useState, type KeyboardEvent } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 import { LoaderCircle, Send } from "lucide-react";
 
 export default function MessageComposer({ sending = false, onSend }: { sending?: boolean; onSend: (message: string) => Promise<void> }) {
   const [message, setMessage] = useState("");
+  const pending = useRef(false);
   async function handleSend() {
     const trimmed = message.trim();
-    if (!trimmed || sending) return;
-    await onSend(trimmed);
-    setMessage("");
+    if (!trimmed || sending || pending.current) return;
+    pending.current = true;
+    try {
+      await onSend(trimmed);
+      setMessage("");
+    } catch {
+      // The hook displays the API error; keep this draft available for correction.
+    } finally {
+      pending.current = false;
+    }
   }
   function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {

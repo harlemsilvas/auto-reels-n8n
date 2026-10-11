@@ -10,7 +10,7 @@ const filename = path.resolve(
 );
 const source = readFileSync(filename, "utf8");
 
-function fixture({ accountExists = true } = {}) {
+function fixture({ accountExists = true, duplicate = false } = {}) {
   const calls = { raw: [], queries: [], conversations: [], saved: [], emitted: [], errors: [] };
   const repository = {
     async saveWebhookEvent(payload) {
@@ -21,7 +21,7 @@ function fixture({ accountExists = true } = {}) {
       return { id: "conversation-test" };
     },
     async saveMessage(params) {
-      const message = { id: "message-test", ...params };
+      const message = { id: "message-test", ...params, wasDuplicate: duplicate };
       calls.saved.push(message);
       return message;
     },
@@ -65,6 +65,14 @@ function event(extra) {
 function body(...events) {
   return { object: "instagram", entry: [{ messaging: events }] };
 }
+
+test("Webhook repetido preserva evento bruto sem emitir mensagem duplicada", async () => {
+  const { service, calls } = fixture({ duplicate: true });
+  await service.processWebhook(body(event({ message: { mid: "duplicate-mid", text: "Teste" } })));
+  assert.equal(calls.raw.length, 1);
+  assert.equal(calls.saved.length, 1);
+  assert.equal(calls.emitted.length, 0);
+});
 
 for (const [label, extra] of [
   ["read", { read: { watermark: 123 } }],

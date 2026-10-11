@@ -12,16 +12,19 @@ import { useAuth } from "../../auth/context/AuthContext";
 
 export default function InstagramInboxPage() {
   const { can } = useAuth();
-  const { loading: conversationsLoading, error: conversationsError, conversations, selectedConversation, setSelectedConversation, refresh: refreshConversations } = useConversations();
-  const { loading: messagesLoading, error: messagesError, sending, messages, sendMessage } = useMessages(selectedConversation);
-  const [realtimeMessages, setRealtimeMessages] = useState(messages);
+  const { loading: conversationsLoading, error: conversationsError, conversations, selectedConversation, setSelectedConversation, updateUnreadCount, refresh: refreshConversations } = useConversations();
   const [mobileChat, setMobileChat] = useState(false);
-  useEffect(() => { setRealtimeMessages(messages); }, [messages]);
+  const [narrowScreen, setNarrowScreen] = useState(() => window.matchMedia("(max-width: 760px)").matches);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 760px)");
+    const changed = () => setNarrowScreen(media.matches);
+    media.addEventListener("change", changed);
+    return () => media.removeEventListener("change", changed);
+  }, []);
+  const { loading: messagesLoading, error: messagesError, sending, messages, sendMessage, receiveMessage } = useMessages(selectedConversation, updateUnreadCount, !narrowScreen || mobileChat);
   useRealtimeInbox({
     selectedConversation,
-    onNewMessage(message) {
-      setRealtimeMessages((previous) => previous.some((item) => item.id === message.id) ? previous : [...previous, message]);
-    },
+    onNewMessage: receiveMessage,
     onConversationUpdate() { void refreshConversations(); },
   });
   const name = selectedConversation?.instagramName || selectedConversation?.instagramUsername || `ID ${selectedConversation?.instagramUserId}`;
@@ -38,7 +41,7 @@ export default function InstagramInboxPage() {
             <span className="inbox-channel"><Camera size={16} /><span>{selectedConversation.accountName || "Instagram"}</span></span>
           </header>
           {messagesError ? <p className="inbox-error" role="alert">{messagesError}</p> : null}
-          <ConversationMessages loading={messagesLoading} messages={realtimeMessages} />
+          <ConversationMessages conversationId={selectedConversation.id} loading={messagesLoading} messages={messages} />
           {can("inbox.reply") ? <MessageComposer key={selectedConversation.id} sending={sending} onSend={sendMessage} /> : <p className="inbox-readonly-notice">Acesso somente para leitura.</p>}
         </>}
       </div>

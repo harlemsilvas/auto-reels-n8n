@@ -194,6 +194,8 @@ async function processMessagingEvent(event) {
 
     log("MESSAGE SAVED");
 
+    if (savedMessage?.wasDuplicate) return true;
+
     // Emite o evento com o objeto correto
     realtimeEvents.emitNewMessage(savedMessage);
 

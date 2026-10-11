@@ -1,6 +1,120 @@
 # SocialBot — Contexto de Continuidade para Codex
 
-Atualizado em: 2026-10-10
+Atualizado em: 2026-10-11
+
+## TAG de retomada: RETOMADA-2026-10-11
+
+### Deploy controlado Inbox/014 autorizado: preparacao
+
+- Usuario autorizou deploy das correcoes locais de confiabilidade e nao lidas.
+  Preflight atual confirmou VPS em 982b3b7, API/dashboard HTTP 200, backend online
+  restart 3 e worker online restart 0. Quatro conversas/vinte mensagens, schema
+  sender_type/payload; inbox_unread ainda ausente. Scripts remotos sujos preservados.
+- Backup da release anterior validado por catalogo tar/SHA-256, modo 0600:
+  /home/socialbot/backups/inbox-unread-pre-deploy-20261011T131510Z/.
+  Inclui backend/src, dashboard/dist e workflow anterior; scripts locais remotos
+  preservados separadamente no mesmo diretorio, sem credenciais.
+- Workflow preparado com opcao 014, sintaxe dos modulos Inbox, backup custom
+  protegido/catalogo pg_restore e SHA-256 antes da migration. Schema 014 verificado
+  antes de publicar frontend/reiniciar backend; health API com retry e falha real.
+- Testes PostgreSQL isolado/ROLLBACK, nove Testers, onze webhook, sete HTTP
+  simulados, cookies/CSRF, build e badges desktop/mobile repetidos e aprovados.
+  Main local e origin/main em fb979ae antes do commit. Nenhuma DM real enviada.
+- Execucao planejada: dashboard=true, restart_backend=true, run_migrations=true,
+  migration_set=014. Worker/n8n/tokens/portas preservados. Esta entrada nao comprova
+  deploy concluido; registrar SHA/Action/backup PostgreSQL e verificacoes ao finalizar.
+
+### Nao lidas: segundo incremento aplicado somente localmente
+
+- API Inbox e Testers calculam unreadCount por COUNT das mensagens inbox_unread,
+  substituindo zero fixo/contador legado. Novos inbound user sao nao lidos;
+  outbound nao incrementa. Estado compartilhado do Inbox, nao por operador.
+- Migration 014 idempotente/transacional adiciona boolean default false e indice
+  parcial. Historico anterior permanece sem badges retroativos (leitura desconhecida).
+  Aplicada/verificada somente no PostgreSQL local, cinco mensagens preservadas.
+  Backup validado por pg_restore --list, arquivo modo 0600:
+  backups/inbox-unread-2026-10-11T13-00-42-026Z/local.dump.
+  Host nao tem pg_dump: utilizado binario do container socialbot_postgres.
+- Insercao de mensagem e contador em transacao, com lock por conversa;
+  deduplicacao por conversation_id/meta_message_id antes de inserir/emitir SSE.
+  Criacao de conversa serializada por conta/tester com advisory lock.
+  Compatibilidade sender_type/sent_by e payload/raw_payload usa savepoints.
+- POST read aceita messageIds UUID (maximo 500); IDs vazios nao apagam nada,
+  IDs de outro chat nao alteram estado. Sem corpo mantem compatibilidade com
+  clientes antigos (reconhece snapshot atual). Validacao 400 e ausente 404.
+  API lista as ultimas 100 mensagens em ordem cronologica, nao as primeiras 100.
+- UI confirma IDs carregados/eventos recebidos somente com conversa visivel e
+  aba ativa; lista mobile nao marca chat oculto. Resposta atualiza badge/filtro;
+  respostas antigas de listagem sao invalidadas apos leitura. Mudanca de viewport
+  nao reinicia o estado de envio. Nao lidas anteriores ao recorte de 100 permanecem.
+- Teste PostgreSQL em schema temporario aprovado: migration duas vezes/verificador,
+  historico, inbound/outbound, duplicados concorrentes, leitura parcial/vazia/escopo,
+  corrida leitura+nova DM, rollback em falha e schema legado. Nove testes Testers,
+  onze webhook, sete confiabilidade HTTP simulados e teste cookies/CSRF aprovados.
+  Playwright badges/filtro/IDs e leitura mobile, confiabilidade e UI desktop/mobile
+  aprovados com APIs interceptadas. Build TypeScript/Vite e lint focado aprovados.
+- Novos testes: backend/scripts/test-inbox-unread.js e
+  dashboard/tests/inbox-unread.mjs (PLAYWRIGHT_MODULE externo, dashboard 5181).
+- API local reiniciada exclusivamente pelo launcher protegido de simulacao,
+  health 3101 HTTP 200. Dashboard existente 5181 mantido; nenhum worker iniciado.
+  Sintaxe dos modulos backend alterados e git diff --check aprovados.
+- Sem Meta/DM real, commit/push/deploy ou acesso VPS. Ultimo deploy confirmado
+  continua 982b3b7 com migration 013. Proximo deploy deve habilitar 014 no workflow
+  e aplica-la/verifica-la antes de reiniciar backend; nao publicar codigo sem schema.
+  Reels, worker, n8n e configuracoes VPS preservados. Residual: eventos sem ID Meta
+  nao tem deduplicacao confiavel; reconciliacao de envio segue pendente.
+
+### Confiabilidade Inbox: primeiro incremento aplicado somente localmente
+
+- Envio: hook propaga falha ao compositor; rascunho mantido e mensagem otimista
+  removida individualmente. Guards por ref impedem envio simultaneo no compositor.
+  Typing indicator passou a best-effort: falha nao bloqueia texto; sem retry automatico
+  de envio/persistencia. Erros externos nao sao impressos pelo catch do indicador.
+- Mensagens: uma carga inicial por ciclo, polling sem sobreposicao e invalidacao por
+  geracao ao trocar/desmontar conversa. Respostas antigas nao atualizam outro chat.
+  Lista unica por ID integra polling, SSE e envio; polling preserva eventos recebidos
+  durante requisicao e mensagens otimistas. Envio finalizado em outro chat nao o invade.
+- Listagem nao recarrega por selecionar conversa; refresh mantem selecao por ID e
+  descarta respostas fora de ordem. SSE mantem uma conexao por montagem e handlers
+  atuais, sem reconectar a cada render. Scroll preserva leitura de mensagens antigas.
+- Sete testes backend com cliente Meta/repositorio simulados aprovados: sucesso,
+  typing falhando, conta/token ausentes, falha externa/persistencia e matriz HTTP
+  sessao/CSRF/permissao admin/operator. HTTP usa middleware/rotas reais e servicos
+  simulados, nao autentica sessoes em PostgreSQL nem exercita app.js completo.
+- Testes Playwright com APIs interceptadas aprovados: resposta atrasada, erro de
+  envio/rascunho, SSE duplicado durante polling, estabilidade da conexao e envio
+  finalizado em outra conversa. Regressao desktop/mobile anterior tambem aprovada.
+  Build TypeScript/Vite, lint dos seis arquivos frontend alterados, sintaxe backend
+  e diff --check aprovados. Testes cookies/CSRF e dez testes webhook repetidos.
+- Comandos novos: node backend/scripts/test-inbox-reliability.js e
+  PLAYWRIGHT_MODULE=/tmp/socialbot-ui-check/node_modules/playwright node
+  dashboard/tests/inbox-reliability.mjs. Playwright instalado apenas fora do repo.
+- Sem migration, banco real nos testes, envio DM, commit/push/deploy ou consulta VPS.
+  Ultimo deploy confirmado continua 982b3b7. Dashboard local iniciado na porta 5181;
+  API iniciada pelo launcher protegido de simulacao, health 3101 HTTP 200. Nenhum
+  worker/coletor iniciado. Documentacao local anterior preservada.
+- Proximo incremento: nao lidas/resumos no Inbox geral. API hoje retorna unreadCount
+  fixo zero; revisar persistencia inbound/mark-read com transacoes e testes antes
+  de substituir esse valor. Perfil da pagina Testers nao atualiza Inbox geral.
+- Residual: erro de persistencia apos envio Meta pode significar mensagem entregue
+  sem registro. Nao repetir envio automaticamente; idempotencia/reconciliacao exige
+  desenho posterior. Testes atuais nao comprovam comportamento real de Meta/SSE VPS.
+
+- README atualizado com funcionalidades Inbox/Testers testadas, limites do
+  enriquecimento de perfil, migration 013, testes, seguranca local e links relativos.
+- Roteiro de 09/10 ganhou secao atual que prevalece sobre pendencias historicas.
+  Proxima etapa recomendada: confiabilidade Inbox (permissoes, falhas de envio,
+  typing indicator, troca de conversa, polling/SSE e nao lidas), antes de anexos
+  ou respostas rapidas. Nenhuma nova feature funcional implementada nesta revisao.
+- Ultimo deploy confirmado permanece 982b3b7, Action 38074150243, migration 013.
+  HEAD local fb979ae no inicio da sessao; registro documental do deploy anterior.
+  Sem consulta de saude/VPS hoje; nao interpretar resultados de ontem como atuais.
+- Usuario pediu atualizar README e seguir evolucao. Testes/relatos anteriores
+  usados como evidencia; nao inferir validacao visual pos-deploy de cada controle.
+- Apenas documentacao alterada localmente; sem commit/push/deploy, migration,
+  envio DM ou leitura de .env. Artefatos de simulacao nao versionados preservados.
+- docs/0006-mult-posts.md continua ausente. Validacao desta revisao: links locais
+  do README e git diff --check; testes funcionais nao repetidos para mudanca textual.
 
 ## TAG de retomada: RETOMADA-2026-10-10
 

@@ -35,6 +35,11 @@ export function useRealtimeInbox({
    */
 
   const eventSourceRef = useRef<EventSource | null>(null);
+  const handlers = useRef({ selectedConversation, onNewMessage, onConversationUpdate });
+
+  useEffect(() => {
+    handlers.current = { selectedConversation, onNewMessage, onConversationUpdate };
+  }, [selectedConversation, onNewMessage, onConversationUpdate]);
 
   /**
    * ======================================
@@ -85,14 +90,14 @@ export function useRealtimeInbox({
          * Update conversation list
          */
 
-        onConversationUpdate?.(message.conversationId, message);
+        handlers.current.onConversationUpdate?.(message.conversationId, message);
 
         /**
          * Only append if selected
          */
 
-        if (selectedConversation?.id === message.conversationId) {
-          onNewMessage?.(message);
+        if (handlers.current.selectedConversation?.id === message.conversationId) {
+          handlers.current.onNewMessage?.(message);
         }
       } catch (err) {
         console.error(err);
@@ -118,7 +123,7 @@ export function useRealtimeInbox({
     return () => {
       eventSource.close();
     };
-  }, [selectedConversation, onNewMessage, onConversationUpdate]);
+  }, []);
 }
 
 export default useRealtimeInbox;

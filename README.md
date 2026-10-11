@@ -39,6 +39,8 @@ Hoje o sistema ja possui implementacao real para:
 - dashboard administrativo com login, troca obrigatoria de senha e controle por permissao;
 - tela de uploads, agendamentos, historico, contas, usuarios e horarios;
 - inbox Instagram com visualizacao de conversas, leitura de mensagens e resposta;
+- Inbox responsivo com busca, filtro de nao lidas, agrupamento por data e navegacao mobile;
+- painel Testers DM com envio individual, fluxo de teste e ocultacao de registros;
 - stream em tempo real via SSE para atualizacao de inbox;
 - worker de publicacao com BullMQ;
 - fluxo seguro de Reels via n8n;
@@ -106,6 +108,7 @@ Regras atuais do fluxo:
 - React Router 7
 - TypeScript
 - Vite
+- Lucide React para icones do Inbox
 
 ### Processamento E Automacao
 
@@ -180,6 +183,12 @@ O modelo atual contempla:
 - `post_events`
 - usuarios administrativos, sessoes e permissoes
 - templates de midia e variantes de texto
+- `instagram_conversations`, `instagram_messages` e historico bruto de webhooks
+
+A migration `013-testers-dm-visibility.sql` adiciona `testers_hidden_at` para ocultar
+conversas apenas na pagina Testers DM. Nao apaga mensagens, nao altera a exclusao
+geral da conversa e nao remove funcoes de testador na Meta. Deve ser aplicada e
+verificada antes de iniciar o backend que utiliza esse campo.
 
 Na evolucao multi-tipo, ja estao presentes:
 
@@ -208,6 +217,22 @@ Como portfolio, o SocialBot evidencia experiencia pratica em:
 - cuidado com separacao entre desenvolvimento local e producao.
 
 ## Execucao Em Desenvolvimento
+
+### Cuidados com a simulacao local
+
+O ambiente local restaurado da VPS e exclusivamente para testes: tokens Meta
+removidos, credenciais de IA desabilitadas, worker/coletores desligados e workflow
+importado inativo. Nao executar os comandos de worker abaixo nessa simulacao nem
+iniciar o bootstrap oficial sem revisar as flags de automacao e os dados da fila.
+
+Os acessos locais registrados sao dashboard `http://localhost:5181`, API
+`http://localhost:3101` e n8n `http://localhost:5678`. Esses valores nao devem ser
+copiados para a VPS. Consulte o [roteiro local](project-docs/retomada-2026-10-09.md)
+para iniciar a simulacao com o launcher local; os scripts de simulacao ainda nao
+estao versionados e nao fazem parte de uma instalacao limpa.
+
+Os comandos seguintes descrevem o desenvolvimento geral, nao autorizam ativar
+publicacao real e exigem configuracao de ambiente propria, fora do Git.
 
 ### Infraestrutura local
 
@@ -238,20 +263,108 @@ npm install
 npm run dev
 ```
 
-## Estado Atual Em 13 De Agosto De 2026
+## Estado Atual Em 11 De Outubro De 2026
 
-Em 13 de agosto de 2026, o banco local ja estava validado com as fases 1 e 2 da evolucao multi-posts aplicadas, incluindo colunas de `publish_type` e a tabela `post_media_items`.
+Ultimo deploy confirmado em 10/10/2026: commit `982b3b7`, com backend e dashboard
+atualizados e migration `013` aplicada na VPS apos backup PostgreSQL. O registro
+de resultado foi enviado no commit documental `fb979ae`, sem novo deploy.
+[Execucao do deploy](https://github.com/harlemsilvas/auto-reels-n8n/actions/runs/38074150243).
 
-O sistema atual ja cobre operacao administrativa, publicacao, historico, inbox e preparacao para formatos multi-midia, mantendo Reels como fluxo mais consolidado.
+### Funcionalidades testadas
+
+- DM real recebida por webhook, persistida e exibida no painel; resposta entregue
+  ao testador, conforme consultas registradas e confirmacao do usuario.
+- Botoes Enviar DM de teste e Enviar fluxo teste validados pelo usuario.
+- Inbox modernizado: busca por nome, username, ID ou resumo, filtro de nao lidas,
+  mensagens recebidas/enviadas distintas, datas, horarios e compositor com icone.
+  Layout desktop/mobile testado com APIs simuladas e validado localmente pelo usuario.
+- Testers DM consulta nome/username por ID scoped quando disponiveis na Meta e
+  deriva a ultima mensagem real do historico. Perfil indisponivel nao bloqueia
+  a listagem; nome ausente nao e inventado. Esse enriquecimento e exclusivo dessa
+  pagina e ainda nao atualiza o perfil no Inbox geral.
+- Botao Ocultar com confirmacao e endpoint
+  `DELETE /api/internal/testers-dm/conversations/:id`, protegido por sessao,
+  CSRF e `inbox.manage_testers`. Operacao idempotente e preservacao de historico
+  verificadas com testes locais e ROLLBACK. Validacao visual pos-deploy ainda pendente.
+- Eventos sem objeto de mensagem valido, como recibos de leitura, nao criam
+  mensagens vazias; o webhook bruto permanece registrado.
+
+Na verificacao apos o deploy, API/dashboard responderam HTTP 200 e o hash do
+bundle publico correspondeu ao build da VPS. Worker permaneceu online sem reinicio.
+Esses sao resultados registrados em 10/10, nao uma nova verificacao em 11/10.
+Nenhuma conversa foi ocultada automaticamente pelo deploy.
+
+A pagina Testers DM lista conversas recebidas, nao uma lista de funcoes validada
+com a Meta. Falha ao buscar perfil nao comprova que um usuario seja invalido.
+
+### Testes De Regressao
+
+```bash
+node backend/scripts/test-instagram-webhook.js
+node backend/scripts/test-testers-dm-list.js
+node backend/scripts/test-inbox-reliability.js
+node backend/scripts/test-inbox-unread.js
+node dashboard/tests/inbox-service.test.mjs
+npm run build --prefix dashboard
+```
+
+Os testes isolados usam dependencias simuladas, sem enviar DMs reais. Para incluir
+os testes SQL, use `node backend/scripts/test-testers-dm-list.js --database`
+somente com PostgreSQL local configurado; o teste de escrita usa ROLLBACK.
+O teste visual `dashboard/tests/inbox-ui.mjs` exige Playwright/Chromium e dashboard
+local ativo; `PLAYWRIGHT_MODULE` permite apontar para uma instalacao externa da
+biblioteca. Todas as chamadas de API sao interceptadas nesse teste.
+O teste `test-inbox-unread.js` exige PostgreSQL local e cria/remove um schema
+temporario: cobre migration idempotente, concorrencia, deduplicacao e leitura
+parcial. `dashboard/tests/inbox-unread.mjs` valida badges/filtro e leitura mobile
+com APIs interceptadas; requer Playwright e dashboard local ativo.
+
+### Contadores De Nao Lidas (Local)
+
+Implementados e testados localmente em 11/10, com migration
+`014-inbox-unread.sql` aplicada apos backup. Novas DMs recebidas incrementam
+o contador; respostas enviadas e webhooks repetidos com o mesmo ID Meta nao.
+A API calcula o contador pelo estado das mensagens, sem zero fixo.
+O painel reconhece somente os IDs carregados na conversa visivel, sem apagar
+mensagens posteriores. No celular, apenas exibir a lista nao marca como lida.
+O estado de leitura e compartilhado pelo Inbox, nao individual por operador.
+Historico anterior permanece sem badges retroativos, pois sua leitura era desconhecida.
+Ainda nao publicado: aplicar/verificar a migration 014 na VPS antes do restart
+do backend. O workflow atual precisa oferecer essa migration no proximo deploy.
+
+### Proximas Etapas
+
+Em 11/10, o primeiro incremento de confiabilidade foi implementado e testado
+somente localmente: rascunho preservado em falha, typing nao bloqueante, isolamento
+de respostas atrasadas e SSE/polling sem duplicacao nos cenarios simulados. Ainda
+nao esta na VPS. Contadores de nao lidas tambem corrigidos localmente, com migration
+014; reconciliacao de envio e validacao em producao continuam pendentes.
+
+1. Consolidar confiabilidade do Inbox: testes de permissao/sessao/CSRF, falhas de
+   envio, typing indicator, polling/SSE, nao lidas e troca de conversa.
+2. Ampliar identificacao e resumo para o Inbox geral, com consulta de perfil
+   controlada e sem bloquear o atendimento quando a Meta estiver indisponivel.
+3. Evoluir atendimento com respostas rapidas e anexos, apos definir escopo e
+   validar contratos; nao confundir suporte do cliente Meta com UI ja implementada.
+4. Retomar validacao das telas de publicacao/modelos e tratar lint/dependencias
+   por modulo, preservando Reels e separacao local/VPS.
+
+O [roteiro atualizado](project-docs/retomada-2026-10-09.md) define criterios de
+aceite e distingue entregas concluidas de pendencias. Nao ha prazo fechado para
+essas etapas; novos deploys exigem autorizacao.
 
 ## Documentacao Complementar
 
-- [docs/](/mnt/c/Projetos/auto-reels-n8n/docs/)
-- [CODEX_CONTINUITY.md](/mnt/c/Projetos/auto-reels-n8n/CODEX_CONTINUITY.md)
-- [docs/0006-mult-posts.md](/mnt/c/Projetos/auto-reels-n8n/docs/0006-mult-posts.md)
-- [docs/0007-auth-users.md](/mnt/c/Projetos/auto-reels-n8n/docs/0007-auth-users.md)
-- [docs/features/001-permissoes-granulares.md](/mnt/c/Projetos/auto-reels-n8n/docs/features/001-permissoes-granulares.md)
-- [docs/features/002-modelos-midias-ia-tags.md](/mnt/c/Projetos/auto-reels-n8n/docs/features/002-modelos-midias-ia-tags.md)
+- [Documentacao tecnica](docs/)
+- [Continuidade e validacoes](CODEX_CONTINUITY.md)
+- [Roteiro de evolucao](project-docs/retomada-2026-10-09.md)
+- [Autenticacao e usuarios](docs/0007-auth-users.md)
+- [Permissoes granulares](docs/features/001-permissoes-granulares.md)
+- [Modelos, midias, IA e TAGs](project-docs/features/002-modelos-midias-ia-tags.md)
+- [Deploy controlado](project-docs/deploy/003-github-actions-deploy-vps.md)
+
+O documento historico `docs/0006-mult-posts.md` permanece ausente neste checkout;
+o estado consolidado das fases multi-posts esta registrado na continuidade.
 
 ## Autor
 

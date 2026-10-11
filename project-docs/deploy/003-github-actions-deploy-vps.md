@@ -126,6 +126,24 @@ bash scripts/backup_postgres_db.sh
 
 ## Validação após execução
 
+### Inbox E Migration 014 (2026-10-11)
+
+Para publicar os contadores de nao lidas e confiabilidade Inbox, selecionar:
+
+```text
+deploy_dashboard = true
+restart_backend = true
+run_migrations = true
+migration_set = 014
+```
+
+O workflow valida backup PostgreSQL custom (catalogo pg_restore e SHA-256), aplica
+a migration e verifica o schema antes do restart/backend e publicacao/frontend.
+Historico permanece sem badges retroativos. O health check da API usa retries e
+falha o deploy se continuar indisponivel. Worker e n8n nao sao reiniciados.
+Em falha, preservar o schema aditivo 014 e recuperar codigo/frontend anteriores
+do backup de release, sem restaurar o banco por cima de DMs recebidas depois.
+
 Depois de rodar o workflow, conferir:
 
 ```bash

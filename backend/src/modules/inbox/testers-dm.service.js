@@ -19,7 +19,8 @@ async function listTesterConversations() {
         c.instagram_name AS "instagramName",
         COALESCE(latest.message_text, c.last_message_text) AS "lastMessageText",
         COALESCE(latest.created_at, c.last_message_at) AS "lastMessageAt",
-        COALESCE(c.unread_count, 0)::int AS "unreadCount",
+        (SELECT COUNT(*)::int FROM instagram_messages unread
+          WHERE unread.conversation_id = c.id AND unread.inbox_unread = TRUE) AS "unreadCount",
         a.access_token AS "_accessToken"
       FROM instagram_conversations c
       LEFT JOIN instagram_accounts a

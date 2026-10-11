@@ -30,6 +30,7 @@ on:
           - "009_010"
           - "011"
           - "013"
+          - "014"
           - "010_011"
           - "009_010_011"
 
@@ -100,6 +101,12 @@ jobs:
             node --check src/modules/ai-credentials/ai-credentials.crypto.js
             node --check src/modules/ai-credentials/ai-credentials.service.js
             node --check src/modules/ai-credentials/ai-credentials.routes.js
+            node --check src/modules/conversations/instagram-conversations.service.js
+            node --check src/modules/conversations/instagram-conversations.routes.js
+            node --check src/modules/webhooks/instagram-messages.repository.js
+            node --check src/modules/webhooks/instagram-messages.service.js
+            node --check src/modules/instagram/instagram-send.service.js
+            node --check src/modules/inbox/testers-dm.service.js
 
             if [[ "$RUN_MIGRATIONS" == "true" ]]; then
               if [[ "$MIGRATION_SET" == "none" ]]; then
@@ -110,10 +117,22 @@ jobs:
               log "Backup PostgreSQL antes das migrations"
               umask 077
               cd "$APP_DIR"
+              BACKUP_DIR="$HOME/backups/socialbot-postgres/deploy-$(date -u +%Y%m%dT%H%M%SZ)"
+              export SOCIALBOT_BACKUP_DIR="$BACKUP_DIR"
+              export SOCIALBOT_BACKUP_FORMAT=custom
               bash scripts/backup_postgres_db.sh
+              BACKUP_FILES=("$BACKUP_DIR"/*.dump)
+              [[ "${#BACKUP_FILES[@]}" -eq 1 && -s "${BACKUP_FILES[0]}" ]]
+              docker exec -i socialbot_postgres pg_restore --list < "${BACKUP_FILES[0]}" > /dev/null
+              sha256sum "${BACKUP_FILES[0]}"
 
               cd "$APP_DIR/backend"
               case "$MIGRATION_SET" in
+                "014")
+                  run_migration \
+                    "sql/014-inbox-unread.sql" \
+                    "sql/014-inbox-unread-verify.sql"
+                  ;;
                 "013")
                   run_migration \
                     "sql/013-testers-dm-visibility.sql" \
@@ -170,6 +189,13 @@ jobs:
               log "Migrations desativadas"
             fi
 
+            if [[ "$RESTART_BACKEND" == "true" || "$DEPLOY_DASHBOARD" == "true" ]]; then
+              log "Verificando schema obrigatorio do Inbox antes de publicar"
+              cd "$APP_DIR/backend"
+              docker exec -i socialbot_postgres psql -U n8n -d n8n \
+                < sql/014-inbox-unread-verify.sql
+            fi
+
             if [[ "$RESTART_BACKEND" == "true" ]]; then
               log "Reiniciando backend PM2"
               pm2 restart socialbot-backend
@@ -187,6 +213,8 @@ jobs:
             fi
 
             log "Health check API"
-            curl -fsS -I https://api.hrmmotos.com.br/api/health || true
+            curl --retry 12 --retry-delay 5 --retry-connrefused \
+              --connect-timeout 10 --max-time 15 -fsS \
+              https://api.hrmmotos.com.br/api/health
 
             log "Deploy finalizado"

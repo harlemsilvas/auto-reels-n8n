@@ -102,6 +102,9 @@ test("Migration idempotente e ocultacao preservam Inbox e mensagens com ROLLBACK
     await client.query(sql);
     await client.query(sql);
     await client.query(verify);
+    const unreadSql = readFileSync(path.resolve(__dirname, "../sql/014-inbox-unread.sql"), "utf8")
+      .split("\n").filter((line) => !line.startsWith("\\") && !["BEGIN;", "COMMIT;"].includes(line.trim())).join("\n");
+    await client.query(unreadSql);
     const row = before.rows.find((item) => item.deleted_at === null);
     assert.ok(row, "Conversa local necessaria para teste transacional");
     const api = load("../src/modules/inbox/testers-dm.service.js", {
@@ -199,7 +202,8 @@ test("Consulta PostgreSQL escolhe ultima mensagem real, nao recibo vazio", {
         ('m2', 'conversation-test', 'Sent reply', TIMESTAMPTZ '2026-10-10 12:00:00+00'),
         ('m3', 'conversation-test', NULL, TIMESTAMPTZ '2026-10-10 13:00:00+00'),
         ('m4', 'conversation-test', '  ', TIMESTAMPTZ '2026-10-10 14:00:00+00')
-      ) AS m(id, conversation_id, message_text, created_at)
+      ) AS entries(id, conversation_id, message_text, created_at)
+      CROSS JOIN (SELECT FALSE AS inbox_unread) unread_state
     )
   `;
   const api = load("../src/modules/inbox/testers-dm.service.js", {

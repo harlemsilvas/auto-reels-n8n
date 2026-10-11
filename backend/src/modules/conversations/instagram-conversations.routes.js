@@ -52,6 +52,7 @@ router.post("/:conversationId/read", async (req, res, next) => {
   try {
     const result = await service.markConversationAsRead(
       req.params.conversationId,
+      req.body?.messageIds,
     );
 
     return res.json(result);

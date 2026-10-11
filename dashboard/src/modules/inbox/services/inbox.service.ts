@@ -98,9 +98,10 @@ export async function sendMessage(payload: SendMessagePayload) {
  * ======================================
  */
 
-export async function markConversationAsRead(conversationId: string) {
+export async function markConversationAsRead(conversationId: string, messageIds?: string[]) {
   const response = await api.post(
     `/api/internal/conversations/${conversationId}/read`,
+    messageIds === undefined ? undefined : { messageIds },
   );
 
   return response.data;
