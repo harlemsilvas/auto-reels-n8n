@@ -378,6 +378,18 @@ arquivos temporarios e desktop/mobile. Nenhuma DM real enviada nestes testes.
 
 ### Proximas Etapas
 
+Deploy concluido em 12/10/2026: release `47a5dac`,
+[Action validada](https://github.com/harlemsilvas/auto-reels-n8n/actions/runs/38305628683).
+Resumos, perfis com cache e registro duravel de texto publicados; migration 015
+aplicada/verificada com backup protegido. Preservados 21 posts, quatro conversas
+e 39 mensagens; somente API reiniciada, worker preservado. API/dashboard HTTP 200,
+rota de tentativas anonima 401, bundle publico igual ao build VPS e login
+desktop/mobile sem erros JavaScript. Teste autenticado de envio pelo usuario
+ainda pendente; nenhuma DM real enviada pelo agente.
+
+As descricoes locais abaixo registram a preparacao desta release. Proximos itens:
+aceite em producao, ledger para imagens, retencao e manutencao de dependencias/lint.
+
 Envio duravel de texto (12/10, somente local): migration `015-inbox-send-attempts.sql`
 aplicada/verificada apos backup. PostgreSQL registra tentativa antes da chamada
 Meta; lock e indice unico bloqueiam concorrencia entre abas/dispositivos/processos.
@@ -397,8 +409,8 @@ Sem garantia absoluta exactly-once da Meta; imagens/quick replies fora do ledger
 Testes: `node backend/scripts/test-inbox-send-attempts.js` usa PostgreSQL local em
 schema isolado e Meta simulada; `dashboard/tests/inbox-durable-send.mjs` verifica
 multi-aba/dispositivo/mobile com API simulada. Regressao, build/lint aprovados.
-VPS ainda em `151d235`: deploy exige aplicar/verificar 015 antes do restart API.
-Workflow preparado, nao executado. Retencao de tentativas/textos ainda pendente.
+VPS atualizada para `47a5dac`: 015 aplicada/verificada antes do restart API.
+Retencao de tentativas/textos ainda pendente.
 
 Perfis Inbox (12/10, somente local): nomes/usernames ausentes podem ser
 complementados pelo cliente Meta existente, com cache por conta/destinatario/
@@ -406,7 +418,7 @@ credencial, TTL uma hora e espera de cinco minutos em falha. Limites por process
 cinco consultas simultaneas, dez novos inicios por minuto e 500 entradas.
 Dados salvos preservados, sem token na resposta e sem migration. Testes simulados
 `backend/scripts/test-inbox-profiles.js` e regressoes aprovados; validacao com
-Meta real/deploy pendentes. Usuario confirmou os testes locais da etapa de resumos
+Meta real pendente; deploy concluido em `47a5dac`. Usuario confirmou os testes locais da etapa de resumos
 e acesso localhost. Reconciliacao duravel implementada localmente como descrita acima.
 
 Em 12/10, o usuario confirmou em producao selecao de modelos, confirmacao de
@@ -414,9 +426,9 @@ agendamento e contadores da release `151d235`. Proximo incremento preparado
 somente localmente: Inbox usa nome ja salvo e resumo da ultima mensagem real,
 incluindo imagens/anexos, sem recibos vazios apagarem resumo/data. Payload/URLs
 de anexos nao sao incluidos na listagem; sem novas chamadas Meta ou migration.
-Testes PostgreSQL isolados e desktop/mobile aprovados. Deploy ainda pendente.
-Perfis ausentes continuam username/ID; cache e reconciliacao duravel tambem estao
-preparados localmente, aguardando deploy. Rotulos de outros anexos nao habilitam seu envio.
+Testes PostgreSQL isolados e desktop/mobile aprovados; publicado em `47a5dac`.
+Perfis ausentes continuam username/ID; cache e reconciliacao duravel tambem foram
+publicados nessa release. Rotulos de outros anexos nao habilitam seu envio.
 
 Deploy Inbox/Modelos concluido em 11/10/2026, release `151d235`,
 [Action validada](https://github.com/harlemsilvas/auto-reels-n8n/actions/runs/38172633374).

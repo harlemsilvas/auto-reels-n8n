@@ -4,6 +4,50 @@ Atualizado em: 2026-10-12
 
 ## TAG de retomada: RETOMADA-2026-10-12
 
+### Deploy Inbox duravel concluido em 2026-10-12
+
+- Release confirmada na VPS: 47a5dacb64cda69ddd9f5b0211990eacf2708d32.
+  Action 38305628683 concluida com sucesso em 12/10 as 17:40 (America/Sao_Paulo):
+  https://github.com/harlemsilvas/auto-reels-n8n/actions/runs/38305628683
+  Publicados resumos/perfis com cache e reconciliacao duravel de texto no Inbox;
+  migration 015 aplicada/verificada antes do restart API. Entradas somente locais
+  abaixo sao historicas; estes incrementos nao estao mais pendentes de deploy.
+- Backup protegido da release anterior 151d235/config/dependencias:
+  /home/socialbot/backups/inbox-images-pre-deploy-20261012T203930Z/release-anterior.tar.gz,
+  12806544 bytes, modo 0600, SHA-256
+  80f2e654d3e262a7daea2a59888c51e1ee966ee3d28acba4b325faa17d9c9f18.
+  Arquivo tar validado pelo workflow; configuracao anterior copiada em modo 0600,
+  sem consultar conteudo. Backup PostgreSQL anterior a migration:
+  /home/socialbot/backups/socialbot-postgres/deploy-20261012T203947Z/n8n_20261012_203947.dump,
+  399784 bytes, modo 0600, SHA-256
+  ce172d0a38fb83a7370b6f6c5bf95f29f770c0d824a167a133f6649d8f16c6da.
+  Catalogo pg_restore verificado novamente por SSH, sem teste de restore.
+- Verificador 015 passou novamente na VPS. Preservados 21 posts, quatro conversas
+  e 39 mensagens; ledger novo vazio na verificacao. API online restart 6 -> 7,
+  PID 648344; worker online restart 0/PID 1653 preservados. Scripts remotos sujos
+  mantidos. Sem mudar portas/proxy/credenciais ou fluxo Reels; reload Nginx pelo
+  script de frontend existente, sem alterar configuracao.
+- Health API e dashboard HTTP 200; tentativas anonimas HTTP 401.
+  Bundle publico /assets/index-BNDpM1Hx.js igual ao build da VPS, SHA-256
+  6a5ec762239a29633196863a3e2c9844190947dbcae073f450f72d22ffcf15ed.
+  Playwright publico desktop/mobile carregou login/bundle sem erro JavaScript ou
+  overflow; captura mobile inspecionada. Sem sessao autenticada/DM/IA/post real.
+- Antes do deploy passaram testes PostgreSQL isolados de tentativas/resumos/
+  nao lidas, cache de perfis, confiabilidade/imagens e Playwright reconciliacao/
+  multi-aba/dispositivo. Build/lint focado/sintaxe/diff aprovados. Lint amplo Inbox
+  possui quatro erros preexistentes em TestersDmPage (arquivo nao alterado).
+  npm ci VPS reportou quatro alertas backend (dois high) e doze dashboard (nove
+  high); manutencao pontual pendente, sem upgrade automatico no deploy.
+- Proximo aceite do usuario: enviar texto pelo Inbox, recarregar/verificar
+  historico e abrir a mesma conversa em outra aba/dispositivo. Falhas incertas
+  devem bloquear novo envio; nao induzir timeout em producao para testar.
+  Cenarios de falha foram simulados localmente. Perfil depende de permissao/
+  credencial Meta e pode manter fallback. Ledger duravel ainda nao cobre imagens/
+  quick replies; politica de retencao permanece pendente.
+- README/roteiro atualizados em commit documental separado, sem novo deploy.
+  .gitignore do usuario, scripts de simulacao e midias locais continuam fora dos
+  commits/VPS. Sem copiar .env ou registrar segredos.
+
 ### Deploy Inbox autorizado: preflight em 2026-10-12
 
 - Usuario autorizou deploy do pacote local de resumos/perfis/reconciliacao e
