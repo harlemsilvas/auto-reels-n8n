@@ -23,7 +23,7 @@ export default function MessageBubble({ message }: { message: Message }) {
       {text || !images.length ? <div className="inbox-message-text">{textParts(text || "[Mensagem sem texto]").map((part, index) =>
         <span key={index}>{part.url ? <a href={part.url} target="_blank" rel="noopener noreferrer">{part.text}</a> : part.text}{part.suffix}</span>
       )}</div> : null}
-      <div className="inbox-message-time">{String(message.id).startsWith("temp-") ? <Clock3 size={12} aria-label="Envio pendente" /> : null}<time dateTime={message.createdAt} title={date.toLocaleString("pt-BR")}>{Number.isNaN(date.getTime()) ? "-" : date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</time></div>
+      <div className="inbox-message-time">{message.deliveryState === "uncertain" ? <span>Entrega incerta</span> : String(message.id).startsWith("temp-") ? <Clock3 size={12} aria-label="Envio pendente" /> : null}<time dateTime={message.createdAt} title={date.toLocaleString("pt-BR")}>{Number.isNaN(date.getTime()) ? "-" : date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</time></div>
     </div>
   </div>;
 }

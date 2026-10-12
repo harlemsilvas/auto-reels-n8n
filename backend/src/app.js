@@ -249,6 +249,14 @@ app.use("/api/internal/media", mediaInternalRoutes);
 // });
 
 app.use((error, req, res, _next) => {
+  if (error?.deliveryMayHaveSucceeded) {
+    return res.status(502).json({
+      code: "MESSAGE_DELIVERY_UNCERTAIN",
+      message: "A mensagem pode ter sido entregue. Confira o Instagram antes de reenviar.",
+      metaMessageId: typeof error.metaMessageId === "string" ? error.metaMessageId : undefined,
+      attempt: error.attempt,
+    });
+  }
   if (process.env.NODE_ENV !== "production") {
     console.error("======================================");
     console.error("[ERROR]");

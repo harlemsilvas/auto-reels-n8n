@@ -31,6 +31,7 @@ on:
           - "011"
           - "013"
           - "014"
+          - "015"
           - "010_011"
           - "009_010_011"
 
@@ -125,6 +126,9 @@ jobs:
             node --check src/modules/inbox/testers-dm.service.js
             node --check src/modules/inbox/inbox-images.service.js
             node --check src/modules/inbox/inbox-images.routes.js
+            node --check src/modules/inbox/message-send-attempts.js
+            node --check src/modules/inbox/instagram-send-message.routes.js
+            node --check src/modules/inbox/instagram-send-message.controller.js
 
             if [[ "$RESTART_BACKEND" == "true" ]]; then
               log "Instalando dependencias backend pelo lockfile"
@@ -181,6 +185,11 @@ jobs:
 
               cd "$APP_DIR/backend"
               case "$MIGRATION_SET" in
+                "015")
+                  run_migration \
+                    "sql/015-inbox-send-attempts.sql" \
+                    "sql/015-inbox-send-attempts-verify.sql"
+                  ;;
                 "014")
                   run_migration \
                     "sql/014-inbox-unread.sql" \
@@ -247,6 +256,8 @@ jobs:
               cd "$APP_DIR/backend"
               docker exec -i socialbot_postgres psql -U n8n -d n8n \
                 < sql/014-inbox-unread-verify.sql
+              docker exec -i socialbot_postgres psql -U n8n -d n8n \
+                < sql/015-inbox-send-attempts-verify.sql
             fi
 
             if [[ "$RESTART_BACKEND" == "true" ]]; then

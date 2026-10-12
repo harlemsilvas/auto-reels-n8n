@@ -75,6 +75,9 @@ export interface TesterConversation {
  */
 
 export interface Message {
+  unsentDraft?: string;
+  sendAttemptId?: string;
+  deliveryState?: "pending" | "uncertain";
   id: string;
 
   conversationId: string;
@@ -113,10 +116,20 @@ export interface PaginatedResponse<T> {
  */
 
 export interface SendMessagePayload {
+  requestId?: string;
   conversationId: string;
   accountId: string;
   recipientId: string;
   messageText: string;
+}
+
+export interface SendAttempt {
+  id: string;
+  conversationId: string;
+  state: "sending" | "sent" | "uncertain" | "rejected" | "dismissed";
+  messageText: string;
+  metaMessageId?: string | null;
+  createdAt: string;
 }
 
 export interface SendTesterDmPayload {

@@ -21,7 +21,7 @@ function log(...args) {
 
 async function sendMessage(req, res, next) {
   try {
-    const { conversationId, accountId, recipientId, messageText } = req.body;
+    const { conversationId, accountId, recipientId, messageText, requestId } = req.body;
 
     /**
      * ======================================
@@ -47,7 +47,7 @@ async function sendMessage(req, res, next) {
       });
     }
 
-    if (!messageText?.trim()) {
+    if (typeof messageText !== "string" || !messageText.trim()) {
       return res.status(400).json({
         message: "messageText is required.",
       });
@@ -70,6 +70,7 @@ async function sendMessage(req, res, next) {
       accountId,
       recipientId,
       messageText: messageText.trim(),
+      requestId,
     });
 
     /**

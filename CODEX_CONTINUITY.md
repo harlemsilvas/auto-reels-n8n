@@ -1,6 +1,207 @@
 # SocialBot — Contexto de Continuidade para Codex
 
-Atualizado em: 2026-10-11
+Atualizado em: 2026-10-12
+
+## TAG de retomada: RETOMADA-2026-10-12
+
+### Deploy Inbox autorizado: preflight em 2026-10-12
+
+- Usuario autorizou deploy do pacote local de resumos/perfis/reconciliacao e
+  registro duravel de texto. Inspecao atual confirmou VPS na release 151d235,
+  Node 20.20.2, API online restart 6/PID 3918851, worker online restart 0/PID
+  1653. Sem deploy concorrente; main remoto e HEAD local e9d6ceb.
+- PostgreSQL VPS: 21 posts, quatro conversas, 39 mensagens; tabela de tentativas
+  ausente. Schema 014 verificado somente leitura. Alteracoes remotas nos scripts
+  create-user/publish_instagram_reel/validar_publicacao_real e sql/005 preservadas.
+- Workflow autorizado com dashboard=true, restart_backend=true,
+  run_migrations=true e migration_set=015. Backup protegido da release/config
+  e dump PostgreSQL com catalogo/hash antes da migration. Reiniciar somente API;
+  manter worker, configuracoes/portas e fluxo de Reels.
+- Regressao PostgreSQL isolada de tentativas/resumos/nao lidas, perfis Meta
+  simulados, quinze testes confiabilidade/quatro imagens, Playwright multi-aba/
+  dispositivo, build e sintaxe aprovados. Nenhuma DM/publicacao real no preflight.
+- .gitignore do usuario, arquivos de simulacao e midias nao integram o commit.
+  Esta entrada registra preparacao; resultado real sera registrado apos deploy.
+
+### Envio duravel: migration 015 aplicada somente localmente
+
+- Usuario confirmou teste da primeira etapa e pediu registro no servidor para
+  proteger tambem entre abas/dispositivos. Esta entrada substitui a pendencia de
+  ledger da etapa abaixo. HEAD documental anterior e9d6ceb; ultima release VPS
+  registrada 151d235. Sem commit/push/deploy ou acesso VPS nesta etapa.
+- Nova tabela instagram_send_attempts registra UUID, conversa, hash/texto, estado
+  e confirmacao Meta antes de finalizar historico. Lock da conversa e indice
+  parcial unico impedem duas tentativas ativas entre processos/clientes. Conta e
+  destinatario devem corresponder a conversa ativa. Tentativa fica duravel antes
+  da chamada Meta; falha de banco impede novo envio, nao libera retry.
+- Mesmo UUID confirmado retorna mensagem original; UUID reutilizado com outro
+  texto/conversa e rejeitado. Novo UUID com texto identico confirmado nos ultimos
+  90 segundos reutiliza resultado, inclusive entre dispositivos. Essa janela
+  tambem suprime repeticoes intencionais identicas; depois dela novo UUID permite
+  novo envio. Chamadores legados sem UUID recebem ID no servidor, mas devem
+  reutilizar requestId para garantia de replay alem da janela.
+- GET /api/internal/messages/attempts/:conversationId recupera tentativa;
+  POST no mesmo caminho /reconcile repara somente persistencia com ID/confirmacao
+  Meta duraveis, sem reenviar DM. POST /dismiss exige acknowledged=true e
+  conferencia humana; nao aceita tentativa com ID Meta nem sending recente.
+  Sending orfao so pode ser encerrado manualmente depois de cinco minutos.
+  Rotas exigem inbox.reply, sessao e CSRF nas mutacoes; aliases Inbox mantidos.
+- Frontend recupera bloqueio do servidor em outra aba/dispositivo e apos reload;
+  preserva rascunho nao enviado quando outra tentativa esta ativa. Confirmacao
+  duravel permite reconciliar historico automaticamente, nunca repetir Meta.
+  Sem ID, nao ha expiracao/desbloqueio automatico. Encerramento manual nao cancela
+  envio em curso nem prova ausencia de entrega; nao prometemos exactly-once Meta.
+- Protecao duravel cobre texto do sender central, nao imagens/quick replies.
+  Registros mantem texto como o historico existente e apenas recibo message_id,
+  sem token/credenciais/erro bruto do provedor. Politica de retencao pendente;
+  nao remover automaticamente tentativas ativas. Reels/worker/echo preservados.
+- Migration 015 transacional/idempotente: rollback e duas aplicacoes testadas
+  primeiro em schema temporario. Verificador valida colunas/tipos/nulabilidade,
+  FKs e indice unico parcial na coluna conversation_id; teste rejeita indice
+  sobre coluna errada. Bootstrap existente nao contem tabelas Inbox e nao foi
+  alterado. docs/0006-mult-posts.md continua ausente.
+- Backup local protegido antes de aplicar:
+  `backups/inbox-attempts-pre-migration-20261012T175043Z/n8n_20261012_145043.dump`,
+  388070 bytes, modo 0600, SHA-256
+  8fe64ed47f767269309b648f04585c06faee3b1260bb5e3a43783e3ced10cd84.
+  Catalogo pg_restore verificado, sem teste de restore. Migration aplicada duas
+  vezes localmente; verificador final aprovado. Preservados 26 posts, duas
+  conversas e cinco mensagens; tabela nova vazia apos aplicacao.
+- Teste PostgreSQL isolado aprovado: concorrencia de IDs, escopo, reuso/restart,
+  timeout/rejeicao, recibo duravel, reparo concorrente, ack de commit perdido,
+  falha de journal, descarte manual, indice e HTTP sessao/CSRF/permissoes.
+  Meta simulada. Quinze testes confiabilidade e quatro imagens passaram.
+  Playwright multi-aba/dispositivo/mobile passou com API simulada: recuperacao
+  sem storage, rascunho preservado, reparo sem segundo envio e encerramento
+  compartilhado. Regressoes reconciliacao/imagens/confiabilidade, lint focado,
+  build e sintaxe passaram; captura mobile inspecionada. Nenhuma DM/IA/post real.
+- API local reiniciada pelo launcher protegido, health localhost:3101 HTTP 200;
+  consulta anonima de tentativas HTTP 401. Dashboard usar http://localhost:5181.
+  Jobs/worker continuam desligados. Configuracoes, simulacao, midias e alteracoes
+  do usuario preservadas, incluindo .gitignore; segredos nao consultados.
+- Workflow preparado com opcao 015 e verificacao obrigatoria antes de publicar
+  backend/dashboard. VPS NAO recebeu schema/codigo novo. Proximo: aceite local
+  desta etapa e deploy explicitamente autorizado com backup/migration 015 antes
+  do restart API. Depois ampliar ledger a imagens e definir retencao.
+
+### Envio incerto: primeira etapa de reconciliacao somente local
+
+- Usuario pediu reconciliacao para evitar duplicacao em respostas incertas.
+  Implementada protecao de texto no Inbox: rejeicao HTTP 4xx preserva rascunho;
+  timeout/erro sem resposta, HTTP 5xx e MESSAGE_DELIVERY_UNCERTAIN preservam
+  texto como registro local visivel, bloqueando texto/imagem naquela conversa.
+  Sem retry automatico de chamada de envio Meta.
+- Backend de texto exige ID Meta antes de confirmar sucesso. Apos envio confirmado,
+  falha ao salvar permite uma segunda tentativa somente de persistencia com mesmo
+  ID (repository ja deduplica). Se ambas falham, middleware retorna 502/codigo
+  MESSAGE_DELIVERY_UNCERTAIN e ID conhecido, sem stack/erro do banco/provedor.
+- Registro guardado antes do POST em sessionStorage por usuario/conta/conversa;
+  recarregar/sair-voltar restaura bloqueio conservador. Contem texto do rascunho,
+  nao token; escopo da aba, descartado ao fecha-la. Storage indisponivel conserva
+  protecao em memoria, mas nao garante recuperacao apos reload. Nao ha expiracao
+  que libere reenvio automaticamente.
+- Historico libera bloqueio somente por mensagem bot da mesma conversa com ID
+  Meta exato; texto igual/horario nao comprovam entrega. Retorno tardio de sucesso
+  confirma a mesma tentativa mesmo apos sair-voltar. Descarte manual tem confirmacao,
+  remove apenas registro local e nao cancela DM nem prova falha de entrega.
+- Limites: nao e idempotencia global/duravel entre abas, dispositivos ou clientes;
+  sem ID conhecido, ausencia no historico nao comprova falha e exige conferencia
+  humana. Webhook atual ignora echo, nao foi alterado. Historico nao necessariamente
+  recebera registro de uma falha permanente de banco. Ledger duravel de tentativas
+  e endpoint de conciliacao seguem pendentes para proxima etapa; nenhuma migration.
+  Persistencia/reconciliacao automatica nova cobre texto, nao quick replies/imagens.
+- Quinze testes backend confiabilidade (Meta/banco simulados), quatro imagens e
+  Playwright reconciliacao desktop/mobile passaram: rejeicao, rede, reload, escopo,
+  ID divergente/exato, descarte e retorno tardio. Regressao frontend confiabilidade
+  e imagens passou; build, lint focado, sintaxe e diff-check aprovados.
+  Capturas inspecionadas; nenhuma DM/IA/publicacao real executada pelo agente.
+- API local reiniciada apenas pelo launcher protegido; health localhost:3101
+  HTTP 200, dashboard usar localhost:5181. Sem worker/jobs, commit/push/deploy,
+  acesso VPS ou mudanca de banco. Correcoes locais anteriores de resumos/perfis,
+  arquivos de simulacao e midias do usuario preservados. VPS registrada 151d235.
+
+### Perfis Inbox: enriquecimento com cache somente local
+
+- Usuario confirmou Tudo testado apos orientacao localhost e incremento de
+  resumos. Aceite local relatado pelo usuario, nao nova sessao autenticada do
+  agente. Ultima release VPS registrada permanece 151d235; HEAD e9d6ceb.
+- Listagem Inbox agora complementa nome/username ausentes com cliente de perfil
+  ja existente. Nao altera host/versao/scopes/token/fields do cliente Meta.
+  Credencial e destinatario obtidos exclusivamente da conta da conversa ativa;
+  contas excluidas/inativas e ID ficticio/sem token nao acionam consulta.
+- Cache de processo por conta/destinatario/hash da credencial, TTL sucesso uma
+  hora, falha/perfil vazio cinco minutos, single-flight e capacidade 500 entradas.
+  Maximo cinco consultas simultaneas/dez novos inicios por minuto por processo.
+  Rotacao de credencial nao reutiliza perfil da chave anterior. Falha transitoria
+  preserva ultimo perfil conhecido; dados salvos no banco nunca substituidos.
+- Tokens, erros do provedor e payloads internos nao incluidos na resposta/logs
+  desta funcionalidade; somente nome/username normalizados. Sem gravar perfis
+  no banco, sem migration e sem modificar Testers DM/envio/Reels/worker.
+  Cache nao compartilhado entre instancias e descartado ao reiniciar API.
+  Primeiras consultas podem adicionar ate o timeout existente de tres segundos;
+  consultas suprimidas por limite permanecem com fallback username/ID.
+- Sete testes test-inbox-profiles.js aprovados com Meta simulada: TTL/backoff,
+  deduplicacao, conta/destinatario/rotacao, falha preservando perfil, limites,
+  capacidade e listagem sem vazamento. PostgreSQL isolado resumos/nao lidas,
+  Playwright resumos/identidade e sincronizacao desktop/mobile, sete testes
+  Testers DM sem banco (dois DB opcionais pulados), build/sintaxe/diff passaram.
+- Documentacao Meta direta consultada, mas respondeu 429; nenhuma mudanca de
+  contrato externo inferida desse bloqueio. Mantido cliente getUserProfile
+  existente/testado. Nenhuma chamada real Meta/DM/IA/publicacao durante validacao.
+- API local reiniciada somente pelo launcher protegido apos inspecao do processo;
+  health localhost:3101 HTTP 200. Dashboard usar http://localhost:5181 (nao misturar
+  hosts no navegador). Jobs/worker permanecem desligados; dados/segredos preservados.
+- Alteracoes ainda somente locais, sem commit/push/deploy e sem acesso VPS nesta
+  rodada. Resumos anteriores e arquivos de simulacao/midias do usuario preservados.
+  Proximo: validar perfis com conta autorizada em deploy futuro; reconciliacao
+  de envio continua pendente, sem retry automatico nem reenvio de entrega incerta.
+
+### Dashboard local: nao misturar localhost e 127.0.0.1
+
+- Usuario abriu http://127.0.0.1:5181 e relatou Falha ao carregar dashboard.
+  Configuracao publica do frontend aponta a API para http://localhost:3101.
+- Nesta sessao, resumo/top-posts SQL locais e estatisticas Redis passaram;
+  API/dashboard estao ouvindo nas portas 3101/5181. Teste Chromium com cookie
+  ficticio SameSite=Lax confirmou: frontend 127.0.0.1 nao envia cookie para
+  API localhost; frontend localhost envia. Nao usada senha/sessao real no teste.
+- Orientacao: acessar http://localhost:5181 e entrar novamente, mantendo
+  localhost nos dois enderecos do navegador. Bind dos processos pode continuar
+  127.0.0.1. Nao desabilitar SameSite/autenticacao para contornar o problema.
+- Sem alteracao de .env, codigo, VPS ou banco. Validacao autenticada pelo usuario
+  ainda pendente; incremento local de resumos Inbox permanece preservado.
+
+### Cronograma retomado: aceite da release anterior e resumos Inbox
+
+- Usuario confirmou em 12/10 que validou na VPS selecao do modelo, confirmacao
+  de agendamento e contadores Inbox: funcionaram. Aceite relatado pelo usuario,
+  nao nova verificacao autenticada do agente. Ultimo deploy registrado continua
+  151d235/Action 38172633374; HEAD documental e9d6ceb antes desta etapa.
+- Proximo incremento implementado somente localmente: listagem Inbox passa a
+  usar instagram_name salvo, sem consulta Meta, e resumir a ultima mensagem
+  significativa, incluindo imagens recebidas e enviadas/anexos. Texto tem
+  prioridade sobre anexo; recibos e payloads vazios/invalidos nao substituem
+  resumo/data anteriores. Desempate por ID mantem ordem deterministica.
+- Payload da ultima mensagem fica interno ao servico; resposta de listagem
+  nao expoe URL/capacidade/anexo bruto. Contadores por mensagem preservados,
+  conversas deleted omitidas, escopo por conta mantido. Schemas legados sem
+  instagram_name e com raw_payload permanecem compativeis; sem migration.
+- backend/scripts/test-inbox-summaries.js passou em schema PostgreSQL temporario
+  isolado/removido: nome, texto, anexos, recibos, data, contadores, empate,
+  escopo/deleted, payload invalido e legado. Regressao PostgreSQL nao lidas,
+  oito testes confiabilidade, Playwright resumos desktop/mobile e sincronizacao
+  de badges passaram. Build, sintaxe e diff-check aprovados; capturas inspecionadas.
+  Meta/API nos testes de UI simuladas; nenhuma DM, publicacao ou chamada IA real.
+- Dashboard local 127.0.0.1:5181 e API 127.0.0.1:3101 iniciados; launcher protegido
+  valida autenticacao, banco local e jobs/worker desativados. Health local HTTP
+  200 e listagem anonima 401. Playwright instalado apenas em /tmp para testes.
+- Alteracoes somente locais, sem commit/push/deploy ou mudanca na VPS; arquivos
+  de simulacao e midias do usuario preservados. docs/0006-mult-posts.md segue ausente.
+- Proximos passos: testar resumos locais e autorizar deploy deste incremento;
+  depois planejar enriquecimento de perfil com cache/limites de consultas Meta
+  e reconciliacao de envio. Nome ausente permanece com fallback username/ID;
+  nao inventar perfil nem fazer chamada externa em cada polling de cinco segundos.
+  Rotulos video/audio/arquivo apenas identificam payload recebido, nao habilitam
+  envio desses formatos. Respostas rapidas seguem no backlog de atendimento.
 
 ## TAG de retomada: RETOMADA-2026-10-11
 

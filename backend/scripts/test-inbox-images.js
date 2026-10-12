@@ -151,6 +151,7 @@ test("Servico Instagram persiste imagem e sinaliza resultado incerto sem retry",
     let sends = 0;
     let saves = 0;
     const service = load("modules/instagram/instagram-send.service.js", {
+      "../inbox/message-send-attempts": {},
       "../../lib/db": { query: async () => ({ rowCount: 1, rows: [{ accessToken: outcome === "no-token" ? "" : "fake", instagramId: "ig" }] }) },
       "../webhooks/instagram-messages.repository": { saveMessage: async (message) => {
         saves++;

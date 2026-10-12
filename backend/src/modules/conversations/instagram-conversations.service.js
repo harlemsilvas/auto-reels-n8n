@@ -1,7 +1,19 @@
 const { query, getPool } = require("../../lib/db");
+const { lookupProfile } = require("./instagram-profile-cache");
 
 function log(...args) {
   console.log(`[CONVERSATIONS ${new Date().toISOString()}]`, ...args);
+}
+
+function attachmentSummary(payload) {
+  if (payload?.inboxImage?.filename) return "[Imagem]";
+  const attachments = payload?.message?.attachments ?? payload?.attachments;
+  if (!Array.isArray(attachments)) return null;
+  const types = attachments.map((item) => item?.type).filter((type) => typeof type === "string" && type.trim());
+  if (!types.length) return null;
+  if (types.length > 1) return "[Anexos]";
+  const labels = { image: "[Imagem]", video: "[Video]", audio: "[Audio]", file: "[Arquivo]" };
+  return Object.hasOwn(labels, types[0]) ? labels[types[0]] : "[Anexo]";
 }
 
 /**
@@ -72,25 +84,43 @@ async function listConversations({ accountId, limit = 50 }) {
         c.account_id::text AS "accountId",
         c.instagram_user_id AS "instagramUserId",
         c.instagram_username AS "instagramUsername",
-        NULL::text AS "instagramName",
+        NULLIF(BTRIM(to_jsonb(c)->>'instagram_name'), '') AS "instagramName",
         NULL::text AS "profilePictureUrl",
-        COALESCE(last_message.message_text, to_jsonb(c)->>'last_message_text') AS "lastMessageText",
+        CASE WHEN last_message.id IS NOT NULL THEN last_message.message_text
+          ELSE to_jsonb(c)->>'last_message_text' END AS "lastMessageText",
+        last_message.payload AS "_lastMessagePayload",
         COALESCE(last_message.created_at, c.last_message_at, c.created_at) AS "lastMessageAt",
         COALESCE(stats.unread_count, 0)::int AS "unreadCount",
         COALESCE(stats.messages_count, 0)::int AS "messagesCount",
         c.created_at AS "createdAt",
         c.updated_at AS "updatedAt",
-        ia.nome AS "accountName"
+        ia.nome AS "accountName",
+        CASE WHEN to_jsonb(ia)->>'deleted_at' IS NULL
+          AND (to_jsonb(ia)->>'ativo') IS DISTINCT FROM 'false'
+          THEN to_jsonb(ia)->>'access_token' END AS "_accessToken"
       FROM instagram_conversations c
       LEFT JOIN instagram_accounts ia
         ON ia.id = c.account_id
       LEFT JOIN LATERAL (
         SELECT
-          m.message_text,
-          m.created_at
-        FROM instagram_messages m
-        WHERE m.conversation_id = c.id
-        ORDER BY m.created_at DESC
+          m.id, NULLIF(BTRIM(m.message_text), '') AS message_text,
+          m.created_at, m.payload
+        FROM (
+          SELECT m.id, m.message_text, m.created_at,
+            COALESCE(to_jsonb(m)->'payload', to_jsonb(m)->'raw_payload') AS payload
+          FROM instagram_messages m WHERE m.conversation_id = c.id
+        ) m
+        WHERE NULLIF(BTRIM(m.message_text), '') IS NOT NULL
+          OR NULLIF(m.payload->'inboxImage'->>'filename', '') IS NOT NULL
+          OR EXISTS (
+            SELECT 1 FROM jsonb_array_elements(
+              CASE WHEN jsonb_typeof(COALESCE(m.payload->'message'->'attachments', m.payload->'attachments')) = 'array'
+                THEN COALESCE(m.payload->'message'->'attachments', m.payload->'attachments')
+                ELSE '[]'::jsonb END
+            ) attachment WHERE jsonb_typeof(attachment->'type') = 'string'
+              AND NULLIF(BTRIM(attachment->>'type'), '') IS NOT NULL
+          )
+        ORDER BY m.created_at DESC, m.id DESC
         LIMIT 1
       ) last_message ON true
       LEFT JOIN LATERAL (
@@ -99,8 +129,8 @@ async function listConversations({ accountId, limit = 50 }) {
         FROM instagram_messages m
         WHERE m.conversation_id = c.id
       ) stats ON true
-      WHERE ($1::uuid IS NULL OR c.account_id = $1::uuid)
-      ORDER BY COALESCE(last_message.created_at, c.last_message_at, c.created_at) DESC
+      WHERE c.deleted_at IS NULL AND ($1::uuid IS NULL OR c.account_id = $1::uuid)
+      ORDER BY COALESCE(last_message.created_at, c.last_message_at, c.created_at) DESC, c.id DESC
       LIMIT $2
     `,
     [normalizedAccountId, limit],
@@ -108,7 +138,19 @@ async function listConversations({ accountId, limit = 50 }) {
 
   return {
     total: result.rows.length,
-    items: result.rows,
+    items: await Promise.all(result.rows.map(async ({ _lastMessagePayload, _accessToken, ...conversation }) => {
+      const profile = conversation.instagramName && conversation.instagramUsername ? null : await lookupProfile({
+        accountId: conversation.accountId,
+        instagramUserId: conversation.instagramUserId,
+        accessToken: _accessToken,
+      });
+      return {
+        ...conversation,
+        instagramName: conversation.instagramName || profile?.name || null,
+        instagramUsername: conversation.instagramUsername || profile?.username || null,
+        lastMessageText: conversation.lastMessageText || attachmentSummary(_lastMessagePayload),
+      };
+    })),
   };
 }
 

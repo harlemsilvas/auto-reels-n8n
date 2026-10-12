@@ -9,6 +9,7 @@ function load(file, db) {
   const filename = path.resolve(__dirname, "../src", file);
   new Script(`(function(require,module){\n${fs.readFileSync(filename, "utf8")}\n})`, { filename })
     .runInThisContext()((name) => {
+      if (name === "./instagram-profile-cache") return { lookupProfile: async () => null };
       assert.equal(name, "../../lib/db");
       return db;
     }, module);

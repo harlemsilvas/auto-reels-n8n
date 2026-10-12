@@ -3,6 +3,7 @@ const { query } = require("../../lib/db");
 const apiClient = require("./instagram-api.client");
 
 const repository = require("../webhooks/instagram-messages.repository");
+const attempts = require("../inbox/message-send-attempts");
 
 function log(...args) {
   console.log(`[INSTAGRAM SEND ${new Date().toISOString()}]`, ...args);
@@ -85,28 +86,34 @@ async function saveOutboundMessage({
  * ======================================
  */
 
-async function sendTextMessage({ accountId, recipientId, messageText }) {
+async function sendTextMessage({ accountId, recipientId, messageText, conversationId, requestId }) {
+  if (typeof messageText !== "string" || !messageText.trim()) throw Object.assign(new Error("messageText is required."), { status: 400 });
+  messageText = messageText.trim();
   log("======================================");
   log("SEND TEXT MESSAGE");
 
   const account = await findAccount(accountId);
 
   if (!account) {
-    throw new Error("Instagram account not found.");
+    throw Object.assign(new Error("Instagram account not found."), { status: 404 });
   }
 
   if (!account.accessToken) {
-    throw new Error("Instagram access token not found.");
+    throw Object.assign(new Error("Instagram access token not found."), { status: 400 });
   }
 
   /**
    * Conversation
    */
 
-  const conversation = await getConversation({
+  const conversation = conversationId ? { id: conversationId } : await getConversation({
     accountId,
     recipientId,
   });
+  const attempt = await attempts.claim({ requestId, conversationId: conversation.id,
+    accountId, recipientId, messageText });
+  if (!attempt.fresh) return { ...attempt.message, sendAttemptId: attempt.row.id };
+  try {
 
   /**
    * Typing indicator
@@ -125,29 +132,68 @@ async function sendTextMessage({ accountId, recipientId, messageText }) {
    * Send message
    */
 
-  const response = await apiClient.sendTextMessage({
-    accessToken: account.accessToken,
-    recipientId,
-    messageText,
-  });
+  let response;
+  try {
+    response = await apiClient.sendTextMessage({
+      accessToken: account.accessToken, recipientId, messageText,
+    });
+  } catch (error) {
+    error.deliveryMayHaveSucceeded = !error.status || error.status >= 500;
+    throw error;
+  }
 
   /**
    * Save outbound
    */
 
-  const savedMessage = await saveOutboundMessage({
-    conversationId: conversation.id,
-    recipientId,
-    accountInstagramId: account.instagramId,
-    messageText,
-    response,
-  });
+  const metaMessageId = response?.message_id || response?.messageId;
+  if (typeof metaMessageId !== "string" || !metaMessageId) {
+    throw Object.assign(new Error("A Meta nao retornou um ID de mensagem."), { deliveryMayHaveSucceeded: true });
+  }
+  try {
+    await attempts.recordDelivery(attempt.row.id, response, account.instagramId);
+  } catch (error) {
+    error.deliveryMayHaveSucceeded = true;
+    error.metaMessageId = metaMessageId;
+    error.confirmedDelivery = { senderId: account.instagramId, response: { message_id: metaMessageId } };
+    throw error;
+  }
+  const outbound = { conversationId: conversation.id, recipientId,
+    accountInstagramId: account.instagramId, messageText, response };
+  let savedMessage;
+  try {
+    savedMessage = await saveOutboundMessage(outbound);
+  } catch {
+    // Retry only local persistence; repository deduplicates by the confirmed Meta ID.
+    try {
+      savedMessage = await saveOutboundMessage(outbound);
+    } catch (error) {
+      error.deliveryMayHaveSucceeded = true;
+      error.metaMessageId = metaMessageId;
+      throw error;
+    }
+  }
 
   log("MESSAGE SENT SUCCESSFULLY");
 
   log("======================================");
 
-  return savedMessage;
+  try {
+    await attempts.finish(attempt.row.id, savedMessage);
+  } catch (error) {
+    error.deliveryMayHaveSucceeded = true;
+    error.metaMessageId = metaMessageId;
+    throw error;
+  }
+  return { ...savedMessage, sendAttemptId: attempt.row.id };
+  } catch (error) {
+    await attempts.fail(attempt.row.id, error).catch(() => {});
+    if (error.deliveryMayHaveSucceeded) error.attempt = {
+      id: attempt.row.id, conversationId: conversation.id, state: "uncertain",
+      messageText, createdAt: attempt.row.created_at, metaMessageId: error.metaMessageId ?? null,
+    };
+    throw error;
+  }
 }
 
 /**

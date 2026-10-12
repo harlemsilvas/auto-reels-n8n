@@ -15,7 +15,7 @@ function load(file, dependencies) {
   return module.exports;
 }
 
-function sendService({ token = "fake", account = true, typingFails = false, sendFails = false, saveFails = false } = {}) {
+function sendService({ token = "fake", account = true, typingFails = false, sendFails = false, saveFails = false, saveFailures = 0, sendError, response = { message_id: "meta1" } } = {}) {
   const calls = [];
   const service = load("modules/instagram/instagram-send.service.js", {
     "../../lib/db": { query: async () => ({ rowCount: account ? 1 : 0, rows: [{ id: "a1", instagramId: "ig1", accessToken: token }] }) },
@@ -23,13 +23,17 @@ function sendService({ token = "fake", account = true, typingFails = false, send
       findOrCreateConversation: async () => ({ id: "c1" }),
       saveMessage: async (message) => {
         calls.push(["save", message]);
-        if (saveFails) throw Error("Persistence failed");
+        if (saveFails || saveFailures-- > 0) throw Error("Persistence failed");
         return { id: "m1", ...message };
       },
     },
+    "../inbox/message-send-attempts": {
+      claim: async () => ({ fresh: true, row: { id: "attempt-test" } }),
+      recordDelivery: async () => {}, finish: async () => {}, fail: async () => {},
+    },
     "./instagram-api.client": {
       sendTypingIndicator: async () => { calls.push(["typing"]); if (typingFails) throw Error("Typing failed"); },
-      sendTextMessage: async () => { calls.push(["send"]); if (sendFails) throw Error("Meta unavailable"); return { message_id: "meta1" }; },
+      sendTextMessage: async () => { calls.push(["send"]); if (sendError) throw sendError; if (sendFails) throw Error("Meta unavailable"); return response; },
     },
   });
   return { service, calls };
@@ -70,8 +74,32 @@ for (const options of [{ account: false }, { token: "" }, { sendFails: true }]) 
 }
 test("Falha de persistencia propaga sem repetir envio", async () => {
   const { service, calls } = sendService({ saveFails: true });
-  await assert.rejects(service.sendTextMessage({ accountId: "a1", recipientId: "user1", messageText: "Test" }));
+  await assert.rejects(service.sendTextMessage({ accountId: "a1", recipientId: "user1", messageText: "Test" }), { deliveryMayHaveSucceeded: true, metaMessageId: "meta1" });
   assert.equal(calls.filter(([name]) => name === "send").length, 1);
+  assert.equal(calls.filter(([name]) => name === "save").length, 2);
+});
+
+test("Reconcilia gravacao transitoria sem repetir chamada Meta", async () => {
+  const { service, calls } = sendService({ saveFailures: 1 });
+  const saved = await service.sendTextMessage({ accountId: "a1", recipientId: "user1", messageText: "Test" });
+  assert.equal(saved.metaMessageId, "meta1");
+  assert.equal(calls.filter(([name]) => name === "send").length, 1);
+  assert.equal(calls.filter(([name]) => name === "save").length, 2);
+});
+
+for (const [status, uncertain] of [[400, false], [403, false], [429, false], [500, true], [undefined, true]]) {
+  test(`Classifica rejeicao/entrega incerta: ${status}`, async () => {
+    const { service, calls } = sendService({ sendError: Object.assign(Error("Meta failure"), { status }) });
+    await assert.rejects(service.sendTextMessage({ accountId: "a1", recipientId: "user1", messageText: "Test" }), { deliveryMayHaveSucceeded: uncertain });
+    assert.equal(calls.filter(([name]) => name === "send").length, 1);
+    assert.equal(calls.filter(([name]) => name === "save").length, 0);
+  });
+}
+
+test("Resposta Meta sem ID nao vira sucesso nem grava mensagem sem identificador", async () => {
+  const { service, calls } = sendService({ response: {} });
+  await assert.rejects(service.sendTextMessage({ accountId: "a1", recipientId: "user1", messageText: "Test" }), { deliveryMayHaveSucceeded: true });
+  assert.equal(calls.filter(([name]) => name === "save").length, 0);
 });
 
 test("Middleware HTTP: sessao, CSRF e permissoes admin/operator", async () => {

@@ -8,6 +8,7 @@ import type {
   SendMessagePayload,
   SendTesterDmPayload,
   TesterConversation,
+  SendAttempt,
 } from "../types/inbox.types";
 
 /**
@@ -92,6 +93,23 @@ export async function sendMessage(payload: SendMessagePayload) {
   return response.data;
 }
 
+export async function getSendAttempt(conversationId: string, requestId?: string) {
+  const response = await api.get<{ attempt: SendAttempt | null; message?: Message | null }>(
+    `/api/internal/messages/attempts/${encodeURIComponent(conversationId)}`, { params: { requestId } });
+  return response.data;
+}
+
+export async function reconcileSendAttempt(conversationId: string, requestId: string) {
+  const response = await api.post<{ attempt: SendAttempt; message: Message }>(
+    `/api/internal/messages/attempts/${encodeURIComponent(conversationId)}/reconcile`, { requestId });
+  return response.data;
+}
+
+export async function dismissSendAttempt(conversationId: string, requestId: string) {
+  await api.post(`/api/internal/messages/attempts/${encodeURIComponent(conversationId)}/dismiss`,
+    { requestId, acknowledged: true });
+}
+
 export async function sendImage(conversationId: string, image: File) {
   const form = new FormData();
   form.append("image", image);
@@ -161,6 +179,9 @@ export async function hideTesterConversation(conversationId: string) {
 }
 
 export default {
+  getSendAttempt,
+  reconcileSendAttempt,
+  dismissSendAttempt,
   listConversations,
   listMessages,
   sendMessage,
