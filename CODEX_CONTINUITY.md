@@ -4,6 +4,218 @@ Atualizado em: 2026-10-13
 
 ## TAG de retomada: RETOMADA-2026-10-13
 
+### Deploy MR-05 autorizado: preflight
+
+- Usuario autorizou commit/push/deploy seguro do pacote MR-05. Escopo: webhook
+  assinatura/escopo/logs, paginas PT/EN/privacy/exclusao e pedidos duraveis 016.
+  Nao inclui executor de exclusao, limpeza automatica ou callback Meta.
+- VPS reinspecionada em f7d52a0, API online PID 1510352/restart 8, worker PID
+  1653/restart 0. Scripts remotos sujos preservados. Sem Action concorrente;
+  origin/main e branch em 0216ebd antes do commit.
+- App Secret/verify token/App ID presentes e overrides PM2 compativeis, sem
+  valores impressos. Config Inbox compativel; schemas 014/015 passaram, 016
+  ausente. Contagens preflight: 21 posts, 42 mensagens, seis conversas, 276
+  webhooks (274 object instagram, dois legados sem object).
+- Workflow ampliado com 016 e verificador dentro da transacao antes COMMIT;
+  backup release/config/dependencias e dump PostgreSQL protegido antes da
+  migration. Checa config webhook e schema 016 antes de carregar API.
+- Preflight: 32 testes seguranca/Inbox/perfis/imagens, 15 webhook, 11 relatorio,
+  schema isolado pedidos/016, Playwright paginas/login PT/EN, build/catalogos/
+  lint/sintaxe/YAML/bash passaram. Zero envio Meta ou exclusao real nos testes.
+- Publicacao planejada no dominio dashboard via fluxo existente; arquivo
+  privacy.html do dominio midia permanece separado/inalterado. Sem copiar env,
+  simulacao, Docker override, midias ou .gitignore do usuario.
+- Deploy com dashboard=true, restart_backend=true, run_migrations=true e
+  migration_set=016. Worker/n8n/portas/proxy preservados; rollback por release
+  protegida, mantendo tabelas aditivas 016 sem apagar dados. Resultado pendente.
+
+### MR-05: pedido duravel/verificacao, 016 somente local
+
+- Implementados service/routes privacy deletion-requests e migration/verificador
+  016, pedidos pending_verification/verified com actor/data/metodo/referencia,
+  replay e unicidade por conta/remetente. Escopo resolvido pela conversa no servidor.
+  Sessao/admin/senha definitiva/CSRF obrigatorios, mesmo auth flag false.
+- Router anterior ao parser/logger global, JSON 16KiB/campos extras rejeitados,
+  erro seguro; GET apenas metadata agregada. Sem callback publico ou UI.
+- Verificacao cria tarefas duraveis DB/files/cache/backups. Manifesto cruza
+  referencias de produto/mensagens externas e preserva compartilhadas/soft-deleted.
+  Arquivos/banco nao excluidos; ingresso e executor real ainda nao implementados.
+- Cache remove escopo nesta instancia e nao devolve perfil de consulta em voo
+  invalidada; capacidades novas possuem escopo e sao revogadas sem afetar outros.
+  Tarefa bloqueada por outras instancias/ingresso/capacidades legadas. Backups
+  registram revisao autenticada/inventario/plano, continuam bloqueados ate tratar
+  copias e validar restore. deletionComplete false enquanto faltarem etapas.
+- Backup antes da 016: backups/privacy-requests-016-2026-10-13T22-05-12.977Z/
+  local.dump, 392235 bytes/0600, SHA256
+  1c36c1745250d0b9e4f4eae7df31d4cc7e2670f10a5ea6cd19081fe08f5eea1b.
+  Mesmo servidor local/container confirmado, pg_restore catalogo valido; sem
+  restore. 016 aplicada/verificada antes COMMIT local, pedidos/tarefas vazios.
+- Teste schema isolado migration rollback/duas aplicacoes/verificador, persistencia/
+  verificacao/escopo/HTTP/CSRF/saida segura passou; schema removido. Perfis 9/9,
+  imagens 5/5 e reliability 15/15, sintaxe/diff passaram com Meta simulada.
+- PID antigo API ausente, porta 3101 livre; launcher protegido iniciado com auth
+  ativa/DB local/jobs/Meta desligados. Health 200/privacy anonimo 401. Sem worker,
+  pedidos reais, limpeza, envio Meta, commit/push/deploy ou acesso VPS.
+- Registro mr-05/pedido-duravel.md. Proximo executor/bloqueio escopo em produtores,
+  quarentena de arquivos e reconciliacao, cobertura logs/eventos/cache/copias e
+  restore. 016 nao aplicada VPS nem adicionada ao workflow; f7d52a0 registrada.
+  MR-05 permanece aberto; verified nao comprova identidade automaticamente nem
+  exclusao final. Politica de minimizacao do registro do pedido ainda pendente.
+
+### MR-05: aceite paginas e exclusao demonstrativa isolada
+
+- Usuario confirmou textos PT/EN e pediu sequencia. Aceite registrado; avisos
+  de rascunho removidos localmente. Nao e parecer juridico/aprovacao Meta nem
+  autorizacao de deploy; paginas remotas intactas.
+- Criado modulo privacy/deletion-demo.js e runner test-deletion-demo.js,
+  restritos a schema mr05_deletion_demo_UUID local descartavel. Recusa public,
+  DB remoto/connection string/production. Sem rota ou migration principal.
+- PostgreSQL demonstrou COMMIT/ROLLBACK, bloqueio sending/uncertain/desconhecido/
+  recibo inconsistente/referencia de outra conversa, remocao por conta+remetente,
+  eventos mistos preservando terceiros, manifesto midia compartilhada e replay
+  de pedido/escopo. Falha tardia/FK restauram evento e historico integralmente.
+- Contagens public antes/depois iguais; schema temporario removido. Sem arquivo
+  real manipulado, Meta/e-mail/dados individuais na saida. Sintaxe/diff passaram.
+  Registro mr-05/exclusao-demonstrativa.md explicita limites: FKs demo adicionais,
+  product_media ficticio, verified nao autentica e audit descartavel com IDs.
+- Nao remover guarda para aplicar em public. Proximo desenho de pedido duravel/
+  bloqueio escopo e verificacao autenticada, arquivos/cache/copias e corrida com
+  ingresso real. Sem limpeza principal/endpoint/exclusao completa ou mudanca VPS.
+- Build/catalogos/lint e paginas PT/EN apos remover aviso validados abaixo.
+  Sem restart/commit/push/deploy; VPS f7d52a0 registrada preservada, MR-05 aberto.
+
+### MR-05: paginas privacy/exclusao PT/EN, somente local
+
+- Usuario pediu revisar privacy conforme Meta com EN e depois seguir adiante.
+  Releitura publica HTTPS confirmou politica antiga 15/05/2026, contato antigo
+  e foco publicacao. Termos Meta diretos indisponiveis; nao declarar certificacao.
+- Criados dashboard/public/privacy.html, privacy.en.html, data-deletion.html,
+  data-deletion.en.html e privacy.css. HTML sem sessao/JS/tracking, idioma por
+  links, crosslinks PT/EN; login oferece privacy/exclusao conforme locale.
+- Texto inclui razao social/contato confirmado, Inbox/eventos/ledger/anexos,
+  usuarios/sessoes/audit, produto e compartilhamento real. Retencao planejada
+  nao tratada como TTL operacional; sem promessa de criptografia/SLA/aprovacao.
+  Exclusao orienta e-mail/minimos/verificacao proporcional e limites de copias.
+- Paginas com aviso de revisao para responsavel; nao publicadas. Sao GET de
+  instrucoes, nao callback POST/signed_request. Processo de exclusao real segue
+  pendente. Nenhum e-mail/pedido externo/alteracao do painel Meta executado.
+- Build/catalogos/lint Login/sintaxe/diff-check passaram. Bundle 551.15 kB,
+  gzip 166.49 kB, aviso >500 kB anterior. Playwright privacy-pages.mjs passou
+  desktop/390/320 sem JS/sessao, idioma/mailto/links/overflow e login PT/EN
+  com APIs simuladas. Captura exclusao EN mobile inspecionada. Chrome do usuario
+  pode abrir localhost:5181; Chromium utilizado apenas como ferramenta de teste.
+- Registro mr-05/paginas-privacidade.md. Antes de publicar: dono aceitar textos/
+  confirmar acessos e processo, exclusao demonstrativa, contrato/painel Meta e
+  host real. Build dashboard nao atualiza privacy no host midia automaticamente.
+- Sem migration, limpeza, restart, commit/push/deploy ou acesso VPS. Release
+  f7d52a0 registrada intacta; paginas remotas antigas preservadas. MR-05 aberto.
+
+### MR-05: relatorio local de candidatos, sem limpeza
+
+- Usuario autorizou preparar relatorio preservando tentativas incertas e midias
+  compartilhadas. Criados backend/scripts/report-retention-candidates.js,
+  modules/privacy/retention-report.js e teste focado; comandos/regras em
+  project-docs/meta-app-review/mr-05/relatorio-local.md.
+- Schema/FKs reais inspecionados localmente em READ ONLY: ledger FK de conversa
+  e message_id ON DELETE SET NULL; webhook created_at sem timezone. Sem migration.
+  Script recusa DB remoto/connection string/production e storage fora do repo;
+  somente metadados, snapshot repeatable-read/read-only/ROLLBACK, sem imports de
+  API/worker/Meta. JSON agregado sem conteudo/IDs/URLs/tokens/paths.
+- Sending/uncertain/estado desconhecido/recibo nao reconciliado protegem conversa
+  inteira. Linha/imagem ligada ao ledger preservada. Midias compartilhadas,
+  referencias soft-deleted, FKs extras e arquivos orfaos ficam protegidos.
+  Reels/modelos/uploads apenas fornecem referencias, nunca candidatos.
+- Relatorio final 2026-10-13T20:26:09.856Z: cinco mensagens >90 dias candidatas
+  a revisao, ledger zero, diretorio Inbox ausente, 74 nomes de referencias de
+  produto preservados (nao arquivos existentes), 191 webhooks todos pendentes
+  de correlacao/fuso. Arquivo 0600 em .dev-run/retention-reports/, ignorado Git.
+- Onze testes fixtures passaram: incertas/ativas, recibo inconsistente, FK,
+  compartilhadas, datas/limites, orfaos/symlinks e saida segura; sintaxe/diff
+  aprovados. Leitura DB exigiu permissao de loopback fora do sandbox. Nao ha
+  tentativa real nem imagem no dataset para provar esses cenarios por consulta.
+- Snapshot DB e filesystem nao sao atomicos; categorias se sobrepoem e contagens
+  nao autorizam delete. Logs/backups/cache/resumos e webhook exigem etapa propria.
+  Proximo desenho transacional demonstrativo com locks/revalidacao/copias.
+- Sem exclusao/anonimizacao, mutation DB, migration, restart, chamada Meta,
+  commit/push/deploy ou acesso VPS (release f7d52a0 registrada). Alteracoes
+  anteriores e arquivos locais do usuario preservados. MR-05 ainda aberto.
+
+### MR-05: diretriz de retencao aceita e tabela corrigida
+
+- Usuario forneceu docs/prazo-retencao-backup-logs.md e autorizou seguir suas
+  sugestoes. Tabela corrigida para Markdown, original preservado com nota de
+  revisao. docs/ ignorado; registro versionavel em
+  project-docs/meta-app-review/mr-05/retencao-e-exclusao.md.
+- Faixas aceitas como diretriz: DMs 30-90 dias, imagens 7-30, logs 7-14,
+  acesso/seguranca seis meses, backups diarios 14-30/snapshots ate 90,
+  ledger ate um ano somente metadata. Base tecnica proposta 90/30/14/30,
+  seis meses de calendario/um ano; nao numeros individualmente escolhidos pelo
+  usuario. Webhook 14 dias e proposta adicional; tentativas ativas/incertas
+  exigem desenho sem liberar reenvio. Nenhuma rotina de limpeza implementada.
+- Marco Civil art. 15 conferido no Planalto: registros de acesso sob condicoes
+  do artigo, nao todo log nem norma da LGPD. Meta callback/termos indisponiveis;
+  prazos universais/URL 24h/desautorizacao 30 dias nao comprovados. Reels/modelos
+  compartilhados exigem frente propria; restore precisa reaplicar exclusoes.
+- D07/inventario/guia/MR-05 atualizados. Acessos VPS/e-mail, operadores/regiao,
+  verificacao do solicitante, processo/excecoes e politica PT/EN pendentes.
+- Validacao documental tabela/links/diff-check; sem testes runtime novos,
+  exclusao, migration, restart, commit/push/deploy ou acesso VPS (f7d52a0
+  registrada). Proximo: schema/FKs local e relatorio de candidatos sem apagar.
+
+
+### MR-05: primeiro incremento de seguranca webhook, somente local
+
+- Retomado pelo handoff abaixo; branch docs/meta-app-review-i18n, HEAD 0216ebd.
+  Ultima VPS registrada f7d52a0/Action 38453215523, nao consultada nesta sessao.
+  Alteracoes documentais anteriores, simulacao, Docker override e midias preservados.
+- POST webhook agora usa bytes originais antes do JSON global, HMAC-SHA256 e
+  timingSafeEqual com META_APP_SECRET existente. Assinatura ausente/malformada/
+  invalida retorna 403; secret ausente 503, sem bypass local/auth desligada.
+  JSON invalido 400, limite existente 100 KiB/413 e compressao rejeitada/400.
+  GET challenge preservado; token ausente/config ausente/query estruturada rejeitados.
+- Removidos payload, texto, IDs, nomes, conversa, verify token/challenge e erros
+  externos brutos dos logs deste caminho. Erros do parser ficam na rota com
+  resposta segura; erro async depois do ACK nao passa ao handler global.
+- Evento salvo e envelope filtrado, nao copia bruta do lote: somente object
+  instagram, messaging e changes.messages de conta ativo=true/deleted_at NULL.
+  Escopo inbound pelo recipient, echo pelo sender; desconhecidos/outros campos/
+  metadata do envelope descartados antes de gravar. Historico e SSE preservados;
+  echo continua sem nova mensagem. Nao e isolamento por operador/workspace.
+- Nesta sessao: 15 testes webhook + 3 seguranca HTTP/config passaram; regressao
+  reliability 15/15, imagens 4/4 e OAuth simulado passou. Sintaxe e diff-check
+  aprovados. HTTP precisou permissao fora do sandbox para porta de loopback.
+  DB/Meta simulados, sem mensagem real, leitura de .env, migration ou exclusao.
+- Documentacao Graph Meta respondeu 429; SDK oficial Meta confirma header/secret,
+  fonte e limites registrados em mr-05/README.md. Entrega Instagram real e
+  configuracao efetiva devem ser verificadas antes de deploy autorizado.
+- Somente codigo preparado localmente: nenhum restart de API/worker, commit,
+  push, deploy ou alteracao VPS. ACK 200 antecipado e falhas de persistencia
+  sem retry continuam limites anteriores; nao prometer entrega duravel.
+- Proximo: dono definir retencao por categoria, operadores/acessos e procedimento
+  de verificacao/exclusao; politica/instrucoes PT/EN dependem dessas decisoes.
+  Pergunta enviada nesta sessao, ainda sem resposta. MR-01/05 permanecem abertos.
+  docs/0006-mult-posts.md continua ausente; Reels/worker/n8n intactos.
+
+### Handoff: iniciar MR-05 em nova sessao
+
+- Usuario vai abrir nova sessao para MR-05; pediu registro para nao perder
+  contexto. Criado project-docs/meta-app-review/mr-05/README.md com base,
+  decisoes abertas, sequencia local e gates. Ainda nao iniciou implementacao.
+- Branch docs/meta-app-review-i18n; ultimo commit documental enviado 0216ebd,
+  release VPS funcional f7d52a0/Action 38453215523. Este handoff e alteracao
+  documental local posterior; sem novo commit/push/deploy nesta rodada.
+- Retomar pela reinspecao de seguranca webhook: raw payload/verify token em
+  logs, assinatura POST e escopo antes de persistir. MR-03/04 sanitizaram OAuth/
+  Send API, nao estes riscos. Contrato Meta deve ser verificado antes de mudar.
+- Dono ainda nao definiu retencao DMs/imagens/logs/backups; processo seguro
+  de exclusao, operadores/regiao e politica PT/EN exigem decisoes confirmadas.
+  Exclusao por ocultacao de tester nao existe; nao prometer SLA/limpeza/criptografia.
+- Aceite autenticado da VPS ainda nao relatado apos deploy. Ambiente separado
+  do analista, OAuth real/multipagina e acesso avancado Meta permanecem pendentes.
+- Guia 03-submissao-e-evidencias.md atualizado: rótulo Connect with Meta ja
+  implementado, deploy nao e submissao/aprovacao. Preservar arquivos locais do
+  usuario e VPS; nao iniciar MR-05 nem novo deploy por este pedido documental.
+
 ### Deploy MR-02..04 confirmado na VPS
 
 - Release f7d52a03299d23f48ff95fb31456ae600d14457b; Action 38453215523

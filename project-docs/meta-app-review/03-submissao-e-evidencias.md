@@ -1,6 +1,12 @@
 # Submissao, tratamento de dados e evidencias
 
-Rascunho em 2026-10-12. Nao enviado; textos dependem de revisao do dono.
+Atualizado em 2026-10-13. Nao enviado; textos dependem de revisao do dono.
+MR-02..04 publicados na release VPS `f7d52a0`; registro documental enviado
+`0216ebd`. Login publico PT/EN validado, sem novo teste autenticado/OAuth real.
+Preparacao da proxima sessao: [MR-05](mr-05/README.md). Politica, exclusao,
+deploy/entrega real da seguranca webhook e ambiente do analista ainda pendentes.
+Primeiro incremento de assinatura/escopo/logs webhook testado somente localmente
+no MR-05; nao comprova configuracao de producao nem conclui os controles de dados.
 
 Escopo confirmado: uso interno HRM/contas proprias, avaliacao de Inbox com
 ambiente separado. Publicacao/insights nao integram esta primeira submissao;
@@ -19,7 +25,17 @@ dedicada de exclusao nao existe segundo dono; politica atual ja orienta pedido
 por e-mail, sem processo operacional comprovado. Nao enviar respostas de dados
 como concluidas antes dessas verificacoes.
 
+Atualizacao em 2026-10-13: diretriz de faixas de retencao aceita pelo dono,
+[base tecnica registrada](mr-05/retencao-e-exclusao.md). Ainda sem rotina aplicada;
+processo de exclusao, operadores e politica publica pendentes. Nao preencher o
+formulario como se rotacao/expiracao/exclusao ja estivessem operacionais.
+
 ## Descricao candidata: instagram_manage_messages
+
+Revisao privacy/instrucoes PT/EN preparada somente localmente em 2026-10-13:
+[paginas e gates de publicacao](mr-05/paginas-privacidade.md). Ainda nao ha nova
+URL remota de exclusao confirmada, callback automatico ou processo de exclusao
+demonstrado. Nao usar caminhos localhost nos campos do painel Meta.
 
 ```text
 SocialBot is an internal operations dashboard used by authorized staff to
@@ -46,11 +62,11 @@ Completar descricoes especificas por permissao mantida; nao reutilizar esta para
 
 ## Roteiro real de screencast
 
-1. Usar dados demonstrativos autorizados, interface EN apos implementacao ou
+1. Usar dados demonstrativos autorizados, interface EN no caminho ja traduzido ou
    legendas EN revisadas. Fechar .env, terminal de logs e ferramentas com tokens.
 2. Mostrar SocialBot desconectado; iniciar no login publico. Capturar entrada
    com usuario de avaliacao, sem senha legivel. Nao mostrar senha pessoal Meta.
-3. Abrir Accounts e iniciar Connect with Facebook/Meta (rotulo futuro proposto).
+3. Abrir Accounts e iniciar Connect with Meta (rotulo EN implementado).
    Mostrar login/consentimento Meta real e conta/pagina escolhida quando disponivel.
 4. Mostrar retorno e conta conectada. Se a conta ja autorizou e nao aparece
    consentimento, usar conta demonstrativa adequada; nao revogar a integracao

@@ -1,14 +1,8 @@
 const service = require("./instagram-messages.service");
 
-async function receiveInstagramWebhook(req, res, next) {
+async function receiveInstagramWebhook(req, res) {
   try {
     const body = req.body;
-
-    console.log("======================================");
-    console.log("[INSTAGRAM WEBHOOK RECEIVED]");
-    console.log(JSON.stringify(body, null, 2));
-    console.log("======================================");
-
     /**
      * Responde IMEDIATAMENTE para Meta
      * evitando timeout.
@@ -20,7 +14,8 @@ async function receiveInstagramWebhook(req, res, next) {
      */
     await service.processWebhook(body);
   } catch (error) {
-    next(error);
+    console.error("[INSTAGRAM WEBHOOK PROCESSING FAILED]");
+    if (!res.headersSent) res.sendStatus(500);
   }
 }
 

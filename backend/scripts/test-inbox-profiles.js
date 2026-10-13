@@ -25,6 +25,30 @@ function cache(fetchProfile) {
 }
 const input = { accountId: "account-a", instagramUserId: "123", accessToken: "fake-token" };
 
+test("Exclusao de escopo remove todas as credenciais sem remover outras contas/perfis", async () => {
+  let calls=0;
+  const api=cache(async()=>({name:`Perfil ${++calls}`}));
+  await api.lookupProfile(input);
+  await api.lookupProfile({...input,accessToken:"another"});
+  await api.lookupProfile({...input,accountId:"account-b"});
+  assert.equal(api.forgetScope(input),2);
+  await api.lookupProfile({...input,accountId:"account-b"});
+  assert.equal(calls,3);
+  await api.lookupProfile(input);
+  assert.equal(calls,4);
+});
+
+test("Resposta de perfil em voo nao repovoa cache nem devolve perfil apos invalidacao", async () => {
+  let release;
+  const api=cache(async()=>{await new Promise(resolve=>{release=resolve;});return {name:"Deleted"};});
+  const pending=api.lookupProfile(input);
+  await Promise.resolve();
+  assert.equal(api.forgetScope(input),1);
+  release();
+  assert.equal(await pending,null);
+  assert.equal(api.forgetScope(input),0);
+});
+
 test("Cache deduplica consultas concorrentes, normaliza dados e expira em uma hora", async () => {
   let calls = 0;
   let release;

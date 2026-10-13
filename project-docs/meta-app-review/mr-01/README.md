@@ -24,7 +24,7 @@ e validacoes externas pendentes. MR-01 ainda nao concluido.
 | D04 | Integracao | Preservar Facebook Login e graph.facebook.com; nao migrar por diferenca de nome da permissao | Proposta tecnica, consistente com codigo atual |
 | D05 | Identidade legal | HRM MOTOS PECAS E ACESSORIOS LTDA; exclusao@hrmmotos.com.br, alias de vendas@hrmmotos.com.br; dono atende pedidos | Declarados pelo dono em 2026-10-12; caixa operacional segundo relato, sem teste de e-mail ou verificacao documental pelo agente |
 | D06 | Operadores | Hostinger hospeda VPS; backups atuais na propria VPS | Confirmado pelo dono em 2026-10-12; entidade contratual/localizacao/outros acessos a confirmar. Copia local eventual e proposta, nao rotina ou recurso implementado |
-| D07 | Retencao/exclusao | Ainda nao ha prazo definido para DMs, imagens, logs e backups | Estado atual confirmado pelo dono em 2026-10-12; politica futura e rotina de exclusao continuam pendentes |
+| D07 | Retencao/exclusao | Diretriz de faixas aceita; runtime sem limpeza | Usuario autorizou seguir sugestoes em 2026-10-13; [base tecnica e limites](../mr-05/retencao-e-exclusao.md). Processo/implementacao pendentes |
 | D08 | URLs de avaliacao/privacidade | Politica em https://midia.hrmmotos.com.br/privacy.html; pagina de exclusao ainda inexistente segundo dono | Politica acessivel/lida nesta etapa; revisao de conteudo, pagina de exclusao e URL de avaliacao pendentes |
 
 Nao substituir campos pendentes por respostas convenientes. Uso por outras

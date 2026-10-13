@@ -57,6 +57,8 @@ Nosso login proprio pode continuar separado da autorizacao Meta.
    limites de OAuth real, selecao multipagina e ambiente do analista.
 7. [MR-04 local](mr-04/README.md): Inbox/Testers PT/EN, feedback seguro de
    permissao e regressao de entrega incerta, anexos e nao lidas.
+8. [Retomada MR-05](mr-05/README.md): estado pos-deploy, decisoes pendentes,
+   sequencia de seguranca/privacidade/exclusao e gates para nova sessao.
 
 ## Decisoes propostas
 

@@ -23,6 +23,7 @@ async function findAccountByInstagramId(instagramId) {
       FROM instagram_accounts
       WHERE instagram_id = $1
         AND deleted_at IS NULL
+        AND ativo = true
       LIMIT 1
     `,
     [instagramId],
@@ -37,21 +38,54 @@ async function findAccountByInstagramId(instagramId) {
  * ======================================
  */
 
+// Rebuild the envelope using only events addressed to connected accounts.
+// Never save the original mixed-account batch or unrelated change metadata.
+async function scopeWebhook(body) {
+  const scoped = { object: "instagram", entry: [] };
+  if (body?.object !== "instagram" || !Array.isArray(body.entry)) return scoped;
+  const accounts = new Map();
+  async function allowed(event) {
+    const id = event?.message?.is_echo ? event?.sender?.id : event?.recipient?.id;
+    if (typeof id !== "string" || !id) return false;
+    if (!accounts.has(id)) accounts.set(id, await findAccountByInstagramId(id));
+    return Boolean(accounts.get(id));
+  }
+  for (const entry of body.entry) {
+    const messaging = [];
+    const changes = [];
+    for (const event of Array.isArray(entry?.messaging) ? entry.messaging : []) {
+      if (await allowed(event)) messaging.push(event);
+    }
+    for (const change of Array.isArray(entry?.changes) ? entry.changes : []) {
+      if (change?.field !== "messages") continue;
+      const value = change.value;
+      if (Array.isArray(value?.messaging)) {
+        const events = [];
+        for (const event of value.messaging) if (await allowed(event)) events.push(event);
+        if (events.length) changes.push({ field: "messages", value: { messaging: events } });
+      } else if (await allowed(value)) {
+        changes.push({ field: "messages", value: {
+          sender: value.sender, recipient: value.recipient, message: value.message,
+        } });
+      }
+    }
+    if (messaging.length || changes.length) scoped.entry.push({ messaging, changes });
+  }
+  return scoped;
+}
+
 async function processWebhook(body) {
   try {
     log("======================================");
     log("START PROCESS WEBHOOK");
 
     /**
-     * Save raw payload
+     * Save only the connected-account portion of the payload
      */
 
+    body = await scopeWebhook(body);
+    if (!body.entry.length) return;
     await repository.saveWebhookEvent(body, "instagram_webhook");
-
-    if (!body?.entry?.length) {
-      log("No entries found");
-      return;
-    }
 
     for (const entry of body.entry) {
       const messaging = entry?.messaging ?? [];
@@ -83,7 +117,7 @@ async function processWebhook(body) {
   } catch (error) {
     console.error(
       "[INSTAGRAM WEBHOOK ERROR]",
-      error?.response?.data || error.message,
+      "PROCESSING_FAILED",
     );
   }
 }
@@ -120,15 +154,6 @@ async function processMessagingEvent(event) {
 
     const hasAttachments = attachments.length > 0;
 
-    log({
-      senderId,
-      recipientId,
-      metaMessageId,
-      messageText,
-      hasAttachments,
-      isEcho,
-    });
-
     /**
      * Ignore echo messages
      * (messages sent by ourselves)
@@ -155,15 +180,9 @@ async function processMessagingEvent(event) {
     const account = await findAccountByInstagramId(recipientId);
 
     if (!account) {
-      log("Instagram account not found:", recipientId);
+      log("Instagram account not found");
       return;
     }
-
-    log("ACCOUNT FOUND:", {
-      id: account.id,
-      instagramId: account.instagramId,
-      nome: account.nome,
-    });
 
     /**
      * Find/create conversation
@@ -173,8 +192,6 @@ async function processMessagingEvent(event) {
       accountId: account.id,
       instagramUserId: senderId,
     });
-
-    log("CONVERSATION:", conversation);
 
     /**
      * Save message
@@ -216,7 +233,7 @@ async function processMessagingEvent(event) {
   } catch (error) {
     console.error(
       "[PROCESS MESSAGING EVENT ERROR]",
-      error?.response?.data || error.message,
+      "PROCESSING_FAILED",
     );
   }
 }
@@ -233,11 +250,6 @@ async function processChangeEvent(change) {
     log("PROCESS CHANGE EVENT");
 
     const field = change?.field;
-
-    log({
-      field,
-      value: change?.value,
-    });
 
     if (field === "messages") {
       const value = change?.value ?? {};
@@ -275,7 +287,7 @@ async function processChangeEvent(change) {
   } catch (error) {
     console.error(
       "[PROCESS CHANGE EVENT ERROR]",
-      error?.response?.data || error.message,
+      "PROCESSING_FAILED",
     );
   }
 }

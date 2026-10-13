@@ -7,7 +7,7 @@ import { LanguageSelector } from "../../../shared/i18n/LanguageSelector";
 export function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const { t } = useTranslation("auth");
+  const { t, i18n } = useTranslation("auth");
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -65,6 +65,11 @@ export function LoginPage() {
             {t(isSubmitting ? "signingIn" : "signIn")}
           </button>
         </form>
+        <p>
+          <a href={i18n.resolvedLanguage?.startsWith("en") ? "/privacy.en.html" : "/privacy.html"}>{t("privacyPolicy")}</a>
+          {" · "}
+          <a href={i18n.resolvedLanguage?.startsWith("en") ? "/data-deletion.en.html" : "/data-deletion.html"}>{t("dataDeletion")}</a>
+        </p>
       </section>
     </main>
   );

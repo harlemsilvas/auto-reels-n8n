@@ -32,6 +32,7 @@ on:
           - "013"
           - "014"
           - "015"
+          - "016"
           - "010_011"
           - "009_010_011"
 
@@ -72,6 +73,11 @@ jobs:
               local verify_file="$2"
 
               log "Aplicando migration: $file"
+              if [[ "$file" == "sql/016-privacy-deletion-requests.sql" ]]; then
+                { sed '/^COMMIT;$/d' "$file"; cat "$verify_file"; printf 'COMMIT;\n'; } \
+                  | docker exec -i socialbot_postgres psql -U n8n -d n8n
+                return
+              fi
               docker exec -i socialbot_postgres psql -U n8n -d n8n < "$file"
 
               log "Validando migration: $verify_file"
@@ -122,6 +128,12 @@ jobs:
             node --check src/modules/conversations/instagram-conversations.routes.js
             node --check src/modules/webhooks/instagram-messages.repository.js
             node --check src/modules/webhooks/instagram-messages.service.js
+            node --check src/modules/webhooks/instagram-webhook.signature.js
+            node --check src/modules/webhooks/instagram-webhook.verify.js
+            node --check src/modules/webhooks/instagram-messages.routes.js
+            node --check src/modules/webhooks/instagram-messages.controller.js
+            node --check src/modules/privacy/deletion-requests.service.js
+            node --check src/modules/privacy/deletion-requests.routes.js
             node --check src/modules/instagram/instagram-send.service.js
             node --check src/modules/inbox/testers-dm.service.js
             node --check src/modules/inbox/inbox-images.service.js
@@ -143,6 +155,9 @@ jobs:
               INBOX_MEDIA_DIR: '/home/socialbot/storage/inbox',
             };
             const current = dotenv.parse(fs.readFileSync('.env'));
+            for (const key of ['META_APP_ID', 'META_APP_SECRET', 'META_WEBHOOK_VERIFY_TOKEN']) {
+              if (!current[key]?.trim()) throw new Error(`Configuracao webhook ausente: ${key}`);
+            }
             for (const [key, value] of Object.entries(settings)) {
               if (current[key] && current[key] !== value) {
                 throw new Error(`Configuracao Inbox divergente: ${key}; revisar antes do deploy`);
@@ -185,6 +200,11 @@ jobs:
 
               cd "$APP_DIR/backend"
               case "$MIGRATION_SET" in
+                "016")
+                  run_migration \
+                    "sql/016-privacy-deletion-requests.sql" \
+                    "sql/016-privacy-deletion-requests-verify.sql"
+                  ;;
                 "015")
                   run_migration \
                     "sql/015-inbox-send-attempts.sql" \
@@ -258,6 +278,8 @@ jobs:
                 < sql/014-inbox-unread-verify.sql
               docker exec -i socialbot_postgres psql -U n8n -d n8n \
                 < sql/015-inbox-send-attempts-verify.sql
+              docker exec -i socialbot_postgres psql -U n8n -d n8n \
+                < sql/016-privacy-deletion-requests-verify.sql
             fi
 
             if [[ "$RESTART_BACKEND" == "true" ]]; then

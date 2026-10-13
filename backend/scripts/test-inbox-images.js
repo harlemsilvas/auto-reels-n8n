@@ -22,6 +22,26 @@ function load(file, dependencies) {
 const conversationId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const messageId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 
+test("Revoga capacidade somente para o escopo confirmado e preserva outros destinatarios", async () => {
+  let recipient="subject-a";
+  const urls=[];
+  const service=load("modules/inbox/inbox-images.service.js",{
+    "node:fs/promises":{async mkdir(){},async writeFile(){}},"node:path":path,"node:crypto":crypto,sharp,
+    "../../lib/db":{async query(){return {rowCount:1,rows:[{accountId:"account-a",recipientId:recipient}]};}},
+    "../../config/env":{INBOX_MEDIA_DIR:"/tmp/demo-inbox",INBOX_PUBLIC_BASE_URL:"https://example.test"},
+    "../instagram/instagram-send.service":{async sendImageMessage(input){urls.push(input.imageUrl);return {};}}
+  });
+  const buffer=await sharp({create:{width:2,height:2,channels:3,background:"red"}}).png().toBuffer();
+  await service.sendConversationImage(conversationId,{buffer,mimetype:"image/png"});
+  recipient="subject-b";
+  await service.sendConversationImage(conversationId,{buffer,mimetype:"image/png"});
+  const [a,b]=urls.map(url=>url.split("/").at(-1));
+  assert.ok(service.resolveDelivery(a));
+  assert.deepEqual(service.revokeScope({accountId:"account-a",instagramUserId:"subject-a"}),{removed:1,legacyUnscoped:0});
+  assert.throws(()=>service.resolveDelivery(a),error=>error.status===404);
+  assert.ok(service.resolveDelivery(b));
+});
+
 test("JPG/PNG: pixels validados, metadados removidos, formato e limites", async () => {
   const service = load("modules/inbox/inbox-images.service.js", {
     "node:fs/promises": fs, "node:path": path, "node:crypto": crypto, sharp,

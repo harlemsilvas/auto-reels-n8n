@@ -1,0 +1,19 @@
+:root { color-scheme: light; font-family: system-ui, sans-serif; color: #233047; background: #edf2f7; }
+* { box-sizing: border-box; }
+body { margin: 0; padding: 32px 16px; }
+main { max-width: 880px; margin: auto; padding: 40px; background: white; border: 1px solid #dbe3ed; border-radius: 16px; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.brand { font-weight: 650; }
+nav { display: flex; gap: 8px; flex-wrap: wrap; }
+nav a { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 14px; border: 1px solid #b8c8dd; border-radius: 8px; text-decoration: none; }
+nav a[aria-current] { background: #163d72; color: white; border-color: #163d72; }
+a { color: #174f96; overflow-wrap: anywhere; }
+a:focus-visible { outline: 3px solid #b45309; outline-offset: 4px; }
+h1 { font-size: clamp(1.8rem, 5vw, 2.6rem); line-height: 1.2; margin-top: 32px; }
+h2 { font-size: 1.3rem; line-height: 1.4; margin-top: 32px; }
+p { line-height: 1.75; overflow-wrap: anywhere; }
+ol { padding-left: 24px; }
+li { line-height: 1.75; margin-bottom: 12px; overflow-wrap: anywhere; }
+.date, footer { color: #516079; font-size: .94rem; }
+footer { border-top: 1px solid #dbe3ed; margin-top: 36px; padding-top: 20px; line-height: 1.6; }
+@media (max-width: 480px) { body { padding: 12px 8px; } main { padding: 22px 16px; } }

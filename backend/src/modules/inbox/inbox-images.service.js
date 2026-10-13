@@ -46,9 +46,9 @@ function deliveryBase() {
   return url.href.replace(/\/$/, "");
 }
 
-function grantDelivery(filename) {
+function grantDelivery(filename, scope) {
   const token = randomBytes(32).toString("hex");
-  const entry = { filename, expiresAt: Date.now() + 15 * 60 * 1000 };
+  const entry = { filename, ...scope, expiresAt: Date.now() + 15 * 60 * 1000 };
   capabilities.set(token, entry);
   setTimeout(() => capabilities.delete(token), 15 * 60 * 1000).unref();
   return token;
@@ -77,7 +77,8 @@ async function sendConversationImage(conversationId, file) {
   const filename = randomUUID() + image.extension;
   await fs.mkdir(INBOX_MEDIA_DIR, { recursive: true, mode: 0o700 });
   await fs.writeFile(imagePath(filename), image.buffer, { flag: "wx", mode: 0o600 });
-  const token = grantDelivery(filename);
+  const token = grantDelivery(filename, { accountId: conversation.rows[0].accountId,
+    instagramUserId: conversation.rows[0].recipientId });
   try {
     return await instagram.sendImageMessage({ ...conversation.rows[0], conversationId,
       imageUrl: `${base}/api/inbox/media/${token}`,
@@ -100,4 +101,15 @@ async function resolveConversationImage(conversationId, messageId) {
   return imagePath(result.rows[0]?.payload?.inboxImage?.filename);
 }
 
-module.exports = { MAX_IMAGE_BYTES, normalizeImage, resolveDelivery, resolveConversationImage, sendConversationImage };
+function revokeScope({ accountId, instagramUserId }) {
+  let removed = 0, legacyUnscoped = 0;
+  for (const [token, entry] of capabilities) {
+    if (!entry.accountId || !entry.instagramUserId) { legacyUnscoped++; continue; }
+    if (entry.accountId === accountId && entry.instagramUserId === instagramUserId) {
+      capabilities.delete(token); removed++;
+    }
+  }
+  return { removed, legacyUnscoped };
+}
+
+module.exports = { MAX_IMAGE_BYTES, normalizeImage, resolveDelivery, resolveConversationImage, sendConversationImage, revokeScope };

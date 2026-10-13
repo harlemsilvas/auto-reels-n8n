@@ -42,6 +42,11 @@ certificacao de seguranca/conformidade nem prova de configuracao efetiva da VPS.
 
 ## Categorias e ciclo de vida observado
 
+Atualizacao em 2026-10-13: usuario aceitou faixas do documento fornecido.
+[Base tecnica](../mr-05/retencao-e-exclusao.md) registra prazos, fontes e pendencias.
+Nenhuma rotina implementada; relato abaixo descreve estado anterior, e runtime
+continua sem limpeza automatica de historico/ledger/copias.
+
 Dono confirmou em 2026-10-12 que ainda nao ha prazo definido para guardar DMs,
 imagens, logs e backups. Nao afirmar exclusao automatica ou prazo de atendimento
 ja estabelecido. A ausencia de prazo e estado atual, nao politica futura aprovada.

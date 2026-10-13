@@ -10,8 +10,8 @@ const filename = path.resolve(
 );
 const source = readFileSync(filename, "utf8");
 
-function fixture({ accountExists = true, duplicate = false } = {}) {
-  const calls = { raw: [], queries: [], conversations: [], saved: [], emitted: [], errors: [] };
+function fixture({ accountExists = true, duplicate = false, failQuery = false } = {}) {
+  const calls = { raw: [], queries: [], conversations: [], saved: [], emitted: [], errors: [], logs: [] };
   const repository = {
     async saveWebhookEvent(payload) {
       calls.raw.push(payload);
@@ -30,8 +30,11 @@ function fixture({ accountExists = true, duplicate = false } = {}) {
     "./instagram-messages.repository": repository,
     "../../lib/db": {
       async query(sql, params) {
+        assert.match(sql, /ativo = true/);
+        assert.match(sql, /deleted_at IS NULL/);
+        if (failQuery) throw new Error("sensitive-error-demo");
         calls.queries.push(params);
-        const rows = accountExists
+        const rows = accountExists && params[0] !== "unknown-account"
           ? [{ id: "account-test", instagramId: "recipient-test" }]
           : [];
         return { rowCount: rows.length, rows };
@@ -52,7 +55,7 @@ function fixture({ accountExists = true, duplicate = false } = {}) {
     assert.ok(Object.hasOwn(dependencies, name), `Dependencia inesperada: ${name}`);
     return dependencies[name];
   }, module, {
-    log() {},
+    log(...args) { calls.logs.push(args); },
     error(...args) { calls.errors.push(args); },
   });
   return { service: module.exports, calls };
@@ -85,8 +88,8 @@ for (const [label, extra] of [
     const { service, calls } = fixture();
     const payload = body(event(extra));
     await service.processWebhook(payload);
-    assert.equal(calls.raw[0], payload);
-    assert.equal(calls.queries.length, 0);
+    assert.deepEqual(calls.raw[0].entry[0].messaging, payload.entry[0].messaging);
+    assert.equal(calls.queries.length, 1);
     assert.equal(calls.conversations.length, 0);
     assert.equal(calls.saved.length, 0);
     assert.equal(calls.emitted.length, 0);
@@ -98,7 +101,7 @@ test("Recibo seguido de texto nao interrompe o lote", async () => {
   const { service, calls } = fixture();
   const message = event({ message: { mid: "meta-test", text: "Test message" } });
   await service.processWebhook(body(event({ read: {} }), message));
-  assert.equal(calls.queries.length, 1);
+  assert.equal(calls.queries.length, 2);
   assert.equal(calls.queries[0][0], "recipient-test");
   assert.equal(calls.saved.length, 1);
   assert.equal(calls.saved[0].metaMessageId, "meta-test");
@@ -123,17 +126,32 @@ test("Mensagem com anexo continua persistida e emitida", async () => {
 test("Echo nao duplica mensagem enviada", async () => {
   const { service, calls } = fixture();
   await service.processWebhook(body(event({
+    sender: { id: "recipient-test" }, recipient: { id: "sender-test" },
     message: { mid: "echo-test", text: "Test reply", is_echo: true },
   })));
   assert.equal(calls.raw.length, 1);
-  assert.equal(calls.queries.length, 0);
+  assert.equal(calls.queries.length, 1);
+  assert.deepEqual(calls.queries[0], ["recipient-test"]);
   assert.equal(calls.saved.length, 0);
   assert.equal(calls.emitted.length, 0);
+});
+
+test("changes.messaging misto nao grava eventos externos", async () => {
+  const { service, calls } = fixture();
+  const good = event({ message: { mid: "change-allowed", text: "Demo" } });
+  await service.processWebhook({ object: "instagram", entry: [{ changes: [{
+    field: "messages", value: { messaging: [good,
+      { ...good, recipient: { id: "unknown-account" } }], extra: "external-demo" },
+  }] }] });
+  assert.equal(calls.saved.length, 1);
+  assert.equal(calls.saved[0].payload, good);
+  assert.doesNotMatch(JSON.stringify(calls.raw), /unknown-account|external-demo/);
 });
 
 test("Formato changes preserva o envio de texto", async () => {
   const { service, calls } = fixture();
   await service.processWebhook({
+    object: "instagram",
     entry: [{ changes: [{ field: "messages", value: event({
       message: { mid: "change-test", text: "Test change" },
     }) }] }],
@@ -144,12 +162,47 @@ test("Formato changes preserva o envio de texto", async () => {
   assert.equal(calls.errors.length, 0);
 });
 
-test("Conta desconhecida nao cria conversa", async () => {
+test("Conta desconhecida nao persiste evento nem cria conversa", async () => {
   const { service, calls } = fixture({ accountExists: false });
   await service.processWebhook(body(event({ message: { mid: "unknown-test", text: "Test" } })));
-  assert.equal(calls.raw.length, 1);
+  assert.equal(calls.raw.length, 0);
   assert.equal(calls.queries.length, 1);
   assert.equal(calls.conversations.length, 0);
   assert.equal(calls.saved.length, 0);
   assert.equal(calls.emitted.length, 0);
+});
+
+test("Lote misto remove contas externas, metadados e changes nao suportados", async () => {
+  const { service, calls } = fixture();
+  const good = event({ message: { mid: "allowed", text: "private-text-demo" } });
+  const bad = { ...good, recipient: { id: "unknown-account" } };
+  await service.processWebhook({ object: "instagram", secret: "private-top-demo", entry: [{
+    id: "private-entry-demo", messaging: [bad, good],
+    changes: [{ field: "comments", value: bad }, { field: "messages", value: {
+      messaging: [bad, good], extra: "private-change-demo",
+    } }],
+  }] });
+  assert.deepEqual(calls.raw, [{ object: "instagram", entry: [{ messaging: [good], changes: [
+    { field: "messages", value: { messaging: [good] } },
+  ] }] }]);
+  assert.equal(calls.saved.length, 2);
+  assert.doesNotMatch(JSON.stringify(calls.logs), /private-|sender-test|recipient-test|allowed/);
+});
+
+test("Payload invalido/outro produto nao e persistido", async () => {
+  const { service, calls } = fixture();
+  for (const payload of [null, {}, { object: "page", entry: [event({})] },
+    { object: "instagram", entry: {} }, { object: "instagram", entry: [null, { messaging: {} }] }])
+    await service.processWebhook(payload);
+  assert.equal(calls.raw.length, 0);
+  assert.equal(calls.saved.length, 0);
+});
+
+test("Falha na resolucao de conta nao persiste nem imprime erro sensivel", async () => {
+  const { service, calls } = fixture({ failQuery: true });
+  await service.processWebhook(body(event({ message: { text: "private-text-demo" } })));
+  assert.equal(calls.raw.length, 0);
+  assert.equal(calls.saved.length, 0);
+  assert.equal(calls.errors.length, 1);
+  assert.doesNotMatch(JSON.stringify([...calls.errors, ...calls.logs]), /sensitive-error-demo|private-text-demo/);
 });

@@ -57,9 +57,10 @@ if (allowedOrigins === "*") {
   );
 }
 
-app.use(express.json());
-
 app.use("/api/webhooks/instagram", instagramMessagesRoutes);
+// This router authenticates and parses its own body, with safe errors and no request-body logging.
+app.use("/api/internal/privacy/deletion-requests", require("./modules/privacy/deletion-requests.routes"));
+app.use(express.json());
 // Short-lived capability URL used only by Meta to fetch an outbound image.
 app.get("/api/inbox/media/:token", serveDeliveryImage);
 

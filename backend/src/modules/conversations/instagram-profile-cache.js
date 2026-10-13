@@ -50,9 +50,18 @@ async function lookupProfile({ accountId, instagramUserId, accessToken }) {
       active--;
       entry.pending = null;
     }
-    return entry.profile;
+    return entries.get(key) === entry ? entry.profile : null;
   });
   return entry.pending;
 }
 
-module.exports = { lookupProfile };
+function forgetScope({ accountId, instagramUserId }) {
+  let removed = 0;
+  for (const key of entries.keys()) {
+    const [account, user] = JSON.parse(key);
+    if (account === accountId && user === instagramUserId) { entries.delete(key); removed++; }
+  }
+  return removed;
+}
+
+module.exports = { lookupProfile, forgetScope };

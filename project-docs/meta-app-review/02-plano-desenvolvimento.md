@@ -113,6 +113,12 @@ sem overflow, sem chave literal e sem mudanca de tamanho por loading/idioma.
 
 ## MR-05 - Privacidade, exclusao e seguranca de dados
 
+Entrada para nova sessao: [ponto de retomada MR-05](mr-05/README.md).
+MR-02..04 ja publicados na VPS em `f7d52a0`; primeiro incremento webhook MR-05
+implementado/testado somente localmente. Retencao/exclusao/politica pendentes.
+Priorizar reinspecao/seguranca webhook local e fechar decisoes de dados antes
+de declarar politica ou executar exclusao. Deploy futuro exige autorizacao propria.
+
 - Verificar URLs existentes e publicar politica/instrucoes PT/EN acessiveis sem
   sessao, com contato real e links no login. Texto aprovado pelo responsavel;
   documento tecnico nao certifica conformidade legal.
