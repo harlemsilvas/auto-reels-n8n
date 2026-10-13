@@ -4,12 +4,13 @@ Atualizado em: 2026-10-13. Branch: `docs/meta-app-review-i18n`.
 Status: MR-01 em andamento; base PT/EN do MR-02 implementada/testada localmente,
 com autenticacao/layout aceitos pelo usuario. Contas/feedback OAuth PT/EN do
 MR-03 e Inbox/Testers DM MR-04 testados localmente, aceite pendente.
-Sem deploy ou traducao completa.
+MR-02..04 publicados na VPS na release `f7d52a0` em 2026-10-13;
+[registro do deploy](deploy-2026-10-13.md). Sem traducao completa ou aprovacao Meta.
 
 ## Base confirmada
 
-- Release VPS registrada: `47a5dac`, migration 015 aplicada; HEAD documental
-  anterior a esta branch: `c2655a2`. Sem novo acesso/deploy VPS nesta etapa.
+- Release VPS atual verificada: `f7d52a0`, migration 015 preservada, sem migration
+  nova; HEAD documental anterior a esta branch: `c2655a2`.
 - Usuario relatou DM inbound de nao tester recebida, mas resposta rejeitada com
   erro 200 exigindo acesso avancado a `instagram_manage_messages`.
 - Capturas fornecidas: empresa verificada, testes concluidos, analise ainda nao

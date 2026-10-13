@@ -4,6 +4,33 @@ Atualizado em: 2026-10-13
 
 ## TAG de retomada: RETOMADA-2026-10-13
 
+### Deploy MR-02..04 confirmado na VPS
+
+- Release f7d52a03299d23f48ff95fb31456ae600d14457b; Action 38453215523
+  concluida com sucesso em 13/10 as 16:15 America/Sao_Paulo. Main/branch
+  docs/meta-app-review-i18n publicados. PT/EN auth/layout/Contas/Inbox/Testers
+  e feedback seguro agora aplicados na VPS; entradas somente locais abaixo
+  sao historicas. Documentacao final em commit separado, sem novo deploy.
+- Backup protegido /home/socialbot/backups/inbox-images-pre-deploy-20261013T191414Z/
+  release-anterior.tar.gz: 12815974 bytes, modo 0600, SHA-256
+  19d52eb22913ef934de1b3b09ff499c12dbeaa7e30d7e0084121209dfb7679b4.
+  Release anterior 47a5dac; archive validado pelo workflow, restore nao testado.
+  Backend env identico ao backup, sem valores revelados. Sem dump/migration nova.
+- Schemas 014/015 verificados; API online PID 1510352/restart 7 -> 8;
+  worker PID 1653/restart 0 preservados. Portas/proxy/n8n/config intactos;
+  reload Nginx pelo script frontend existente. Scripts sujos remotos mantidos.
+- Health API/dashboard 200, conversas/tentativas/OAuth anonimos 401. Bundle
+  publico /assets/index-BcLRnve5.js identico ao VPS, SHA-256
+  e579b412dcec2b08dab0d433089d45a85618e6f6cf3486dae6784589270eb3ee.
+  Playwright login publico PT/EN 1440/390/320 passou, persistencia/sem erro JS/
+  overflow; captura mobile inspecionada. Sem login autenticado/DM/IA/OAuth real.
+- Build/catalogos/OAuth com/sem barra/permissao e Contas simuladas repetidos
+  nesta sessao. Bundle VPS 550.73 kB/166.37 kB gzip; aviso >500 kB e avisos
+  antigos Nginx mantidos. Arquivos locais do usuario excluidos do commit.
+- Registro project-docs/meta-app-review/deploy-2026-10-13.md. Proximo aceite
+  manual autenticado PT/EN na VPS e MR-05 privacidade/exclusao/seguranca.
+  MR-01/03 gates, acesso avancado Meta e traducao completa MR-06 pendentes.
+
 ### Deploy MR-02..04 autorizado: preflight
 
 - Usuario autorizou commit/push/deploy controlado antes do MR-05. Escopo:

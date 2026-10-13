@@ -3,7 +3,8 @@
 Data: 2026-10-12, branch `docs/meta-app-review-i18n`.
 Estado: base e primeiro incremento de autenticacao/layout implementados/testados;
 aceite manual local confirmado pelo usuario (registro em 2026-10-13).
-Sem commit/push/deploy ou mudanca na VPS.
+Publicado na VPS em 2026-10-13 na release `f7d52a0`:
+[registro do deploy](../deploy-2026-10-13.md). Entradas locais abaixo sao historicas.
 MR-01 continua em andamento com dados/topologia/retencao pendentes.
 
 ## Entrega atual

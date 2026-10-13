@@ -2,6 +2,8 @@
 
 Atualizado em 2026-10-13, branch `docs/meta-app-review-i18n`.
 Estado: primeiro incremento local implementado/testado, aceite manual pendente.
+Publicado na VPS em 2026-10-13 na release `f7d52a0`:
+[registro do deploy](../deploy-2026-10-13.md). Sem novo OAuth real nesta validacao.
 MR-03 completo ainda pendente; nao confundir feedback traduzido com prontidao
 do ambiente externo de avaliacao ou aprovacao de acesso avancado Meta.
 

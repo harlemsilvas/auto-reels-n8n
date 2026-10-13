@@ -14,7 +14,8 @@ persistida e aceite do usuario. Contas/feedback OAuth PT/EN implementados localm
 no MR-03; Inbox e Testers DM PT/EN implementados e testados localmente no
 [MR-04](project-docs/meta-app-review/mr-04/README.md), preservando rascunhos e
 bloqueios de entrega incerta. Demais telas, ambiente de avaliacao e controles
-adicionais ainda pendentes. Nenhuma traducao publicada na VPS.
+adicionais ainda pendentes. MR-02..04 publicados na VPS em 2026-10-13, release
+`f7d52a0`, com [deploy controlado verificado](project-docs/meta-app-review/deploy-2026-10-13.md).
 
 - Evolucao de um fluxo legado de Reels para uma arquitetura preparada para multiplos formatos de publicacao
 - Backend modular com autenticacao, permissoes, scheduler, historico, inbox, metricas e publisher por estrategia

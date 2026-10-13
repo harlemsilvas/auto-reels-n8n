@@ -1,8 +1,9 @@
 # MR-04 - Inbox e Testers PT/EN
 
 Implementado e testado localmente em 2026-10-13, na branch
-`docs/meta-app-review-i18n`. Aceite manual do usuario pendente. Sem commit,
-push, deploy, migration ou alteracao na VPS.
+`docs/meta-app-review-i18n`. Aceite manual do usuario pendente. Publicado na VPS
+em 2026-10-13 na release `f7d52a0`, sem migration nova:
+[registro do deploy](../deploy-2026-10-13.md). Testes locais abaixo sao historicos.
 
 ## Entrega
 
