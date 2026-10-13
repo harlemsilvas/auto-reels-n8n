@@ -1,0 +1,38 @@
+{
+  "title": "Instagram Inbox", "conversations": "Instagram conversations", "refresh": "Refresh conversations",
+  "searchLabel": "Search conversations", "searchPlaceholder": "Search conversation", "filterLabel": "Filter conversations",
+  "all": "All", "unread": "Unread", "loadingConversations": "Loading conversations...", "noResults": "No conversations found.",
+  "noConversations": "No conversations received.", "noPreview": "No message preview", "noSelection": "No conversation selected",
+  "back": "Back to conversations", "readonly": "Read-only access.", "messages": "Conversation messages",
+  "loadingMessages": "Loading messages...", "noMessages": "No messages in this conversation.", "dateUnavailable": "Date unavailable",
+  "noText": "[Message without text]", "imageUnavailable": "Image unavailable", "openImage": "Open image", "conversationImage": "Conversation image",
+  "deliveryUncertain": "Delivery uncertain", "pendingSend": "Send pending", "message": "Message", "placeholder": "Write a message...",
+  "preview": { "image": "[Image]", "video": "[Video]", "audio": "[Audio]", "file": "[File]", "attachment": "[Attachment]", "attachments": "[Attachments]" },
+  "attachImage": "Attach image", "selectImage": "Select image", "imagePreview": "Image preview", "removeImage": "Remove image",
+  "send": "Send message", "sending": "Sending message", "invalidImage": "Select a JPG or PNG image up to 8 MB.",
+  "uncertainNotice": "Delivery is uncertain. Check Instagram before continuing.", "closeAttempt": "Close attempt after checking delivery",
+  "confirmClose": "This closes the server attempt and releases other tabs. It does not cancel the DM or prove delivery failed. Have you checked Instagram?",
+  "errors": {
+    "loadConversations": "Unable to load conversations.", "loadMessages": "Unable to load messages.", "markRead": "Unable to mark the message as read.",
+    "sendMessage": "Unable to send the message. Your draft has been preserved.", "sendImage": "Unable to send the image.",
+    "deliveryUncertain": "The message may have been delivered. Check Instagram; do not resend it.",
+    "imageDeliveryUncertain": "The image may have been delivered. Check Instagram before selecting it again.",
+    "closeAttempt": "Unable to close the attempt. Delivery remains blocked until it is reconciled or safely closed.",
+    "session": "Your session has expired. Sign in again.", "permission": "You do not have permission for this action.",
+    "metaPermission": "Meta denied the messaging permission required for this recipient. The administrator must check app access and account authorization.",
+    "rateLimit": "Too many requests. Wait before trying again.", "imageTooLarge": "The image exceeds the upload limit.",
+    "testerLoad": "Unable to load tester conversations.", "testerSend": "Unable to send the test DM.", "testerFlow": "Unable to complete the test flow. Previously confirmed messages were not resent.",
+    "testerHide": "Unable to hide the conversation.", "emptyDraft": "Enter a message before sending."
+  },
+  "testers": {
+    "title": "Instagram DM testers", "authorizedOnly": "Authorized testers only.", "firstMessage": "The tester must first send a DM to the connected professional account.",
+    "refresh": "Refresh testers", "loading": "Loading tester conversations...", "empty": "No tester conversations received.",
+    "name": "Name", "username": "Username", "userId": "Instagram User ID", "lastMessage": "Last message", "lastDate": "Last activity",
+    "message": "Message", "actions": "Actions", "draftLabel": "Test message for {{recipient}}", "defaultMessage": "SocialBot test message",
+    "send": "Send test DM", "sending": "Sending...", "flow": "Send test flow", "flowing": "Sending flow...",
+    "hide": "Hide", "hiding": "Hiding...", "hideTitle": "Hide only from this page",
+    "hideConfirm": "Hide {{recipient}} from this page? Inbox history is preserved. This does not remove the tester's Meta role.",
+    "sendSuccess": "DM sent to {{recipient}}.", "flowSuccess": "Test flow sent to {{recipient}}.", "hideSuccess": "{{recipient}} hidden from this page.",
+    "flow1": "Hello! This is a SocialBot test.", "flow2": "Message 2: we received your DM correctly.", "flow3": "Message 3: test completed successfully."
+  }
+}

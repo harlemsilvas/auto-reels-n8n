@@ -1,8 +1,249 @@
 # SocialBot — Contexto de Continuidade para Codex
 
-Atualizado em: 2026-10-12
+Atualizado em: 2026-10-13
+
+## TAG de retomada: RETOMADA-2026-10-13
+
+### Deploy MR-02..04 autorizado: preflight
+
+- Usuario autorizou commit/push/deploy controlado antes do MR-05. Escopo:
+  documentacao Meta, PT/EN auth/layout/Contas/Inbox/Testers e feedback seguro.
+  Simulacao local, midias, .env e .gitignore do usuario excluidos do commit.
+- Preflight SSH confirmou VPS 47a5dac/main, API online PID 648344/restart 7,
+  worker online PID 1653/restart 0. Sem Action concorrente. Schemas 014/015
+  verificados, sem migration nova. Alteracoes remotas em scripts preservadas.
+- Config Inbox existente confere com workflow; auth ligado e config Meta
+  presente, sem leitura de segredos em saida. Nginx valido com avisos antigos
+  de OCSP/vhosts alheios; nenhuma configuracao alterada.
+- FRONTEND_URL remoto termina em barra: ajuste de montagem OAuth remove apenas
+  barras finais para evitar //contas, sem editar env. Teste cobre base com/sem
+  barra. Build e testes isolados OAuth/permissao/catalogos repetidos nesta sessao.
+- Plano: push fast-forward main, workflow existente dashboard=true,
+  restart_backend=true, run_migrations=false/migration_set=none. Backup protegido
+  da release/config/dependencias pelo workflow antes do pull; worker preservado.
+  Confirmar resultado, SHA/bundle publico/health/auth e rollback antes de MR-05.
+
+### MR-04: Inbox/Testers DM PT/EN, somente local
+
+- Retomada na branch docs/meta-app-review-i18n, HEAD documental c2655a2.
+  Ultima VPS registrada 47a5dac/migration 015, nao consultada nem alterada.
+  Preservadas alteracoes anteriores e arquivos locais do usuario.
+- Catalogo inbox PT/EN e UI completa do Inbox/Testers: botoes/tooltips/aria,
+  estados, anexos, erros, confirmacoes e datas Intl. Conteudo do usuario intacto.
+  Hooks traduzem erros ao renderizar; locale nao recria carregamento/SSE nem
+  reseta rascunho/ledger. API acrescenta lastMessageKind sem remover texto.
+- Meta code 200 normalizado para META_MESSAGE_PERMISSION_DENIED/403 seguro,
+  sem payload/token no log de falha do cliente. Entrega incerta prevalece com
+  502; sem retry. Nao resolve aprovacao/acesso avancado do app.
+- Testers envia padrao exibido, preserva texto digitado e captura tres mensagens
+  do fluxo no idioma inicial. Mutacoes simultaneas bloqueadas; ocultacao nao
+  exclui historico nem funcao Meta. Sem novo ledger de imagem/fluxo.
+- Nesta sessao: build/lint Inbox+i18n/catalogos aprovados; Playwright PT/EN
+  desktop/390/320 passou, assim como regressao Inbox/SSE/polling/anexos e
+  reconciliacao/reload. Capturas EN inspecionadas, tabela mobile com scroll interno.
+  Backend permissao isolado, reliability 15/15, profiles 7/7, summaries/unread/
+  send-attempts em schemas locais isolados aprovados. Zero Meta real.
+- Bundle 550.72 kB/166.36 kB gzip; aviso >500 kB mantido. Sem novas dependencias.
+  API local reiniciada somente pelo launcher protegido 3101, sem jobs/worker;
+  Vite 5181 mantido. URLs /inbox e /inbox/testers-dm em http://localhost:5181.
+- Documentacao mr-04/README.md e roteiro atualizados. Sem migration, commit,
+  push ou deploy. Aceite manual MR-04 pendente; MR-01/03 ainda possuem gates.
+  Proximo MR-05 privacidade/exclusao/seguranca, com decisoes de retencao pelo
+  dono; traducao dos demais modulos MR-06 pode seguir incrementalmente.
+
+### MR-03: Contas/feedback OAuth PT/EN local, validacao retomada
+
+- Usuario confirmou teste da base PT/EN e pediu traducao consistente de todas
+  as paginas/botoes/textos/avisos, com etapas de avaliacao validadas em EN.
+  Aceite relatado pelo usuario, nao nova autenticacao real do agente. Sequencia:
+  Contas/OAuth, Inbox/Testers DM, demais modulos; conteudo de usuario nao traduzido.
+- Branch docs/meta-app-review-i18n; HEAD documental anterior c2655a2 e release
+  VPS registrada 47a5dac/migration 015. Nao consultada VPS nesta sessao. Retomada
+  preservou alteracoes PT/EN, backend OAuth e arquivos locais do usuario.
+- Contas integralmente PT/EN: labels/botoes/tooltips/loading/vazio/status/avisos/
+  confirmacao, data via Intl sem mudar payload ISO. OAuth principal e manutencao
+  manual separada em details, token digitado mascarado e nao preenchido do banco.
+  Mutacoes usam CSRF existente, preservam formulario/status em falha, bloqueiam
+  operacoes simultaneas e nao exibem mensagem crua do servidor.
+- Callback devolve UUID da conta salva; frontend confere conta ativa na lista
+  antes de feedback com nome/Instagram ID. Conta nao identificada/retorno legado
+  sem ID usa aviso. Params de retorno consumidos via replace; erro desconhecido
+  usa fallback seguro. Nao e verificacao de grants/token/acesso avancado Meta.
+- Backend OAuth usa whitelist de codigos, nao payload/token/mensagem bruta em
+  redirect/logs de falha. Config ausente bloqueia fluxo antes de state/Meta.
+  State/code estruturados rejeitados; sessao/admin/state/expiracao/consumo unico,
+  scopes/host/versao preservados. Sem migration ou mudanca no worker/Reels.
+- Test-meta-oauth-feedback passou com banco/Meta simulados: state de sessao
+  diferente/expirado/replay, code invalido/cancelamento, sucesso/ID/audit,
+  paginas/IG ausentes, falha segura, config ausente e HTTP 401/403/admin.
+  Catalogos common/auth/accounts, Playwright Contas PT/EN desktop/390/320,
+  regressao auth e ledger Inbox passaram. Capturas EN desktop/mobile 320
+  inspecionadas; sem overlap/overflow da pagina, tabela com rolagem interna.
+- Build/lint focado/sintaxe/diff aprovados. Bundle 543.74 kB/164.28 kB gzip,
+  aviso Vite acima de 500 kB mantido; manutencao de dependencias preexistente.
+  Playwright /tmp ausente apos reinicio foi restaurado fora do repositorio.
+- API local/Vite estavam desligados: retomados somente launcher protegido
+  3101 e Vite 5181, sem jobs/worker/Meta real. Health API 200; OAuth anonimo 401.
+  Navegador http://localhost:5181/contas. Sem dados/schema/segredos alterados.
+- Registro project-docs/meta-app-review/mr-03/README.md atualizado. MR-03 completo
+  ainda pendente: selecao/paginacao multipagina (continua primeira elegivel),
+  metadata/grants/OAuth real e ambiente limitado do analista. MR-01 segue aberto.
+- Sem commit/push/deploy ou alteracao VPS. Proximo aceite local Contas, depois
+  MR-04 traduzir Inbox/Testers DM e seus estados/erros/datas em EN/PT.
 
 ## TAG de retomada: RETOMADA-2026-10-12
+
+### MR-02: base PT/EN implementada somente localmente
+
+- Usuario autorizou implementar base PT/EN em paralelo ao MR-01. Mantida branch
+  docs/meta-app-review-i18n; MR-01 permanece aberto (retencao/operadores/topologia/
+  politica), sem inventar controles aprovados. VPS registrada 47a5dac/015 intacta.
+- Instalados i18next 26.4.4/react-i18next 17.0.16 com versoes fixas/lockfile.
+  Recursos common/auth JSON no bundle e tipagem de chaves. PT-BR padrao/fallback,
+  EN explicito, seletor acessivel em login/troca de senha/layout, html.lang/titulo
+  dinamicos. Preferencia socialbot.language em localStorage, sem credenciais,
+  sincronizada entre abas; indisponibilidade de storage nao impede idioma em memoria.
+- Login/troca de senha, role local, loading/erro e navegacao traduzidos. Erros
+  armazenados como chave mudam de idioma ao alternar; erro externo de senha usa
+  fallback seguro, nao frase bruta. Sem contratos API/backend/scopes modificados.
+  Formulario e rascunho Inbox preservados sem remontar app ou disparar envio.
+- Formatadores Intl e plural preparados/testados; idioma altera apresentacao,
+  nao timestamp/timezone. Datas/componentes internos de Contas/Inbox e demais
+  modulos ainda nao migrados. Traducao completa/erros estruturados API seguem
+  MR-03/04/06; nao declarar screencast inteiro em EN pronto.
+- Testes catalogos/paridade/interpolacao/plural/fallback e Playwright PT/EN
+  desktop/390/320 aprovados: persistencia/reload/logout, storage negado/invalido,
+  sincronizacao abas, loading/erro reativos, senha sucesso/falha/localvalidacao,
+  CSRF, rascunho/DM preservados e Intl. APIs simuladas, sem dados/credenciais reais.
+  Regressao Inbox ledger e confiabilidade passou. Build/lint focado/diff aprovados;
+  capturas login 320/layout mobile inspecionadas sem overlap/overflow.
+- Primeiro teste visual encontrou Vite desligado; iniciados Vite local 5181 e
+  API pelo launcher protegido 3101, health 200, sem jobs/worker/Meta. Navegador
+  usar http://localhost:5181, nao misturar hosts; nenhum schema/dado alterado.
+- Build bundle 533.38 kB/160.76 kB gzip, aviso acima de 500 kB; split futuro,
+  sem refatoracao geral. npm manteve doze alertas (nove high), sem audit fix.
+- Registro project-docs/meta-app-review/mr-02/README.md atualizado. Sem commit/
+  push/deploy ou acesso VPS. Proximo aceite local PT/EN e depois MR-03 Contas/
+  OAuth, preservando pendencias de seguranca MR-01. Arquivos do usuario intactos.
+
+### MR-01: ausencia de prazo de retencao confirmada
+
+- Usuario confirmou que ainda nao ha prazo definido para guardar DMs, imagens,
+  logs e backups. Registro D07/inventario/guia de submissao atualizados como
+  estado atual, nao aprovacao de politica ou declaracao de exclusao automatica.
+- Politica futura por categoria, tratamento de webhook/ledger/copias e rotina
+  de exclusao permanecem pendentes; TTL de cache/sessao/capacidade nao comprova
+  eliminacao de historico/backups. Nenhum prazo numerico presumido.
+- MR-01 segue em andamento; MR-02 nao iniciado. Branch docs/meta-app-review-i18n,
+  somente documentacao local, sem limpeza de dados/runtime/provisionamento/
+  commit/push/deploy ou consulta VPS. Release registrada 47a5dac/015 preservada.
+
+### MR-01: atendimento, hospedagem e backups declarados
+
+- Usuario confirmou que atende pedidos pessoalmente e exclusao@hrmmotos.com.br
+  e alias operacional de vendas@hrmmotos.com.br. Sem envio de e-mail/teste de
+  caixa pelo agente. Registrar acessos/provedor/retencao da caixa como pendentes.
+- VPS na Hostinger e backups na propria VPS segundo dono. Copia local pelo
+  aplicativo foi sugerida como possibilidade, nao rotina existente/recurso
+  implementado. Nenhum backup novo, download ou endpoint de exportacao criado.
+- Inventario registra risco de perda conjunta VPS/backups e futura transferencia
+  segura sem expor dumps/tokens a usuarios Inbox. Contratos/regiao/acessos,
+  retencao/exclusao, politica revisada e topologia de avaliacao ainda pendentes;
+  MR-01 em andamento. Nenhum controle nao confirmado declarado como operacional.
+- Branch docs/meta-app-review-i18n preservada, somente documentos locais; sem
+  runtime/migration/provisionamento/commit/push/deploy ou reinspecao VPS.
+
+### MR-01: responsavel declarado e politica publica inspecionada
+
+- Usuario informou HRM MOTOS PECAS E ACESSORIOS LTDA e contato de exclusao
+  exclusao@hrmmotos.com.br. Dados declarados registrados, sem verificacao
+  documental/caixa de e-mail ou envio de mensagem pelo agente.
+- URL informada https://midia.hrmmotos.com.br/privacy.html lida sem sessao via
+  curl HTTPS apos ferramenta web nao conseguir acessar. Politica de 15/05/2026
+  foca publicacao, nao descreve Inbox/ledger, usa identificacao generica e
+  contato@hrmmotos.com.br; secao 13 contem pedido breve de exclusao por e-mail.
+  Dono informou nao existir pagina dedicada de exclusao. Revisao de conteudo e
+  processo operacional precisam ocorrer antes de submissao; nenhuma pagina alterada.
+- Atualizados inventario/registro MR-01/guia de submissao. D05 declarada, D08
+  parcial. Faltam operacao do contato, operadores/retencao/exclusao, revisao de
+  politica/URL de avaliacao e topologia segura. MR-01 ainda em andamento.
+- Branch docs/meta-app-review-i18n, sem runtime/provisionamento/commit/push/
+  deploy ou acesso administrativo VPS. Release registrada 47a5dac/015 preservada.
+
+### MR-01: decisoes D01-D03 confirmadas pelo usuario
+
+- Usuario confirmou uso interno HRM/contas proprias, primeira submissao somente
+  Inbox (receber/responder DMs) e ambiente separado de avaliacao. Documentos
+  atualizados para distinguir decisoes confirmadas de topologia ainda proposta.
+- Publicacao/metricas fora desta primeira submissao, sem remover funcionalidades,
+  scopes ou permissoes do painel. Conta demonstrativa, dependencias de suporte,
+  roteamento seguro OAuth/webhook e identidade/contato/operadores/retencao/URLs
+  continuam pendentes. MR-01 nao concluido; MR-02 nao iniciado.
+- Branch docs/meta-app-review-i18n mantida; sem provisionamento, runtime,
+  migration, commit/push/deploy ou acesso VPS. Release registrada 47a5dac/015.
+  Alteracoes do usuario preservadas; nenhum dado real/segredo consultado.
+
+### MR-01 iniciado: escopo, inventario e acesso do analista
+
+- Usuario autorizou iniciar MR-01. Mantida branch docs/meta-app-review-i18n;
+  release VPS registrada 47a5dac/migration 015 nao consultada novamente aqui.
+  Somente documentacao local, sem runtime/migration/provisionamento/commit/push.
+- Criados project-docs/meta-app-review/mr-01/README.md, permissoes.md,
+  inventario-dados.md e ambiente-analista.md. Registro separa proposta de decisao
+  confirmada. Perguntados publico interno/clientes, escopo Inbox/completo e
+  ambiente separado/instalacao atual; respostas ainda pendentes nesta entrada.
+- Inventario inclui eventos webhook brutos, mensagens/ledger, perfis/cache,
+  rascunho browser, tokens/contas, usuarios/sessoes/audit, midias e backups,
+  fluxos Meta/n8n/Gemini sem presumir envio de DMs a IA. Tokens Meta gravados
+  diretamente, IA usa AES-GCM; nao declarar criptografia global/anonimato.
+- Leitura identificou risco: webhook controller imprime payload completo e GET
+  verify imprime token/challenge; POST montado antes do auth, express.json sem
+  raw body e assinatura nao validada no caminho inspecionado. Eventos brutos
+  guardados antes do tratamento por conta. Registrado gate de seguranca; nenhuma
+  correcao de runtime/segredo/log production aplicada nesta rodada.
+- Matriz diferencia permissao solicitada, chamadas reais e dependencias a
+  confirmar; fonte primaria Meta/Postman consultada para Conversations, sem
+  extrapolar essa lista ao Send API. Nenhum scope/pedido Meta alterado.
+- Ambiente dedicado e proposta, nao recurso provisionado. Webhook compartilhado
+  pode levar dados reais ao dataset ou interromper producao se callback for
+  trocado; topologia precisa desenho/aceite antes de acesso externo. Operator
+  atual nao responde/conecta; nao entregar admin global de producao ao analista.
+- MR-01 em andamento, nao concluido: faltam decisoes D01-D03, identidade/contato,
+  operadores/URLs, retencao/exclusao e dependencia/topologia confirmadas pelo dono.
+  MR-02 nao iniciado. Arquivos do usuario preservados; .env/dados reais nao lidos.
+
+### Analise Meta e internacionalizacao: planejamento documental
+
+- Usuario pediu diagnostico/diretrizes e etapas de desenvolvimento para analise
+  Meta, incluindo internacionalizacao. Criada branch docs/meta-app-review-i18n
+  a partir de c2655a2; documentos em project-docs/meta-app-review/.
+  Sem alteracoes de runtime/dependencias, migration, commit/push ou novo deploy.
+- TAG mantida RETOMADA-2026-10-12; ultima release VPS registrada 47a5dac com
+  migration 015. Estado de producao abaixo e verificacao anterior; nesta etapa
+  somente leitura de codigo local e diretrizes/capturas fornecidas pelo usuario.
+- Usuario relatou inbound de nao tester recebido e reply erro 200 por falta de
+  acesso avancado a instagram_manage_messages. Capturas mostram pedido ainda
+  nao enviado, empresa verificada e tratamento de dados pendente. Publicacao/
+  teste concluido nao significa acesso avancado. Aprovacao exige decisao Meta.
+- OAuth/sender atuais Facebook Login/graph.facebook.com. Scopes business_* da
+  submissao nao correspondem ao fluxo inspecionado. Matriz documenta dependencias
+  a confirmar antes de remover scopes, preservando publicacao/Reels.
+- Diagnostico: login local/state OAuth ja existem; Contas mistura token manual
+  com OAuth e ignora query de retorno; primeira pagina elegivel escolhida; roles
+  globais/operator nao responde nem conecta; isolamento do analista nao comprovado.
+  Sem i18n, datas pt-BR fixas e html.lang en apesar de UI PT; rotas privacidade/
+  exclusao nao localizadas, URLs externas nao verificadas. Retencao pendente e
+  tokens Meta gravados diretamente no upsert, sem declarar criptografia total.
+- Plano MR-01..07: escopo/ambiente seguro, i18next/react-i18next pt-BR/en,
+  login/conexao, Inbox, dados/exclusao, demais modulos, evidencias/submissao.
+  Inglês com legendas e alternativa permitida nas diretrizes fornecidas; nao
+  criar landing/cadastro publico nem copiar exemplo BizOne apenas para review.
+- Fontes i18n oficiais consultadas; paginas Meta screencast/deletion responderam
+  429. Revalidar contratos no painel antes da implementacao. Textos de formulario
+  candidatos em ingles, roteiro de video e perguntas de dados sem credenciais.
+- Proximo: confirmar escopo/ambiente e iniciar MR-01/MR-02. Nenhuma conta externa
+  criada, DM/IA executada ou configuracao VPS/local alterada. .gitignore, simulacao
+  e midias do usuario preservados. docs/0006-mult-posts.md continua ausente.
 
 ### Deploy Inbox duravel concluido em 2026-10-12
 

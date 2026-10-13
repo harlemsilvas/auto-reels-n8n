@@ -1,0 +1,24 @@
+{
+  "title": "Contas Instagram", "connect": "Conectar com a Meta", "refresh": "Atualizar contas",
+  "listLabel": "Contas Instagram conectadas", "loading": "Carregando contas...", "empty": "Nenhuma conta conectada.",
+  "name": "Nome", "namePlaceholder": "Conta principal", "instagramId": "Instagram ID", "pageId": "Page ID", "pageIdOptional": "Page ID (opcional)",
+  "status": "Status", "active": "Ativa", "inactive": "Inativa", "tokenExpires": "Token expira", "expiresOptional": "Expira em (opcional)",
+  "actions": "A\u00e7\u00f5es", "changeStatus": "Conta ativa: {{name}}", "maintenance": "Manuten\u00e7\u00e3o t\u00e9cnica", "manualEntry": "Cadastro manual de conta",
+  "accessToken": "Token de acesso", "showToken": "Mostrar token de acesso", "hideToken": "Ocultar token de acesso", "save": "Salvar conta", "saving": "Salvando...",
+  "import": "Importar conta configurada", "importing": "Importando...",
+  "confirmImport": "Importar a conta configurada no servidor? Isso pode atualizar uma conta existente e suas credenciais.",
+  "saved": "Conta salva.", "statusUpdated": "Status da conta atualizado.", "imported": "Conta configurada importada.",
+  "loadFailed": "N\u00e3o foi poss\u00edvel carregar as contas. Tente atualizar a lista.", "saveFailed": "N\u00e3o foi poss\u00edvel salvar a conta. Confira os campos e tente novamente.",
+  "statusFailed": "N\u00e3o foi poss\u00edvel atualizar o status da conta.", "importFailed": "N\u00e3o foi poss\u00edvel importar a conta configurada.",
+  "oauthChecking": "Conferindo a conta retornada pela Meta...", "oauthConnected": "Conta conectada: {{name}}",
+  "oauthUnverified": "A Meta retornou um resultado de conex\u00e3o, mas a conta n\u00e3o foi identificada nesta lista. Atualize a lista antes de continuar.",
+  "oauthError": {
+    "access_denied": "A autoriza\u00e7\u00e3o Meta foi cancelada ou negada. Voc\u00ea pode tentar conectar novamente.",
+    "invalid_oauth_state": "A solicita\u00e7\u00e3o de conex\u00e3o expirou ou n\u00e3o p\u00f4de ser validada. Inicie uma nova conex\u00e3o.",
+    "missing_oauth_code": "A Meta n\u00e3o retornou um c\u00f3digo de autoriza\u00e7\u00e3o. Inicie uma nova conex\u00e3o.",
+    "no_facebook_pages": "Nenhuma P\u00e1gina do Facebook acess\u00edvel foi encontrada nesta autoriza\u00e7\u00e3o.",
+    "no_instagram_account": "Nenhuma conta profissional Instagram vinculada a uma P\u00e1gina do Facebook acess\u00edvel foi encontrada.",
+    "meta_configuration_unavailable": "A conex\u00e3o Meta n\u00e3o est\u00e1 configurada neste ambiente.",
+    "oauth_callback_error": "N\u00e3o foi poss\u00edvel concluir a conex\u00e3o Meta. Tente novamente ou contate o administrador."
+  }
+}

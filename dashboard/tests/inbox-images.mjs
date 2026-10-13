@@ -70,7 +70,7 @@ try {
     await page.getByAltText("Previa da imagem").waitFor();
     await page.getByRole("textbox", { name: "Mensagem", exact: true }).fill("Texto enviado");
     await page.getByRole("button", { name: "Enviar mensagem", exact: true }).click();
-    await page.getByRole("alert").filter({ hasText: "Imagem recusada" }).waitFor();
+    await page.getByRole("alert").filter({ hasText: "Falha ao enviar imagem" }).waitFor();
     assert.equal(await page.getByRole("textbox", { name: "Mensagem", exact: true }).inputValue(), "");
     assert.equal(await page.getByAltText("Previa da imagem").count(), 1);
     failImage = false;

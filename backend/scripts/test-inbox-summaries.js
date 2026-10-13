@@ -59,11 +59,13 @@ async function main() {
     await add(" ", { read: { watermark: 123 } }, "2026-10-12T10:01:00Z");
     let item = await latest();
     assert.equal(item.lastMessageText, "Texto real");
+    assert.equal(item.lastMessageKind, "text");
     assert.equal(new Date(item.lastMessageAt).toISOString(), "2026-10-12T10:00:00.000Z");
     assert.equal(item.unreadCount, 1);
     const attachment = type => ({ type, payload: { url: "https://example.test/image.png?test-only=cap" } });
     await add(null, { message: { attachments: [attachment("image")] } }, "2026-10-12T10:02:00Z", true);
     assert.equal((await latest()).lastMessageText, "[Imagem]");
+    assert.equal((await latest()).lastMessageKind, "image");
     assert.equal((await latest()).unreadCount, 2);
     await add(null, { inboxImage: { filename: "test-only.jpg" } }, "2026-10-12T10:03:00Z");
     assert.equal((await latest()).lastMessageText, "[Imagem]");
@@ -78,6 +80,7 @@ async function main() {
     assert.equal((await latest()).lastMessageText, "[Anexos]");
     await add("Legenda com anexo", { attachments: [attachment("image")] }, "2026-10-12T10:11:00Z");
     assert.equal((await latest()).lastMessageText, "Legenda com anexo");
+    assert.equal((await latest()).lastMessageKind, "text");
     for (const payload of [null, [], "invalid", { attachments: {} }, { attachments: [] }, { attachments: [null, {}, "invalid", { type: 123 }] }]) {
       await add(null, payload, "2026-10-12T10:12:00Z");
       assert.equal((await latest()).lastMessageText, "Legenda com anexo");

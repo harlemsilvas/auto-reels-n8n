@@ -1,0 +1,24 @@
+{
+  "title": "Instagram accounts", "connect": "Connect with Meta", "refresh": "Refresh accounts",
+  "listLabel": "Connected Instagram accounts", "loading": "Loading accounts...", "empty": "No accounts connected.",
+  "name": "Name", "namePlaceholder": "Main account", "instagramId": "Instagram ID", "pageId": "Page ID", "pageIdOptional": "Page ID (optional)",
+  "status": "Status", "active": "Active", "inactive": "Inactive", "tokenExpires": "Token expires", "expiresOptional": "Token expiry (optional)",
+  "actions": "Actions", "changeStatus": "Account active: {{name}}", "maintenance": "Technical maintenance", "manualEntry": "Manual account entry",
+  "accessToken": "Access token", "showToken": "Show access token", "hideToken": "Hide access token", "save": "Save account", "saving": "Saving...",
+  "import": "Import configured account", "importing": "Importing...",
+  "confirmImport": "Import the server-configured account? This may update an existing account and its credentials.",
+  "saved": "Account saved.", "statusUpdated": "Account status updated.", "imported": "Configured account imported.",
+  "loadFailed": "Unable to load accounts. Try refreshing the list.", "saveFailed": "Unable to save the account. Check the fields and try again.",
+  "statusFailed": "Unable to update the account status.", "importFailed": "Unable to import the configured account.",
+  "oauthChecking": "Checking the account returned by Meta...", "oauthConnected": "Account connected: {{name}}",
+  "oauthUnverified": "Meta returned a connection result, but the account could not be identified in this list. Refresh the list before continuing.",
+  "oauthError": {
+    "access_denied": "Meta authorization was canceled or denied. You can try connecting again.",
+    "invalid_oauth_state": "The connection request expired or could not be verified. Start a new connection.",
+    "missing_oauth_code": "Meta did not return an authorization code. Start a new connection.",
+    "no_facebook_pages": "No accessible Facebook Page was found for this authorization.",
+    "no_instagram_account": "No Instagram professional account linked to an accessible Facebook Page was found.",
+    "meta_configuration_unavailable": "Meta connection is not configured in this environment.",
+    "oauth_callback_error": "Unable to complete the Meta connection. Try again or contact the administrator."
+  }
+}

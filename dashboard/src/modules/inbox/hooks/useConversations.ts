@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import inboxService from "../services/inbox.service";
 import type { Conversation } from "../types/inbox.types";
+import { useTranslation } from "react-i18next";
+import { inboxErrorKey, type InboxErrorKey } from "../error-key";
 
 export function useConversations(accountId?: string) {
+  const { t } = useTranslation("inbox");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<InboxErrorKey | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const requestVersion = useRef(0);
@@ -36,8 +39,7 @@ export function useConversations(accountId?: string) {
       setError(null);
     } catch (failure: unknown) {
       if (version !== requestVersion.current) return;
-      const error = failure as { response?: { data?: { message?: string } }; message?: string };
-      setError(error?.response?.data?.message || error?.message || "Falha ao carregar conversas.");
+      setError(inboxErrorKey(failure, "loadConversations"));
     } finally {
       pendingRequests.current -= 1;
       if (version === requestVersion.current) setLoading(false);
@@ -71,6 +73,6 @@ export function useConversations(accountId?: string) {
     setSelectedConversation((item) => item?.id === id ? { ...item, unreadCount } : item);
   }, []);
 
-  return { loading, error, conversations, selectedConversation,
+  return { loading, error: error ? t(`errors.${error}`) : null, conversations, selectedConversation,
     setSelectedConversation, updateUnreadCount, refresh: loadConversations };
 }

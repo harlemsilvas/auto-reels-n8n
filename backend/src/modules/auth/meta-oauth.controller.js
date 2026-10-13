@@ -6,7 +6,7 @@ const {
   buildSuccessRedirect,
   buildErrorRedirect,
 } = require("./meta-oauth.service");
-const { ADMIN_AUTH_ENABLED } = require("../../config/env");
+const { ADMIN_AUTH_ENABLED, META_APP_ID, META_APP_SECRET, META_REDIRECT_URI } = require("../../config/env");
 const authRepository = require("./admin-auth.repository");
 
 /**
@@ -17,6 +17,9 @@ const authRepository = require("./admin-auth.repository");
 
 async function redirectToMetaLogin(req, res, next) {
   try {
+    if (!META_APP_ID || !META_APP_SECRET || !META_REDIRECT_URI) {
+      return res.redirect(buildErrorRedirect("meta_configuration_unavailable"));
+    }
     console.log("======================================");
     console.log("[META LOGIN START]");
     console.log("IP:", req.ip);
@@ -45,7 +48,7 @@ async function handleMetaCallback(req, res, next) {
     console.log("======================================");
     console.log("[META CALLBACK]");
 
-    const { code, error, error_reason, state } = req.query;
+    const { code, error, state } = req.query;
 
     if (
       ADMIN_AUTH_ENABLED &&
@@ -60,17 +63,14 @@ async function handleMetaCallback(req, res, next) {
 
     if (error) {
       console.error("[META CALLBACK ERROR]");
-      console.error(error);
-      console.error(error_reason);
-
-      return res.redirect(buildErrorRedirect(error_reason || error));
+      return res.redirect(buildErrorRedirect(error === "access_denied" ? "access_denied" : "oauth_callback_error"));
     }
 
     /**
      * Missing code
      */
 
-    if (!code) {
+    if (typeof code !== "string" || !code) {
       return res.redirect(buildErrorRedirect("missing_oauth_code"));
     }
 
@@ -108,19 +108,14 @@ async function handleMetaCallback(req, res, next) {
      * Redirect frontend
      */
 
-    return res.redirect(buildSuccessRedirect());
+    return res.redirect(buildSuccessRedirect(result?.account?.id));
   } catch (error) {
     console.error("======================================");
     console.error("[META CALLBACK FATAL]");
-    console.error(error?.response?.data || error);
     console.error("======================================");
 
     return res.redirect(
-      buildErrorRedirect(
-        error?.response?.data?.error?.message ||
-          error?.message ||
-          "oauth_callback_error",
-      ),
+      buildErrorRedirect(error?.code),
     );
   }
 }

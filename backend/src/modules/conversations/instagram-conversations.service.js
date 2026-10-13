@@ -5,15 +5,21 @@ function log(...args) {
   console.log(`[CONVERSATIONS ${new Date().toISOString()}]`, ...args);
 }
 
-function attachmentSummary(payload) {
-  if (payload?.inboxImage?.filename) return "[Imagem]";
+function attachmentKind(payload) {
+  if (payload?.inboxImage?.filename) return "image";
   const attachments = payload?.message?.attachments ?? payload?.attachments;
   if (!Array.isArray(attachments)) return null;
   const types = attachments.map((item) => item?.type).filter((type) => typeof type === "string" && type.trim());
   if (!types.length) return null;
-  if (types.length > 1) return "[Anexos]";
+  if (types.length > 1) return "attachments";
+  return ["image", "video", "audio", "file"].includes(types[0]) ? types[0] : "attachment";
+}
+
+function attachmentSummary(payload) {
+  const kind = attachmentKind(payload);
+  if (kind === "attachments") return "[Anexos]";
   const labels = { image: "[Imagem]", video: "[Video]", audio: "[Audio]", file: "[Arquivo]" };
-  return Object.hasOwn(labels, types[0]) ? labels[types[0]] : "[Anexo]";
+  return kind ? (Object.hasOwn(labels, kind) ? labels[kind] : "[Anexo]") : null;
 }
 
 /**
@@ -149,6 +155,8 @@ async function listConversations({ accountId, limit = 50 }) {
         instagramName: conversation.instagramName || profile?.name || null,
         instagramUsername: conversation.instagramUsername || profile?.username || null,
         lastMessageText: conversation.lastMessageText || attachmentSummary(_lastMessagePayload),
+        lastMessageKind: (!conversation.lastMessageText || ["[image]", "[attachment]"].includes(conversation.lastMessageText)) && attachmentKind(_lastMessagePayload)
+          ? attachmentKind(_lastMessagePayload) : conversation.lastMessageText ? "text" : null,
       };
     })),
   };

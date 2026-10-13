@@ -1,0 +1,25 @@
+{
+  "pageTitle": "SocialBot | Painel",
+  "language": "Idioma",
+  "languageName": "Portugu\u00eas",
+  "navigationLabel": "Navega\u00e7\u00e3o principal",
+  "signedInUser": "Usu\u00e1rio conectado",
+  "logout": "Sair",
+  "role": { "admin": "Administrador", "operator": "Operador" },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "uploads": "Uploads",
+    "schedule": "Agendamentos",
+    "slots": "Hor\u00e1rios",
+    "templates": "Modelos",
+    "ai": "IA",
+    "history": "Hist\u00f3rico",
+    "inbox": "Inbox",
+    "testers": "Testers DM",
+    "accounts": "Contas",
+    "users": "Usu\u00e1rios"
+  },
+  "unread_one": "{{count}} mensagem n\u00e3o lida",
+  "unread_other": "{{count}} mensagens n\u00e3o lidas",
+  "unavailable": "-"
+}

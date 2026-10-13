@@ -257,6 +257,12 @@ app.use((error, req, res, _next) => {
       attempt: error.attempt,
     });
   }
+  if (error?.code === "META_MESSAGE_PERMISSION_DENIED") {
+    return res.status(403).json({
+      code: "META_MESSAGE_PERMISSION_DENIED",
+      message: "A Meta negou a permissao necessaria para responder a este destinatario.",
+    });
+  }
   if (process.env.NODE_ENV !== "production") {
     console.error("======================================");
     console.error("[ERROR]");

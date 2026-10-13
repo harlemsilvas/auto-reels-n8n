@@ -1,0 +1,25 @@
+{
+  "pageTitle": "SocialBot | Dashboard",
+  "language": "Language",
+  "languageName": "English",
+  "navigationLabel": "Main navigation",
+  "signedInUser": "Signed-in user",
+  "logout": "Sign out",
+  "role": { "admin": "Administrator", "operator": "Operator" },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "uploads": "Uploads",
+    "schedule": "Schedule",
+    "slots": "Time slots",
+    "templates": "Templates",
+    "ai": "AI",
+    "history": "History",
+    "inbox": "Inbox",
+    "testers": "DM testers",
+    "accounts": "Accounts",
+    "users": "Users"
+  },
+  "unread_one": "{{count}} unread message",
+  "unread_other": "{{count}} unread messages",
+  "unavailable": "-"
+}

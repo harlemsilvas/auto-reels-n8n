@@ -6,6 +6,16 @@ Este projeto demonstra a construcao de um sistema real de operacao interna: back
 
 ## Destaques Do Projeto
 
+Preparacao para analise Meta e internacionalizacao PT/EN documentada em
+[project-docs/meta-app-review](project-docs/meta-app-review/README.md), com
+diagnostico, etapas de desenvolvimento e roteiro de evidencias. Base PT/EN local
+implementada no MR-02 para login/troca de senha/navegacao, com seletor e preferencia
+persistida e aceite do usuario. Contas/feedback OAuth PT/EN implementados localmente
+no MR-03; Inbox e Testers DM PT/EN implementados e testados localmente no
+[MR-04](project-docs/meta-app-review/mr-04/README.md), preservando rascunhos e
+bloqueios de entrega incerta. Demais telas, ambiente de avaliacao e controles
+adicionais ainda pendentes. Nenhuma traducao publicada na VPS.
+
 - Evolucao de um fluxo legado de Reels para uma arquitetura preparada para multiplos formatos de publicacao
 - Backend modular com autenticacao, permissoes, scheduler, historico, inbox, metricas e publisher por estrategia
 - Dashboard administrativo em React para operacao diaria

@@ -69,7 +69,7 @@ try {
   const input = page.getByRole("textbox", { name: "Mensagem", exact: true });
   await input.fill("Rascunho que deve permanecer");
   await page.getByRole("button", { name: "Enviar mensagem", exact: true }).click();
-  await page.getByRole("alert").filter({ hasText: "Falha simulada" }).waitFor();
+  await page.getByRole("alert").filter({ hasText: "Falha ao enviar mensagem" }).waitFor();
   assert.equal(await input.inputValue(), "Rascunho que deve permanecer");
   assert.equal(await page.locator(".inbox-message-bubble").count(), 1);
   assert.equal(await page.evaluate(() => window.testStreams.length), streamCount);

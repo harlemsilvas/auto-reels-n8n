@@ -87,7 +87,7 @@ async function createOAuthState(session, ipAddress) {
 }
 
 async function consumeOAuthState(state, session) {
-  if (!state) return false;
+  if (typeof state !== "string" || !state) return false;
 
   const result = await query(
     `
@@ -300,7 +300,7 @@ async function processOAuthCallback(code) {
     const pages = await getFacebookPages(accessToken);
 
     if (!pages.length) {
-      throw new Error("Nenhuma pagina Facebook encontrada.");
+      throw Object.assign(new Error("Nenhuma pagina Facebook encontrada."), { code: "no_facebook_pages" });
     }
 
     /**
@@ -311,7 +311,7 @@ async function processOAuthCallback(code) {
     const validPage = pages.find((page) => page.instagram_business_account?.id);
 
     if (!validPage) {
-      throw new Error("Nenhuma conta Instagram Business conectada.");
+      throw Object.assign(new Error("Nenhuma conta Instagram Business conectada."), { code: "no_instagram_account" });
     }
 
     const igUserId = validPage.instagram_business_account.id;
@@ -353,7 +353,7 @@ async function processOAuthCallback(code) {
       instagramAccount,
     };
   } catch (error) {
-    console.error("[META OAUTH ERROR]", error?.response?.data || error.message);
+    console.error("[META OAUTH ERROR]", { code: safeOAuthError(error?.code), status: Number(error?.response?.status) || null });
 
     throw error;
   }
@@ -365,8 +365,12 @@ async function processOAuthCallback(code) {
  * ======================================
  */
 
-function buildSuccessRedirect() {
-  return `${FRONTEND_URL}/contas?connected=true`;
+function buildSuccessRedirect(accountId) {
+  const params = new URLSearchParams({ connected: "true" });
+  if (typeof accountId === "string" && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(accountId)) {
+    params.set("accountId", accountId);
+  }
+  return `${FRONTEND_URL.replace(/\/+$/, "")}/contas?${params.toString()}`;
 }
 
 /**
@@ -375,10 +379,14 @@ function buildSuccessRedirect() {
  * ======================================
  */
 
-function buildErrorRedirect(message) {
-  const encoded = encodeURIComponent(message || "oauth_error");
+function safeOAuthError(code) {
+  const allowed = ["access_denied", "invalid_oauth_state", "missing_oauth_code",
+    "no_facebook_pages", "no_instagram_account", "meta_configuration_unavailable", "oauth_callback_error"];
+  return typeof code === "string" && allowed.includes(code) ? code : "oauth_callback_error";
+}
 
-  return `${FRONTEND_URL}/contas?error=${encoded}`;
+function buildErrorRedirect(code) {
+  return `${FRONTEND_URL.replace(/\/+$/, "")}/contas?${new URLSearchParams({ error: safeOAuthError(code) })}`;
 }
 
 module.exports = {

@@ -47,7 +47,7 @@ try {
     const draft = page.getByRole("textbox", { name: "Mensagem", exact: true });
     await draft.fill("Texto a preservar");
     await page.getByRole("button", { name: "Enviar mensagem", exact: true }).click();
-    await page.getByRole("alert").filter({ hasText: "Rejeitado" }).waitFor();
+    await page.getByRole("alert").filter({ hasText: "Falha ao enviar mensagem" }).waitFor();
     assert.equal(await draft.inputValue(), "Texto a preservar");
     assert.equal(await page.locator(".inbox-message-bubble").count(), 0);
     outcome = "uncertain";

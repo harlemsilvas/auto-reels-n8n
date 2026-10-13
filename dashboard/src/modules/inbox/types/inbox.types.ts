@@ -38,6 +38,7 @@ export interface Conversation {
   lastMessageAt?: string | null;
 
   lastMessageText?: string | null;
+  lastMessageKind?: "text" | "image" | "video" | "audio" | "file" | "attachment" | "attachments" | null;
 
   unreadCount?: number;
 

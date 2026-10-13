@@ -1,331 +1,128 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { EyeOff, ListChecks, LoaderCircle, RefreshCw, Send } from "lucide-react";
 import inboxService from "../services/inbox.service";
 import type { TesterConversation } from "../types/inbox.types";
+import { inboxErrorKey, type InboxErrorKey } from "../error-key";
+import { deliveryUncertain } from "../uncertain-send";
+import { formatDateTime } from "../../../shared/i18n/formatters";
+import "../styles/inbox.css";
 
-const TEST_FLOW_MESSAGES = [
-  "Ola! Este e um teste do SocialBot.",
-  "Mensagem 2: recebemos sua DM corretamente.",
-  "Mensagem 3: teste finalizado com sucesso.",
-] as const;
-
-function formatDate(value?: string | null) {
-  if (!value) {
-    return "-";
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  }).format(date);
-}
-
-function wait(ms: number) {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, ms);
-  });
+function wait(ms: number) { return new Promise(resolve => window.setTimeout(resolve, ms)); }
+function recipient(conversation: TesterConversation) {
+  return conversation.instagramUsername ? `@${conversation.instagramUsername}` : conversation.instagramUserId;
 }
 
 export default function TestersDmPage() {
+  const { t } = useTranslation("inbox");
+  const [defaultMessage] = useState(() => t("testers.defaultMessage"));
   const [loading, setLoading] = useState(true);
-  const [sendingId, setSendingId] = useState<string | null>(null);
-  const [flowingId, setFlowingId] = useState<string | null>(null);
-  const [hidingId, setHidingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [messageDrafts, setMessageDrafts] = useState<Record<string, string>>({});
+  const [operation, setOperation] = useState<{ id: string; kind: "send" | "flow" | "hide" } | null>(null);
+  const [error, setError] = useState<InboxErrorKey | null>(null);
+  const [success, setSuccess] = useState<{ key: "sendSuccess" | "flowSuccess" | "hideSuccess"; recipient: string } | null>(null);
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [conversations, setConversations] = useState<TesterConversation[]>([]);
+  const pending = useRef(false);
+  const loadVersion = useRef(0);
+  const busy = operation !== null;
 
-  const primaryButtonStyle = {
-    border: "none",
-    borderRadius: "10px",
-    background: "#18181b",
-    color: "#fafafa",
-    padding: "0.7rem 1rem",
-    fontWeight: 600,
-    cursor: "pointer",
-  } as const;
-
-  const secondaryButtonStyle = {
-    border: "1px solid #d4d4d8",
-    borderRadius: "10px",
-    background: "#ffffff",
-    color: "#18181b",
-    padding: "0.7rem 1rem",
-    fontWeight: 600,
-    cursor: "pointer",
-  } as const;
-
-  const hasConversations = useMemo(
-    () => conversations.length > 0,
-    [conversations.length],
-  );
-
-  async function loadConversations() {
-    setLoading(true);
-    setError(null);
-
+  const loadConversations = useCallback(async () => {
+    const version = ++loadVersion.current;
     try {
       const response = await inboxService.listTesterConversations();
-      setConversations(response.items);
-    } catch (loadError: any) {
-      setError(
-        loadError?.response?.data?.message ||
-          loadError?.message ||
-          "Falha ao carregar conversas de teste.",
-      );
+      if (version === loadVersion.current) { setConversations(response.items); setError(null); }
+    } catch (failure) {
+      if (version === loadVersion.current) setError(inboxErrorKey(failure, "testerLoad"));
     } finally {
-      setLoading(false);
+      if (version === loadVersion.current) setLoading(false);
     }
-  }
-
+  }, []);
   useEffect(() => {
-    void loadConversations();
+    let active = true;
+    const version = ++loadVersion.current;
+    void inboxService.listTesterConversations().then(response => {
+      if (active && version === loadVersion.current) setConversations(response.items);
+    }).catch(failure => {
+      if (active && version === loadVersion.current) setError(inboxErrorKey(failure, "testerLoad"));
+    }).finally(() => {
+      if (active && version === loadVersion.current) setLoading(false);
+    });
+    return () => { active = false; };
   }, []);
 
-  function updateDraft(conversationId: string, value: string) {
-    setMessageDrafts((current) => ({
-      ...current,
-      [conversationId]: value,
-    }));
-  }
-
+  function refresh() { setLoading(true); setError(null); return loadConversations(); }
   async function handleSend(conversation: TesterConversation) {
-    const draft = String(messageDrafts[conversation.id] ?? "").trim();
-
-    if (!draft) {
-      setError("Digite uma mensagem antes de enviar.");
-      setSuccess(null);
-      return;
-    }
-
-    setSendingId(conversation.id);
-    setError(null);
+    if (pending.current) return;
+    const draft = (drafts[conversation.id] ?? defaultMessage).trim();
     setSuccess(null);
-
+    if (!draft) { setError("emptyDraft"); return; }
+    pending.current = true; setOperation({ id: conversation.id, kind: "send" }); setError(null);
     try {
-      await inboxService.sendTesterDm({
-        conversationId: conversation.id,
-        message: draft,
-      });
-
-      setSuccess(`DM enviada para @${conversation.instagramUsername || "tester"}.`);
-      await loadConversations();
-    } catch (sendError: any) {
-      setError(
-        sendError?.response?.data?.message ||
-          sendError?.message ||
-          "Falha ao enviar DM de teste.",
-      );
-    } finally {
-      setSendingId(null);
-    }
+      await inboxService.sendTesterDm({ conversationId: conversation.id, message: draft });
+      setSuccess({ key: "sendSuccess", recipient: recipient(conversation) });
+      await refresh();
+    } catch (failure) { setError(deliveryUncertain(failure) ? "deliveryUncertain" : inboxErrorKey(failure, "testerSend")); }
+    finally { pending.current = false; setOperation(null); }
   }
-
   async function handleFlow(conversation: TesterConversation) {
-    setFlowingId(conversation.id);
-    setError(null);
-    setSuccess(null);
-
+    if (pending.current) return;
+    // Snapshot generated content once; switching locale must not change an in-flight flow.
+    const messages = [t("testers.flow1"), t("testers.flow2"), t("testers.flow3")];
+    pending.current = true; setOperation({ id: conversation.id, kind: "flow" }); setError(null); setSuccess(null);
     try {
-      for (let index = 0; index < TEST_FLOW_MESSAGES.length; index += 1) {
-        await inboxService.sendTesterDm({
-          conversationId: conversation.id,
-          message: TEST_FLOW_MESSAGES[index],
-        });
-
-        if (index < TEST_FLOW_MESSAGES.length - 1) {
-          await wait(2000);
-        }
+      for (let index = 0; index < messages.length; index++) {
+        await inboxService.sendTesterDm({ conversationId: conversation.id, message: messages[index] });
+        if (index < messages.length - 1) await wait(2000);
       }
-
-      setSuccess(
-        `Fluxo de teste enviado para @${conversation.instagramUsername || "tester"}.`,
-      );
-      await loadConversations();
-    } catch (flowError: any) {
-      setError(
-        flowError?.response?.data?.message ||
-          flowError?.message ||
-          "Falha ao enviar o fluxo de teste.",
-      );
-    } finally {
-      setFlowingId(null);
-    }
+      setSuccess({ key: "flowSuccess", recipient: recipient(conversation) });
+      await refresh();
+    } catch (failure) { setError(deliveryUncertain(failure) ? "deliveryUncertain" : inboxErrorKey(failure, "testerFlow")); }
+    finally { pending.current = false; setOperation(null); }
   }
-
   async function handleHide(conversation: TesterConversation) {
-    const label = conversation.instagramUsername
-      ? `@${conversation.instagramUsername}` : conversation.instagramUserId;
-    if (!window.confirm(`Ocultar ${label} desta pagina? O historico do Inbox sera preservado. Esta acao nao remove o testador da Meta.`)) return;
-
-    setHidingId(conversation.id);
-    setError(null);
-    setSuccess(null);
+    if (pending.current || !window.confirm(t("testers.hideConfirm", { recipient: recipient(conversation) }))) return;
+    pending.current = true; setOperation({ id: conversation.id, kind: "hide" }); setError(null); setSuccess(null);
     try {
       await inboxService.hideTesterConversation(conversation.id);
-      setConversations((current) => current.filter((item) => item.id !== conversation.id));
-      setSuccess(`${label} ocultado desta pagina.`);
-    } catch (hideError: unknown) {
-      const failure = hideError as { response?: { data?: { message?: string } }; message?: string };
-      setError(failure?.response?.data?.message || failure?.message || "Falha ao ocultar conversa.");
-    } finally {
-      setHidingId(null);
-    }
+      setConversations(items => items.filter(item => item.id !== conversation.id));
+      setSuccess({ key: "hideSuccess", recipient: recipient(conversation) });
+    } catch (failure) { setError(inboxErrorKey(failure, "testerHide")); }
+    finally { pending.current = false; setOperation(null); }
   }
 
-  return (
-    <section className="dashboard-grid">
-      <article className="panel-card full-width">
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            gap: "1rem",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-          }}
-        >
-          <div>
-            <h2>Teste de DM com Testadores Instagram</h2>
-            <p style={{ margin: 0, color: "#71717a" }}>
-              Painel interno para responder testers autorizados da Meta.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => void loadConversations()}
-            style={secondaryButtonStyle}
-          >
-            Atualizar
-          </button>
-        </div>
-
-        <div
-          style={{
-            display: "grid",
-            gap: "0.75rem",
-            marginTop: "1rem",
-            padding: "1rem",
-            borderRadius: "16px",
-            background: "#fff7ed",
-            border: "1px solid #fdba74",
-          }}
-        >
-          <strong>Primeiro o tester precisa enviar uma DM para @hrmmotos.</strong>
-          <span>Use apenas com testadores autorizados.</span>
-        </div>
-
-        {error ? <p className="error-text">{error}</p> : null}
-        {success ? <p style={{ color: "#166534", marginTop: "1rem" }}>{success}</p> : null}
-
-        {loading ? <p style={{ marginTop: "1rem" }}>Carregando conversas...</p> : null}
-
-        {!loading && !hasConversations ? (
-          <p style={{ marginTop: "1rem" }}>
-            Nenhuma conversa encontrada ainda. Aguarde o tester enviar a primeira DM.
-          </p>
-        ) : null}
-
-        {!loading && hasConversations ? (
-          <div style={{ overflowX: "auto", marginTop: "1rem" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "980px" }}>
-              <thead>
-                <tr style={{ textAlign: "left", borderBottom: "1px solid #d4d4d8" }}>
-                  <th style={{ padding: "0.75rem" }}>Nome</th>
-                  <th style={{ padding: "0.75rem" }}>Username</th>
-                  <th style={{ padding: "0.75rem" }}>Instagram User ID</th>
-                  <th style={{ padding: "0.75rem" }}>Ultima mensagem</th>
-                  <th style={{ padding: "0.75rem" }}>Ultima data</th>
-                  <th style={{ padding: "0.75rem", width: "280px" }}>Mensagem</th>
-                  <th style={{ padding: "0.75rem", width: "240px" }}>Acoes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {conversations.map((conversation) => {
-                  const isSending = sendingId === conversation.id;
-                  const isFlowing = flowingId === conversation.id;
-                  const isHiding = hidingId === conversation.id;
-                  const isBusy = isSending || isFlowing || isHiding;
-
-                  return (
-                    <tr key={conversation.id} style={{ borderBottom: "1px solid #e4e4e7" }}>
-                      <td style={{ padding: "0.75rem" }}>
-                        {conversation.instagramName || "-"}
-                      </td>
-                      <td style={{ padding: "0.75rem" }}>
-                        {conversation.instagramUsername
-                          ? `@${conversation.instagramUsername}`
-                          : "-"}
-                      </td>
-                      <td style={{ padding: "0.75rem", fontFamily: "monospace" }}>
-                        {conversation.instagramUserId}
-                      </td>
-                      <td style={{ padding: "0.75rem" }}>
-                        {conversation.lastMessageText || "-"}
-                      </td>
-                      <td style={{ padding: "0.75rem" }}>
-                        {formatDate(conversation.lastMessageAt)}
-                      </td>
-                      <td style={{ padding: "0.75rem" }}>
-                        <textarea
-                          value={messageDrafts[conversation.id] ?? "Mensagem de teste SocialBot"}
-                          onChange={(event) =>
-                            updateDraft(conversation.id, event.target.value)
-                          }
-                          rows={3}
-                          disabled={isBusy}
-                          style={{
-                            width: "100%",
-                            resize: "vertical",
-                            borderRadius: "12px",
-                            border: "1px solid #d4d4d8",
-                            padding: "0.75rem",
-                          }}
-                        />
-                      </td>
-                      <td style={{ padding: "0.75rem" }}>
-                        <div style={{ display: "grid", gap: "0.5rem" }}>
-                          <button
-                            type="button"
-                            onClick={() => void handleSend(conversation)}
-                            disabled={isBusy}
-                            style={primaryButtonStyle}
-                          >
-                            {isSending ? "Enviando..." : "Enviar DM de teste"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => void handleFlow(conversation)}
-                            disabled={isBusy}
-                            style={secondaryButtonStyle}
-                          >
-                            {isFlowing ? "Enviando fluxo..." : "Enviar fluxo teste"}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => void handleHide(conversation)}
-                            disabled={isBusy}
-                            title="Ocultar apenas desta pagina"
-                            style={secondaryButtonStyle}
-                          >
-                            {isHiding ? "Ocultando..." : "Ocultar"}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : null}
-      </article>
-    </section>
-  );
+  return <section className="testers-page" aria-label={t("testers.title")}>
+    <header className="testers-heading"><h2>{t("testers.title")}</h2>
+      <button type="button" className="inbox-icon-button" title={t("testers.refresh")} aria-label={t("testers.refresh")}
+        disabled={busy || loading} onClick={() => void refresh()}><RefreshCw size={18} /></button>
+    </header>
+    <div className="testers-notice"><strong>{t("testers.firstMessage")}</strong><span>{t("testers.authorizedOnly")}</span></div>
+    {error ? <p className="inbox-error" role="alert">{t(`errors.${error}`)}</p> : null}
+    {success ? <p className="testers-success" role="status">{t(`testers.${success.key}`, { recipient: success.recipient })}</p> : null}
+    {loading ? <p role="status">{t("testers.loading")}</p> : !conversations.length ? <p>{t("testers.empty")}</p> : <div className="table-wrap" role="region" aria-label={t("testers.title")}>
+      <table className="testers-table"><thead><tr>
+        <th>{t("testers.name")}</th><th>{t("testers.username")}</th><th>{t("testers.userId")}</th>
+        <th>{t("testers.lastMessage")}</th><th>{t("testers.lastDate")}</th><th>{t("testers.message")}</th><th>{t("testers.actions")}</th>
+      </tr></thead><tbody>{conversations.map(conversation => {
+        const current = operation?.id === conversation.id ? operation.kind : null;
+        return <tr key={conversation.id}>
+          <td>{conversation.instagramName || "-"}</td><td>{conversation.instagramUsername ? `@${conversation.instagramUsername}` : "-"}</td>
+          <td className="mono-text">{conversation.instagramUserId}</td><td>{conversation.lastMessageText || "-"}</td>
+          <td>{conversation.lastMessageAt ? <time dateTime={conversation.lastMessageAt}>{formatDateTime(conversation.lastMessageAt, { dateStyle: "short", timeStyle: "short" })}</time> : "-"}</td>
+          <td><textarea value={drafts[conversation.id] ?? defaultMessage} aria-label={t("testers.draftLabel", { recipient: recipient(conversation) })}
+            onChange={event => setDrafts(items => ({ ...items, [conversation.id]: event.target.value }))} rows={3} disabled={busy} /></td>
+          <td><div className="testers-actions">
+            <button type="button" disabled={busy} onClick={() => void handleSend(conversation)}>
+              {current === "send" ? <LoaderCircle size={16} className="inbox-spin" /> : <Send size={16} />}{t(current === "send" ? "testers.sending" : "testers.send")}
+            </button>
+            <button type="button" disabled={busy} onClick={() => void handleFlow(conversation)}>
+              {current === "flow" ? <LoaderCircle size={16} className="inbox-spin" /> : <ListChecks size={16} />}{t(current === "flow" ? "testers.flowing" : "testers.flow")}
+            </button>
+            <button type="button" disabled={busy} title={t("testers.hideTitle")} onClick={() => void handleHide(conversation)}>
+              {current === "hide" ? <LoaderCircle size={16} className="inbox-spin" /> : <EyeOff size={16} />}{t(current === "hide" ? "testers.hiding" : "testers.hide")}
+            </button>
+          </div></td>
+        </tr>;
+      })}</tbody></table>
+    </div>}
+  </section>;
 }

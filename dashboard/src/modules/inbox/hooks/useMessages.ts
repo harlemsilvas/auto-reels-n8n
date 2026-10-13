@@ -3,11 +3,8 @@ import inboxService from "../services/inbox.service";
 import type { Conversation, Message } from "../types/inbox.types";
 import { useAuth } from "../../auth/context/AuthContext";
 import { deliveryUncertain, pendingKey, readPending, storePending } from "../uncertain-send";
-
-function errorMessage(error: unknown, fallback: string) {
-  const failure = error as { response?: { data?: { message?: string } }; message?: string };
-  return failure?.response?.data?.message || failure?.message || fallback;
-}
+import { useTranslation } from "react-i18next";
+import { inboxErrorKey, type InboxErrorKey } from "../error-key";
 
 function unique(messages: Message[]) {
   return [...new Map(messages.map((message) => [message.id, message])).values()]
@@ -15,6 +12,7 @@ function unique(messages: Message[]) {
 }
 
 export function useMessages(conversation?: Conversation | null, onRead?: (id: string, unreadCount: number) => void, readEnabled = true) {
+  const { t } = useTranslation("inbox");
   const id = conversation?.id;
   const accountId = conversation?.accountId;
   const recipientId = conversation?.instagramUserId;
@@ -31,7 +29,7 @@ export function useMessages(conversation?: Conversation | null, onRead?: (id: st
   const sendPending = useRef(false);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<InboxErrorKey | null>(null);
   const [state, setState] = useState<{ id?: string; items: Message[] }>({ items: [] });
   const itemsRef = useRef<Message[]>([]);
   const readEnabledRef = useRef(readEnabled);
@@ -50,7 +48,7 @@ export function useMessages(conversation?: Conversation | null, onRead?: (id: st
     const ids = itemsRef.current.filter((message) => message.conversationId === id && !message.id.startsWith("temp-")).map((message) => message.id);
     if (readEnabled && ids.length) {
       void acknowledge(ids, version).catch((failure: unknown) => {
-        if (version === generation.current) setError(errorMessage(failure, "Falha ao marcar mensagem como lida."));
+        if (version === generation.current) setError(inboxErrorKey(failure, "markRead"));
       });
     }
   }, [id, readEnabled, acknowledge]);
@@ -117,7 +115,7 @@ export function useMessages(conversation?: Conversation | null, onRead?: (id: st
         ...current.filter((item) => item.id.startsWith("temp-") || !previousIds.has(item.id))]));
       await acknowledge(response.items.map((message) => message.id), version);
     } catch (failure: unknown) {
-      if (version === generation.current) setError(errorMessage(failure, "Falha ao carregar mensagens."));
+      if (version === generation.current) setError(inboxErrorKey(failure, "loadMessages"));
     } finally {
       if (version === generation.current) {
         fetching.current = false;
@@ -155,13 +153,13 @@ export function useMessages(conversation?: Conversation | null, onRead?: (id: st
     update((items) => unique([...items, message]));
     const version = generation.current;
     void acknowledge([message.id], version).catch((failure: unknown) => {
-      if (version === generation.current) setError(errorMessage(failure, "Falha ao marcar mensagem como lida."));
+      if (version === generation.current) setError(inboxErrorKey(failure, "markRead"));
     });
   }, [id, update, acknowledge]);
 
   async function sendMessage(messageText: string) {
     const trimmed = messageText.trim();
-    if (pendingMessage.current?.deliveryState === "uncertain") throw new Error("Confira a entrega antes de enviar novamente.");
+    if (pendingMessage.current?.deliveryState === "uncertain") throw new Error("MESSAGE_DELIVERY_UNCERTAIN");
     if (!id || !accountId || !recipientId || !trimmed || sendPending.current) return;
     const version = generation.current;
     const temporaryId = `temp-${crypto.randomUUID()}`;
@@ -199,7 +197,7 @@ export function useMessages(conversation?: Conversation | null, onRead?: (id: st
         setUncertain(unknownDelivery);
         update((items) => unknownDelivery ? items.map((item) => item.id === temporaryId ? pending : item)
           : items.filter((item) => item.id !== temporaryId));
-        setError(unknownDelivery ? "Entrega incerta. Confira o Instagram; nao reenvie esta mensagem." : errorMessage(failure, "Falha ao enviar mensagem."));
+        setError(unknownDelivery ? "deliveryUncertain" : inboxErrorKey(failure, "sendMessage"));
       }
       throw failure;
     } finally {
@@ -211,7 +209,7 @@ export function useMessages(conversation?: Conversation | null, onRead?: (id: st
   }
 
   async function sendImage(image: File) {
-    if (pendingMessage.current?.deliveryState === "uncertain") throw new Error("Confira a entrega antes de enviar novamente.");
+    if (pendingMessage.current?.deliveryState === "uncertain") throw new Error("MESSAGE_DELIVERY_UNCERTAIN");
     if (!id || sendPending.current) return;
     const version = generation.current;
     sendPending.current = true;
@@ -221,7 +219,7 @@ export function useMessages(conversation?: Conversation | null, onRead?: (id: st
       const created = await inboxService.sendImage(id, image);
       if (version === generation.current) update((items) => unique([...items, created]));
     } catch (failure: unknown) {
-      if (version === generation.current) setError(errorMessage(failure, "Falha ao enviar imagem."));
+      if (version === generation.current) setError(deliveryUncertain(failure) ? "imageDeliveryUncertain" : inboxErrorKey(failure, "sendImage"));
       throw failure;
     } finally {
       if (version === generation.current) {
@@ -248,13 +246,13 @@ export function useMessages(conversation?: Conversation | null, onRead?: (id: st
         if (pending) update((items) => items.filter((item) => item.id !== pending.id));
       }
     } catch (failure) {
-      if (version === generation.current) setError(errorMessage(failure, "Falha ao encerrar tentativa."));
+      if (version === generation.current) setError(inboxErrorKey(failure, "closeAttempt"));
     } finally {
       if (version === generation.current) { sendPending.current = false; setSending(false); }
     }
   }
 
-  return { loading, sending, error, uncertain, discardUncertain,
+  return { loading, sending, error: error ? t(`errors.${error}`) : null, uncertain, discardUncertain,
     onDraftChange: (value: string) => { if (draftConversation.current === id) draftRef.current = value; },
     draftToRestore: state.id !== id ? "" : uncertain ? state.items.find(item => item.deliveryState === "uncertain")?.unsentDraft ?? "" : recoveredDraft,
     messages: state.id === id ? state.items : [],

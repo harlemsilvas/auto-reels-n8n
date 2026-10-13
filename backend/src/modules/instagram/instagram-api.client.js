@@ -38,17 +38,19 @@ async function sendApiRequest({ accessToken, payload }) {
   } catch (error) {
     const responseData = error?.response?.data;
     const responseStatus = Number(error?.response?.status ?? 500);
+    const permissionDenied = responseData?.error?.code === 200;
     const metaMessage =
       responseData?.error?.message ||
       responseData?.message ||
       error?.message ||
       "Falha ao enviar mensagem para a Meta.";
 
-    console.error("[INSTAGRAM API ERROR]", payload.message?.attachment ? { status: responseStatus } : responseData || error.message);
+    console.error("[INSTAGRAM API ERROR]", { status: responseStatus, metaCode: Number(responseData?.error?.code) || null });
 
-    const normalizedError = new Error(payload.message?.attachment ? "A Meta nao confirmou o envio da imagem." : metaMessage);
+    const normalizedError = new Error(permissionDenied ? "A Meta negou a permissao de mensagens." : payload.message?.attachment ? "A Meta nao confirmou o envio da imagem." : metaMessage);
     normalizedError.status = responseStatus;
-    normalizedError.details = responseData;
+    normalizedError.details = permissionDenied ? { error: { code: 200 } } : responseData;
+    if (permissionDenied) normalizedError.code = "META_MESSAGE_PERMISSION_DENIED";
 
     throw normalizedError;
   }

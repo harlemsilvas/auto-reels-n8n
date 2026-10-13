@@ -67,6 +67,17 @@
 .inbox-error { margin: 0; padding: 12px 16px; background: #fff0f0; color: #a03232; font-size: 13px; overflow-wrap: anywhere; }
 .inbox-readonly-notice { margin: 0; padding: 16px; background: #fff; color: #69777d; font-size: 13px; text-align: center; }
 .inbox-back { display: none; }
+.testers-page { min-width: 0; }
+.testers-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.testers-heading h2 { margin: 0; font-size: 1.25rem; overflow-wrap: anywhere; }
+.testers-notice { display: grid; gap: .4rem; padding: .8rem; margin-bottom: 1rem; border-left: 3px solid #c98928; background: #fff8eb; font-size: .9rem; }
+.testers-success { color: #106940; padding: .75rem 0; margin: 0; overflow-wrap: anywhere; }
+.testers-table { min-width: 980px; }
+.testers-table td { max-width: 260px; overflow-wrap: anywhere; }
+.testers-table textarea { width: 230px; min-height: 78px; resize: vertical; border: 1px solid var(--line); border-radius: 6px; padding: .7rem; font: inherit; }
+.testers-actions { display: grid; gap: .4rem; min-width: 180px; }
+.testers-actions button { display: flex; align-items: center; justify-content: center; gap: .4rem; min-height: 36px; border: 1px solid var(--line); border-radius: 6px; padding: .4rem .6rem; color: var(--ink); background: #fff; font: inherit; font-size: .82rem; cursor: pointer; }
+.testers-actions button:disabled { opacity: .5; cursor: not-allowed; }
 .inbox-spin { animation: inbox-spin 1s linear infinite; }
 @keyframes inbox-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .inbox-spin { animation: none; } }

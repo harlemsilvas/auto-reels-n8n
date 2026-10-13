@@ -1,246 +1,179 @@
-import { useEffect, useState } from "react";
-import {
-  accountsService,
-  type InstagramAccount,
-} from "../services/accounts.service";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { Download, Eye, EyeOff, Link2, LoaderCircle, RefreshCw, Save, Wrench } from "lucide-react";
+import { accountsService, type InstagramAccount } from "../services/accounts.service";
+import { readOAuthFeedback } from "../oauth-feedback";
 import { buildApiUrl } from "../../../shared/config/api";
+import { formatDateTime } from "../../../shared/i18n/formatters";
 
-type FormState = {
-  nome: string;
-  instagramId: string;
-  pageId: string;
-  accessToken: string;
-  tokenExpiresAt: string;
-};
-
-const INITIAL_FORM: FormState = {
-  nome: "",
-  instagramId: "",
-  pageId: "",
-  accessToken: "",
-  tokenExpiresAt: "",
-};
+type FormState = { nome: string; instagramId: string; pageId: string; accessToken: string; tokenExpiresAt: string };
+const INITIAL_FORM: FormState = { nome: "", instagramId: "", pageId: "", accessToken: "", tokenExpiresAt: "" };
+type ActionError = "saveFailed" | "statusFailed" | "importFailed";
+type ActionMessage = "saved" | "statusUpdated" | "imported";
 
 export function AccountsPage() {
+  const { t } = useTranslation("accounts");
+  const [params, setParams] = useSearchParams();
+  const [oauth] = useState(() => readOAuthFeedback(params));
   const [accounts, setAccounts] = useState<InstagramAccount[]>([]);
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [listError, setListError] = useState(false);
+  const [operation, setOperation] = useState<"save" | "toggle" | "import" | null>(null);
+  const [message, setMessage] = useState<ActionMessage | null>(null);
+  const [error, setError] = useState<ActionError | null>(null);
+  const [showToken, setShowToken] = useState(false);
+  const loadVersion = useRef(0);
+  const pending = useRef(false);
 
-  async function loadAccounts() {
-    setIsLoading(true);
-    setError(null);
-
+  const loadAccounts = useCallback(async () => {
+    const version = ++loadVersion.current;
     try {
       const data = await accountsService.list();
-      setAccounts(data.items);
+      if (!Array.isArray(data.items)) throw Error("Invalid accounts response");
+      if (version === loadVersion.current) { setAccounts(data.items); setListError(false); }
     } catch {
-      setError("Falha ao carregar contas.");
+      if (version === loadVersion.current) setListError(true);
     } finally {
-      setIsLoading(false);
+      if (version === loadVersion.current) setIsLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const version = ++loadVersion.current;
+    void accountsService.list().then(data => {
+      if (!active || version !== loadVersion.current) return;
+      if (!Array.isArray(data.items)) throw Error("Invalid accounts response");
+      setAccounts(data.items);
+    }).catch(() => {
+      if (active && version === loadVersion.current) setListError(true);
+    }).finally(() => {
+      if (active && version === loadVersion.current) setIsLoading(false);
+    });
+    return () => { active = false; };
+  }, []);
+
+  function refreshAccounts() {
+    setIsLoading(true);
+    setListError(false);
+    return loadAccounts();
   }
 
   useEffect(() => {
-    loadAccounts().catch(() => null);
-  }, []);
+    if (!["connected", "error", "accountId"].some(key => params.has(key))) return;
+    const clean = new URLSearchParams(params);
+    for (const key of ["connected", "error", "accountId"]) clean.delete(key);
+    setParams(clean, { replace: true });
+  }, [params, setParams]);
 
   function onChange<K extends keyof FormState>(key: K, value: FormState[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm(prev => ({ ...prev, [key]: value }));
   }
 
-  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setIsSubmitting(true);
-    setError(null);
-    setMessage(null);
-
+    if (pending.current) return;
+    pending.current = true;
+    setOperation("save"); setError(null); setMessage(null);
     try {
-      await accountsService.upsert({
-        nome: form.nome,
-        instagramId: form.instagramId,
-        pageId: form.pageId || undefined,
-        accessToken: form.accessToken,
-        tokenExpiresAt: form.tokenExpiresAt || undefined,
-        ativo: true,
-      });
-
-      setMessage("Conta salva com sucesso.");
-      setForm(INITIAL_FORM);
-      await loadAccounts();
-    } catch {
-      setError("Nao foi possivel salvar a conta.");
-    } finally {
-      setIsSubmitting(false);
-    }
+      await accountsService.upsert({ ...form, pageId: form.pageId || undefined,
+        tokenExpiresAt: form.tokenExpiresAt || undefined, ativo: true });
+      setMessage("saved"); setForm(INITIAL_FORM); setShowToken(false);
+      await refreshAccounts();
+    } catch { setError("saveFailed"); }
+    finally { pending.current = false; setOperation(null); }
   }
 
   async function onToggleActive(account: InstagramAccount) {
-    setError(null);
-    setMessage(null);
-
+    if (pending.current) return;
+    pending.current = true;
+    setOperation("toggle"); setError(null); setMessage(null);
     try {
       await accountsService.setActive(account.id, !account.ativo);
-      setMessage("Status da conta atualizado.");
-      await loadAccounts();
-    } catch {
-      setError("Falha ao atualizar status da conta.");
-    }
+      setMessage("statusUpdated"); await refreshAccounts();
+    } catch { setError("statusFailed"); }
+    finally { pending.current = false; setOperation(null); }
   }
 
   async function onBootstrapFromEnv() {
-    setError(null);
-    setMessage(null);
-
+    if (pending.current || !window.confirm(t("confirmImport"))) return;
+    pending.current = true;
+    setOperation("import"); setError(null); setMessage(null);
     try {
-      const result = await accountsService.bootstrapFromEnv();
-      setMessage(result.message);
-      await loadAccounts();
-    } catch {
-      setError("Nao foi possivel importar conta do env.");
-    }
+      await accountsService.bootstrapFromEnv();
+      setMessage("imported"); await refreshAccounts();
+    } catch { setError("importFailed"); }
+    finally { pending.current = false; setOperation(null); }
   }
 
-  function onMetaLogin() {
-    window.location.href = buildApiUrl("/api/auth/meta/login");
-  }
-
+  const connected = oauth?.kind === "connected" && !listError && !isLoading
+    ? accounts.find(account => account.id.toLowerCase() === oauth.accountId && account.ativo) : null;
+  const busy = operation !== null;
   return (
-    <section className="dashboard-grid">
-      <article className="panel-card">
-        <h2>Contas Instagram</h2>
-        <p>Cadastro, ativacao e token por conta.</p>
+    <section className="accounts-page" aria-label={t("title")}>
+      <header className="accounts-heading">
+        <h2>{t("title")}</h2>
+        <div className="accounts-toolbar">
+          <button type="button" onClick={() => { window.location.href = buildApiUrl("/api/auth/meta/login"); }} disabled={busy}>
+            <Link2 size={18} aria-hidden="true" />{t("connect")}
+          </button>
+          <button type="button" className="accounts-icon-button" onClick={() => void refreshAccounts()}
+            disabled={busy || isLoading} title={t("refresh")} aria-label={t("refresh")}>
+            <RefreshCw size={18} aria-hidden="true" />
+          </button>
+        </div>
+      </header>
 
-        <form
-          onSubmit={onSubmit}
-          className="simple-form"
-          style={{ marginTop: 16 }}
-        >
-          <label>
-            Nome
-            <input
-              value={form.nome}
-              onChange={(event) => onChange("nome", event.target.value)}
-              placeholder="Conta principal"
-              required
-            />
-          </label>
+      {oauth?.kind === "error" ? <p className="accounts-notice accounts-notice-error" role="alert">{t(`oauthError.${oauth.code}`)}</p> : null}
+      {oauth?.kind === "connected" ? <div className={`accounts-notice ${connected ? "accounts-notice-success" : "accounts-notice-warning"}`} role="status">
+        {isLoading ? t("oauthChecking") : connected ? <><strong>{t("oauthConnected", { name: connected.nome })}</strong><span>{t("instagramId")}: {connected.instagramId}</span></> : t("oauthUnverified")}
+      </div> : null}
+      {message ? <p className="accounts-notice accounts-notice-success" role="status">{t(message)}</p> : null}
+      {error ? <p className="accounts-notice accounts-notice-error" role="alert">{t(error)}</p> : null}
+      {listError ? <p className="accounts-notice accounts-notice-error" role="alert">{t("loadFailed")}</p> : null}
+      {isLoading ? <p role="status">{t("loading")}</p> : !listError ? (
+        <div className="table-wrap" role="region" aria-label={t("listLabel")}>
+          <table>
+            <thead><tr>
+              <th>{t("name")}</th><th>{t("instagramId")}</th><th>{t("pageId")}</th>
+              <th>{t("status")}</th><th>{t("tokenExpires")}</th><th>{t("actions")}</th>
+            </tr></thead>
+            <tbody>{accounts.map(account => <tr key={account.id}>
+              <td className="accounts-name">{account.nome}</td><td>{account.instagramId}</td><td>{account.pageId ?? "-"}</td>
+              <td>{t(account.ativo ? "active" : "inactive")}</td>
+              <td>{account.tokenExpiresAt ? <time dateTime={account.tokenExpiresAt}>{formatDateTime(account.tokenExpiresAt, { dateStyle: "short", timeStyle: "short" })}</time> : "-"}</td>
+              <td><input type="checkbox" role="switch" checked={account.ativo} disabled={busy || isLoading}
+                aria-label={t("changeStatus", { name: account.nome })} title={t("changeStatus", { name: account.nome })}
+                onChange={() => void onToggleActive(account)} /></td>
+            </tr>)}{accounts.length === 0 ? <tr><td colSpan={6}>{t("empty")}</td></tr> : null}</tbody>
+          </table>
+        </div>
+      ) : null}
 
-          <label>
-            Instagram ID
-            <input
-              value={form.instagramId}
-              onChange={(event) => onChange("instagramId", event.target.value)}
-              placeholder="17841402343252358"
-              required
-            />
-          </label>
-
-          <label>
-            Page ID (opcional)
-            <input
-              value={form.pageId}
-              onChange={(event) => onChange("pageId", event.target.value)}
-              placeholder="123456789"
-            />
-          </label>
-
-          <label>
-            Access Token
-            <textarea
-              value={form.accessToken}
-              onChange={(event) => onChange("accessToken", event.target.value)}
-              placeholder="EA..."
-              rows={3}
-              required
-            />
-          </label>
-
-          <label>
-            Expira em (opcional)
-            <input
-              value={form.tokenExpiresAt}
-              onChange={(event) =>
-                onChange("tokenExpiresAt", event.target.value)
-              }
-              placeholder="2026-12-31T23:59:59Z"
-            />
-          </label>
-
-          <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
-            <button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Salvando..." : "Salvar conta"}
+      <details className="accounts-maintenance">
+        <summary><Wrench size={17} aria-hidden="true" />{t("maintenance")}</summary>
+        <form onSubmit={onSubmit} className="simple-form accounts-manual-form" aria-label={t("manualEntry")}>
+          <label>{t("name")}<input value={form.nome} onChange={event => onChange("nome", event.target.value)} placeholder={t("namePlaceholder")} required /></label>
+          <label>{t("instagramId")}<input value={form.instagramId} onChange={event => onChange("instagramId", event.target.value)} placeholder="17841400000000000" required /></label>
+          <label>{t("pageIdOptional")}<input value={form.pageId} onChange={event => onChange("pageId", event.target.value)} placeholder="123456789" /></label>
+          <label>{t("accessToken")}<span className="accounts-secret">
+            <input type={showToken ? "text" : "password"} autoComplete="off" value={form.accessToken} onChange={event => onChange("accessToken", event.target.value)} required />
+            <button type="button" className="accounts-icon-button" aria-label={t(showToken ? "hideToken" : "showToken")} title={t(showToken ? "hideToken" : "showToken")}
+              onClick={() => setShowToken(value => !value)}>{showToken ? <EyeOff size={18} /> : <Eye size={18} />}</button>
+          </span></label>
+          <label>{t("expiresOptional")}<input value={form.tokenExpiresAt} onChange={event => onChange("tokenExpiresAt", event.target.value)} placeholder="2026-12-31T23:59:59Z" /></label>
+          <div className="accounts-toolbar">
+            <button type="submit" disabled={busy} aria-busy={operation === "save"}>
+              {operation === "save" ? <LoaderCircle size={18} className="accounts-spin" aria-hidden="true" /> : <Save size={18} aria-hidden="true" />}{t(operation === "save" ? "saving" : "save")}
             </button>
-            <button type="button" onClick={onMetaLogin}>
-              Logar Meta
-            </button>
-            <button type="button" onClick={onBootstrapFromEnv}>
-              Importar do env
+            <button type="button" onClick={() => void onBootstrapFromEnv()} disabled={busy} aria-busy={operation === "import"}>
+              {operation === "import" ? <LoaderCircle size={18} className="accounts-spin" aria-hidden="true" /> : <Download size={18} aria-hidden="true" />}{t(operation === "import" ? "importing" : "import")}
             </button>
           </div>
         </form>
-
-        {message ? (
-          <p style={{ color: "#0b7a38", marginTop: 12 }}>{message}</p>
-        ) : null}
-        {error ? (
-          <p className="error-text" style={{ marginTop: 12 }}>
-            {error}
-          </p>
-        ) : null}
-      </article>
-
-      <article className="panel-card full-width">
-        <h2>Contas cadastradas</h2>
-        {isLoading ? <p>Carregando contas...</p> : null}
-
-        {!isLoading ? (
-          <div
-            className="table-wrap"
-            role="region"
-            aria-label="contas cadastradas"
-          >
-            <table>
-              <thead>
-                <tr>
-                  <th>Nome</th>
-                  <th>Instagram ID</th>
-                  <th>Page ID</th>
-                  <th>Status</th>
-                  <th>Token expira</th>
-                  <th>Acoes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {accounts.map((account) => (
-                  <tr key={account.id}>
-                    <td>{account.nome}</td>
-                    <td>{account.instagramId}</td>
-                    <td>{account.pageId ?? "-"}</td>
-                    <td>{account.ativo ? "Ativa" : "Inativa"}</td>
-                    <td>{account.tokenExpiresAt ?? "-"}</td>
-                    <td>
-                      <button
-                        type="button"
-                        onClick={() => onToggleActive(account)}
-                      >
-                        {account.ativo ? "Desativar" : "Ativar"}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {accounts.length === 0 ? (
-                  <tr>
-                    <td colSpan={6}>Nenhuma conta cadastrada.</td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-        ) : null}
-      </article>
+      </details>
     </section>
   );
 }

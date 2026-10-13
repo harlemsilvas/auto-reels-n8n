@@ -1,58 +1,69 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useTranslation } from "react-i18next";
+import { LanguageSelector } from "../../../shared/i18n/LanguageSelector";
 
 export function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { t } = useTranslation("auth");
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [hasError, setHasError] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
-    const ok = await login({ username, password });
-
-    if (!ok) {
-      setError("Credenciais invalidas.");
-      return;
+    if (isSubmitting) return;
+    setHasError(false);
+    setIsSubmitting(true);
+    try {
+      const ok = await login({ username, password });
+      if (!ok) { setHasError(true); return; }
+      navigate("/dashboard", { replace: true });
+    } catch {
+      setHasError(true);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    navigate("/dashboard", { replace: true });
   }
 
   return (
     <main className="login-shell">
       <section className="login-card">
-        <p className="eyebrow">SocialBot</p>
-        <h1>Acesso Admin</h1>
-        <p className="hero-copy">
-          Entre com seu usuário e senha para acessar o painel administrativo.
-        </p>
+        <div className="login-card-heading"><p className="eyebrow">SocialBot</p><LanguageSelector /></div>
+        <h1>{t("loginTitle")}</h1>
+        <p className="hero-copy">{t("loginDescription")}</p>
 
         <form onSubmit={handleSubmit} className="login-form">
           <label>
-            Usuario
+            {t("username")}
             <input
+              autoComplete="username"
+              required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
           </label>
 
           <label>
-            Senha
+            {t("password")}
             <input
               type="password"
+              autoComplete="current-password"
+              required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
           </label>
 
-          {error ? <p className="error-text">{error}</p> : null}
+          {hasError ? <p className="error-text" role="alert">{t("invalidCredentials")}</p> : null}
 
-          <button type="submit">Entrar</button>
+          <button type="submit" disabled={isSubmitting} aria-busy={isSubmitting}>
+            {t(isSubmitting ? "signingIn" : "signIn")}
+          </button>
         </form>
       </section>
     </main>
