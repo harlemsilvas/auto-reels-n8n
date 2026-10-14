@@ -2,6 +2,37 @@
 
 Atualizado em: 2026-10-14
 
+## TAG de retomada: RETOMADA-2026-10-14-MR05-DEPLOY-017
+
+- Deploy de validação confirmado: release 8bd6f300f1b9534d932a0ea002f3965fe46954ce,
+  Action 38599832462 passou em 14/10 às 13:39 America/Sao_Paulo.
+  API e migration 017 publicadas; dashboard não republicado. Commit em main e
+  branch; evidências registradas separadamente, sem acionar outro deploy.
+- 017 aplicada/verificada antes COMMIT e após deploy. API online PID 2330147,
+  restart 9→10; worker PID 1653/restart 0 preservado. Permanecem 21 posts,
+  seis conversas e 42 mensagens. Pedidos/bloqueios/operações/jobs de arquivos
+  todos zero. Nenhuma exclusão ou DM real executada.
+- Executor HTTP desabilitado por padrão; flag não habilitada no arquivo/PM2.
+  .env idêntico ao backup, sem segredos na saída. Health 200; GET privacy e
+  POST executor anônimos 401. Lease com conexão compartilhada passou em
+  teste read-only do código VPS; não comprova entrega Meta ou evicção de
+  cache real da API. Flag off/503/admin/CSRF exercitados localmente.
+- Backups 0600, catálogo/hashes verificados: release 12857390 bytes, SHA256
+  b13e1382820667413612e4ccf133b65994308d024c1e22f9c91cd619d850ff20,
+  inbox-images-pre-deploy-20261014T163859Z/release-anterior.tar.gz.
+  Dump 415787 bytes, SHA256
+  871c2057e9e613cde5913070962bd885b89c3195b6a3fb84a62075f45a5cd172,
+  socialbot-postgres/deploy-20261014T163919Z/n8n_20261014_163919.dump.
+  Restore de produção não executado; ciclo completo somente em fixture local.
+- Worker/n8n/Nginx/portas preservados. Regras de logs/acesso apenas versionadas,
+  sem instalar, chmod legado ou purgas. Script de backup 077/noclobber na VPS.
+  Arquivos do usuário, simulação, mídias, Docker override, .gitignore e scripts
+  remotos sujos preservados. 017 ainda ausente no banco principal LOCAL.
+- Registro mr-05/deploy-validacao-017.md. Próximo aceite: Inbox/histórico/perfis;
+  envio Meta, se necessário, por ação deliberada do responsável. MR-05 aberta:
+  executor off, contrato Meta, cópias/ACLs/logs/retenção/cache e reabertura real
+  PM2 pendentes. Não ativar a flag como simples smoke test.
+
 ## TAG de retomada: RETOMADA-2026-10-14-MR05-PREFLIGHT-017
 
 - Usuario pediu avancar e sugeriu deploy para validar. Pacote preparado:
