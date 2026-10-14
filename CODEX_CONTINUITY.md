@@ -1,6 +1,44 @@
 # SocialBot — Contexto de Continuidade para Codex
 
-Atualizado em: 2026-10-13
+Atualizado em: 2026-10-14
+
+## TAG de retomada: RETOMADA-2026-10-14
+
+### Deploy MR-05 confirmado na VPS
+
+- Release 09a1bb996f8af842bfb940232b63996c58feaf1a; Action 38537276393 passou
+  em 14/10 aproximadamente 05:45 America/Sao_Paulo. Usuario autorizou commit/
+  push/deploy; commit enviado na sessao anterior, Action iniciada na retomada.
+- Aplicados webhook assinatura/escopo/logs, paginas PT/EN privacy/exclusao e
+  pedidos duraveis/migration 016. Verificador 016 antes COMMIT e restart API.
+  Entradas locais abaixo sao historicas. Sem executor de exclusao completa ou
+  callback publico Meta; pedidos/tarefas vazios, nenhuma limpeza real executada.
+- API online PID 2026901/restart 8->9, worker PID 1653/restart 0 preservados.
+  Health 200/privacy e Inbox anonimos 401. Webhook sem assinatura 403 e lote
+  vazio assinado com secret configurado 200, sem mensagem/evento criado. Nao
+  comprova entrega Meta real. Preservados 21 posts/seis conversas/42 mensagens.
+- Backups release/config/dependencias em inbox-images-pre-deploy-20261014T084446Z,
+  archive 12840868 bytes/0600/SHA256
+  acbb99941b9d35d84f92f5af017ffc369c809eabdfc5a30970c7a5d14f06dd4a.
+  Dump pre-016 socialbot-postgres/deploy-20261014T084458Z/n8n_20261014_084458.dump,
+  409507 bytes/0600/SHA256
+  c7f7709937d40797958a630e32bf88fe648e3a2ab05da50098411431b68f2847.
+  Catalogos/hashes novamente verificados; restore nao testado. Backend env
+  identico ao backup sem valores expostos. Scripts remotos sujos preservados.
+- URLs publicas https://dashboard.hrmmotos.com.br/privacy.html e privacy.en.html,
+  data-deletion.html e data-deletion.en.html, HTTP200/bytes iguais ao dist VPS.
+  Playwright publico desktop/390/320 passou sem JS/sessao, idioma/crosslinks/
+  contato/overflow e login PT/EN com APIs simuladas. Sem autenticacao real.
+- Porta/proxy/n8n/worker intactos; reload Nginx pelo script frontend existente.
+  Antiga privacy no host midia nao atualizada; painel Meta nao alterado. Novas
+  paginas de exclusao sao instrucoes por e-mail, nao callback/signed_request.
+- npm remoto: quatro alertas backend (dois high), doze dashboard (nove high);
+  aviso bundle >500kB e avisos Nginx anteriores mantidos. Testes preflight
+  registrados no deploy-2026-10-14.md. Ferramenta Playwright restaurada so /tmp.
+- Registro project-docs/meta-app-review/deploy-2026-10-14.md. Resultado enviado
+  em commit documental separado, sem novo deploy. Arquivos locais do usuario
+  preservados/fora dos commits. Proximo aceite Inbox/DM real pelo usuario e
+  executor/ingresso/quarentena/cache/copias/restore. MR-05 e submissao abertos.
 
 ## TAG de retomada: RETOMADA-2026-10-13
 

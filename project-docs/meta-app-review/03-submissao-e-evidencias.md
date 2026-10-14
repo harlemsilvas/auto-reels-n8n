@@ -1,5 +1,13 @@
 # Submissao, tratamento de dados e evidencias
 
+Atualizacao em 2026-10-14: [deploy MR-05 verificado](deploy-2026-10-14.md),
+release `09a1bb9`/016. Politica PT/EN e instrucoes de exclusao publicas em
+https://dashboard.hrmmotos.com.br/privacy.html e /privacy.en.html,
+/data-deletion.html e /data-deletion.en.html. Antiga URL no host midia intacta;
+nenhum campo do painel Meta alterado. Instrucoes nao sao callback nem prova
+de exclusao completa; processo/executor/copias e demais gates seguem pendentes.
+Registros locais anteriores abaixo sao historicos.
+
 Atualizado em 2026-10-13. Nao enviado; textos dependem de revisao do dono.
 MR-02..04 publicados na release VPS `f7d52a0`; registro documental enviado
 `0216ebd`. Login publico PT/EN validado, sem novo teste autenticado/OAuth real.

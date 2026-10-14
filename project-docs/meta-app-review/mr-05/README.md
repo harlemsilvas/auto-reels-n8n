@@ -1,6 +1,12 @@
 # MR-05 - Ponto de retomada
 
 Preparado em 2026-10-13 para iniciar em uma nova sessao.
+Atualizacao 2026-10-14: pacote publicado/verificado na VPS em `09a1bb9`,
+migration 016, [Action/backup/verificacoes](../deploy-2026-10-14.md).
+Politica e instrucoes PT/EN publicas no dominio dashboard. Demais entradas de
+implementacao somente local abaixo sao historicas; executor/callback/exclusao
+completa e aceite Inbox real permanecem pendentes. MR-05 nao concluido.
+
 Status: primeiro incremento webhook implementado/testado somente localmente;
 diretriz de retencao aceita, exclusao, politica e deploy pendentes. Handoff original abaixo e historico.
 
