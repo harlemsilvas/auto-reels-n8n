@@ -2,6 +2,164 @@
 
 Atualizado em: 2026-10-14
 
+## TAG de retomada: RETOMADA-2026-10-14-MR05-PREFLIGHT-017
+
+- Usuario pediu avancar e sugeriu deploy para validar. Pacote preparado:
+  migration017/leases/triggers/cache, executor por escopo e ferramentas locais
+  de restore/retencao, documentacao. Dashboard sem mudancas; deploy proposto
+  dashboard=false/restart_backend=true/run_migrations=true/migration_set=017.
+- Executor HTTP desabilitado por padrao: PRIVACY_EXECUTOR_ENABLED deve ser
+  exatamente true para block-scope/execute-database/process-files. Admin/CSRF
+  permanecem obrigatorios; flag ausente retorna503 PRIVACY_EXECUTOR_DISABLED.
+  Workflow recusa flag habilitada no deploy de validacao. Sem limpeza automatica,
+  callbackMeta, instalacao logrotate/chmod legado ou replay em producao.
+- Preflight nesta sessao:017/gate/executor, ciclo real dump/restore sintetico,
+  pedidos/flagoff/HTTPadminCSRF, ledger/unread, envio15/imagens5/perfis9,
+  webhookseguranca3/retencao11, cache/inventario e pythonretencao2 passaram.
+  Sintaxe29JS/YAML/bash/diff passaram. Nenhum Meta real ou limpeza principal.
+- VPS readonly reinspecionada09a1bb9:21posts/6conversas/42mensagens/0pedidos,
+  017ausente. Scriptsremotos sujos create-user/publish/validar e sql005 preservados.
+  origin/main=a6320d8, mesmoHEADlocal, sem Action concorrente observada.
+- Backups release/config/dependencias e dump PostgreSQL antes017 pelo workflow,
+  verificadorantesCOMMIT, backup600/catalogo/hash; restartsoAPI, workerintacto.
+  Rollback imediato antes de qualquer bloqueio real pode restaurar release
+  protegida mantendo017aditiva. Apos uso de bloqueios, nao voltar ao enviosem
+  leases: manterprotecoes e elaborar plano especifico.
+- Commit/push/deploy/resultadopendentes; arquivo preflight-017.md. 017naoaplicada
+  principal/local/VPS ate este registro. Alteracoes locais do usuario excluidas
+  do pacote (.gitignore/simulacao/Dockeroverride/midias).
+
+## TAG de retomada: RETOMADA-2026-10-14-MR05-REGRAS-RETENCAO
+
+- Usuario autorizou proximo passo:preparar regrasacesso/rotacao/expiracao,
+  sem aplicar configuracao/limpeza. Criados config/socialbot-pm2.logrotate,
+  access-policy.json/applyfalse, catalogoexemploprotegido e scripts/retention_plan.py.
+- Regra quatrologs PM2 daily/maxsize20M/rotate14/maxage14, create0600,
+  reabertura runuser socialbot /usr/bin/pm2 reloadLogs. Binarios reais/UID1010
+  conferidosreadonly; grupos socialbot/sudo/users/docker. ACLs/contashumanaspendentes.
+- Dryrunlogrotate --debug --state/dev/null passouviaarquivotemporario0600,
+  removido. Tentativastdinignorada naocontadacomoaceite. Quatroarquivosreconhecidos,
+  APIout simuladarotacao por tamanho. Sem state/log/reload real; reaberturaaindapendente.
+- Planejadorreadonly VPS2026-10-14T16:22:24Z:63entradas(46arquivos/17dirs),
+  46protegidos/zeroexpiracao/24revisoespermissao+raiz, semcatalogoaprovado.
+  Semlerconteudodosbackupsnesteplanoreal. Hashes/paths segurosnaosaolistadeexecucao.
+- Dois testesfixtures passaram:30/14dias,hold/hash/recibo/symlink/path,
+  logsativos/outrosprojetos,semdeletenemconteudonasaida. Scriptsemapply/chmod/unlink.
+- Relatorio mr-05/regras-acesso-rotacao-expiracao.md. maxage/schedulernaocomprova
+  TTLhistorico/parados;faltamclassificacaocopias/ACLs/ultimo restoreutil, Nginx/n8n,
+  executorrotacaocomreabertura/expiracaocomrevalidacao,contratoMeta. Nada instalado,
+  nenhumcron/PM2/Nginx/Docker/n8n/worker/portas/env/migrationprincipal/deployalterado.
+  EstadoVPS09a1bb9/016anterior;naoconferida releasehoje. Alteracoesusuariopreservadas.
+
+## TAG de retomada: RETOMADA-2026-10-14-MR05-INVENTARIO-VPS
+
+- Usuario declarou aplicacao somente VPS/Meta/Gemini, sem backups/logs externos
+  conhecidos, armazenamento na VPS/admin. Confirmou manter prazos anteriores
+  DM90/imagem30/logoperacional14/backupdiario30 apos referencia md nao encontrada;
+  docs/informacoes-app-meta.txt existe sem prazos na busca. Nao perguntar de novo.
+- VPS inspecionada somente leitura em2026-10-14T15:36:45Z:09a1bb9 confirmado,
+  016presente/017ausente. PM2API PID2026901/restart9 e workerPID1653/restart0,
+  online/fork; tres containers SocialBot json-file10m/3. Outros projetos intactos.
+- Backups46arquivos/64254050bytes,17com bits grupo/outros, diretorio0755.
+  PM2quatro logs0664/diretorio0775, total154669398bytes(API-out153741503).
+  Nginx225arquivos incluindo outrosprojetos; daily/rotate14/compress/create0640
+  regra global. Sem regraPM2observada; nginx-Tindisponivel. Sem conteudos lidos.
+- n8n sem variaveis explicitas pruning/save no env inspecionado; nao concluir
+  pruningdesligado. Conferirdefaults/workflows/ativos/anotados antes deconfigurar.
+  Documentacao oficial Docker/n8nconsultada, tamanho/contagem nao comprova TTL.
+- Registro mr-05/inventario-operacional.md:diretoriosrestritos+rotacaoexistente
+  propostos; nenhum container/logrotate/chmod/limpeza/restart/deployaplicado.
+  Local85artefatosdesenv separados, classificarse contiverem dadosoperacionais;
+  snapshotsprovedor nao verificados, declaracao semexternos nao comprovacobertura.
+- Proximo controleslogs/backups especificos/dry-run, contasACL/classificacaocopias,
+  cacheaposativacao, contratoMeta/preflight. Sem migrationprincipal/env/worker/
+  portas/proxy/n8n alterados, commit/push/deploy. Alteracoesusuario preservadas.
+
+## TAG de retomada: RETOMADA-2026-10-14-MR05-DUMP-RESTORE
+
+- Usuario autorizou implementar reaplicacao e testar ciclo completo de dump/
+  restore. Preparados restore-replay.js, CLI replay-privacy-restore.js e modo
+  export-receipt no runner local. Sem rota HTTP ou execucao no banco principal.
+- Recibo externo v2 restrito inclui escopo/verificacao/nomes privados para
+  reconstruir pedido ausente no backup. Requer digest confiavel separado,
+  fonte mais recente, tarefas DB/files concluidas, actor registrado e ack.
+  Nao comprova autoria/atualidade sozinho; retencao/minimizacao pendentes.
+- Reaplica apenas DB loopback mr05_restore_HEX32/public, diretorio privado
+  real com mesmo nome do banco. Reconstrucao pedido, bloqueio e executor;
+  plano atual de arquivos/referencias, marcador de retomada por digest.
+  Tentativas incertas/FKs/conflitos/quarentena antiga/reintroducao exigem revisao.
+  activationAllowed=false/deletionComplete=false; CLI sucesso exit2.
+- Teste real PostgreSQL/Docker: fonte e destino descartaveis template0, dump
+  custom antes do pedido e pg_restore transacional real, recibo externo apos
+  exclusao na fonte, reaplicacao somente do escopo, compartilhadas/outro chat/
+  Reel preservados, trigger/replay, incerteza, FK rollback, digest/escopo/ack/
+  alvo invalido, webhook legado e arquivo reintroduzido preservados. Recursos
+  temporarios removidos. Nao e dump/restore do banco real SocialBot/n8n/VPS.
+- Cache/inventario passaram novamente. 017 continua nao aplicada ao principal;
+  nenhum restart, collector, envio Meta, acesso VPS, commit/push/deploy ou
+  limpeza real. VPS09a1bb9/016 apenas registro anterior, nao nova verificacao.
+- Documentacao mr-05/reaplicacao-dump-restore.md. Pendentes frota/capacidades
+  legadas, copias externas, logs/rotacao/retencao/recibos, contrato Meta e
+  preflight completo antes de ativacao. Alteracoes anteriores preservadas;
+  docs/0006-mult-posts.md continua ausente.
+
+## TAG de retomada: RETOMADA-2026-10-14-MR05-CACHE-RESTORE
+
+- Usuario confirmou continuar MR-05 por cache e backups/restore antes de deploy.
+  Preparados sweeper por processo a cada30s no bootstrap server.js, revogacao
+  de capacidades ao acessar escopo bloqueado e CLI local export/check/inventory.
+- Manifesto externo tem hashes de escopos/nomes privados planejados, modo0600
+  e digest separado. Check somente leitura detecta dados reintroduzidos,
+  bloqueios ausentes, orfaos e webhooks desconhecidos; activationAllowed=false/
+  exit2 mesmo banco limpo, sem filtro/reaplicacao automatica ou pg_restore.
+- Inventario local real modo0600:85 arquivos(11banco/4compactados/70outros),
+  um sinal por idade mtime, zero symlinks, sem ler conteudo ou remover copias.
+  .dev-run/privacy-recovery/inventory-2026-10-14.json SHA256
+  54f6f8eb1d2da2cc6277039ea6d0befbe64962f35e3f32ee939d42b134069a03.
+- backup_postgres_db.sh preparado com umask077/noclobber; bash-n passou.
+  Sem alterar copias existentes ou executar backup real. Workflow preparado
+  com sintaxe sweeper; nao acionado.
+- Cache duas instancias simuladas/inventario sem symlink/digest invalido passaram.
+  Gate/executor/017 revalidados em schemas temporarios; segunda copia isolada
+  antiga com dados e sem bloqueio foi recusada pelo checker, eventos legados
+  tambem recusados. Nao e restore de dump. Perfis9/imagens5 passaram nesta etapa.
+- 017 segue ausente no banco principal; export/check principal nao executados,
+  nenhum restart/deploy/commit/push, limpeza real, acesso VPS ou envio Meta.
+  Estado VPS 09a1bb9/016 e registro anterior, nao verificacao atual.
+- Tarefas cache/backups continuam bloqueadas: faltam frota/capacidades legadas,
+  reaplicacao de exclusoes/arquivos apos restore, teste dump/restore, copias
+  externas/rotacao/logs/minimizacao. Contrato Meta pendente, sem nova consulta.
+  Registro: project-docs/meta-app-review/mr-05/cache-backups-restore.md.
+  Arquivos preexistentes do usuario preservados. docs/0006-mult-posts.md ausente.
+
+## TAG de retomada: RETOMADA-2026-10-14-MR05-EXECUTOR-LOCAL
+
+- Usuario autorizou desenvolver bloqueio por escopo e executor enquanto o
+  contrato Meta e verificado. Incremento local sem commit/push/deploy; VPS
+  permanece no estado anteriormente confirmado 09a1bb9/migration 016.
+- Preparados migration/verificador 017, bloqueio persistente por conta/usuario,
+  leases compartilhadas nos envios/perfis/imagens, diario duravel de operacoes,
+  triggers de escrita e filtragem transacional do ingresso webhook.
+- Executor administrativo exige pedido verified, admin/CSRF e acknowledged:
+  block-scope -> execute-database -> process-files. Preserva incerteza e midias
+  compartilhadas; banco transacional e quarentena com recuperacao de falhas.
+  Todas as respostas deletionComplete=false; sem callback ou scheduler automatico.
+- 017 validada em schema PostgreSQL temporario: rollback/idempotencia/triggers,
+  concorrencia/conexao compartilhada/diario, filtragem, exclusao/rollback/replay.
+  Arquivos temporarios: rename/unlink com falha, inode substituido recusado,
+  midia compartilhada preservada. Rotas com sessao/admin/CSRF passaram.
+- Regressao envio15/imagens5/perfis9/seguranca webhook3/retencao11 e scripts
+  isolados de ledger/unread/pedidos/demo passaram. YAML/bash workflow passou.
+  Workflow preparado para 017/verificador antes COMMIT e pre-restart; nao acionado.
+- 017 NAO aplicada no schema principal local ou VPS, API local nao reiniciada.
+  Nenhuma exclusao real, chamada Meta real ou alteracao de worker/Reels nesta
+  etapa. Mudancas locais anteriores do usuario preservadas.
+- Consulta oficial callback Meta novamente HTTP429; contrato e mapeamento de
+  identificador pendentes. Cache multiprocesso, logs/copias/expiracao/restore,
+  orfaos e minimizacao do pedido/bloqueio impedem conclusao integral. Nao
+  reiniciar codigo novo sem 017. Detalhes e roteiro:
+  project-docs/meta-app-review/mr-05/executor-local.md.
+
 ## TAG de retomada: RETOMADA-2026-10-14
 
 ### Deploy MR-05 confirmado na VPS

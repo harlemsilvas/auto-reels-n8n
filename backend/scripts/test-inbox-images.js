@@ -13,6 +13,7 @@ function load(file, dependencies) {
   const module = { exports: {} };
   new Script(`(function(require,module){${readFileSync(filename, "utf8")}\n})`, { filename })
     .runInThisContext()((name) => {
+      if (name === "../privacy/scope-gate") return { withScope: async (_scope, callback) => callback(), outbound: async (_scope, _kind, callback) => callback() };
       assert.ok(Object.hasOwn(dependencies, name), name);
       return dependencies[name];
     }, module);

@@ -8,7 +8,10 @@ function load(file, dependencies) {
   const filename = path.resolve(__dirname, "../src", file);
   const module = { exports: {} };
   new Script(`(function(require,module){${fs.readFileSync(filename, "utf8")}\n})`, { filename })
-    .runInThisContext()((name) => { assert.ok(Object.hasOwn(dependencies, name), name); return dependencies[name]; }, module);
+    .runInThisContext()((name) => {
+      if(name==="../privacy/scope-gate")return {outbound:async(_scope,_kind,callback)=>callback()};
+      assert.ok(Object.hasOwn(dependencies, name), name); return dependencies[name];
+    }, module);
   return module.exports;
 }
 

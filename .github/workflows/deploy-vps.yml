@@ -33,6 +33,7 @@ on:
           - "014"
           - "015"
           - "016"
+          - "017"
           - "010_011"
           - "009_010_011"
 
@@ -73,7 +74,7 @@ jobs:
               local verify_file="$2"
 
               log "Aplicando migration: $file"
-              if [[ "$file" == "sql/016-privacy-deletion-requests.sql" ]]; then
+              if [[ "$file" == "sql/016-privacy-deletion-requests.sql" || "$file" == "sql/017-privacy-scope-executor.sql" ]]; then
                 { sed '/^COMMIT;$/d' "$file"; cat "$verify_file"; printf 'COMMIT;\n'; } \
                   | docker exec -i socialbot_postgres psql -U n8n -d n8n
                 return
@@ -134,6 +135,16 @@ jobs:
             node --check src/modules/webhooks/instagram-messages.controller.js
             node --check src/modules/privacy/deletion-requests.service.js
             node --check src/modules/privacy/deletion-requests.routes.js
+            node --check src/modules/privacy/scope-gate.js
+            node --check src/modules/privacy/cache-sweep.js
+            node --check src/modules/privacy/deletion-executor.js
+            node --check src/modules/privacy/webhook-scope.js
+            node --check src/modules/privacy/webhook-redaction.js
+            node --check src/lib/db.js
+            node --check src/server.js
+            node --check src/modules/privacy/restore-guard.js
+            node --check src/modules/privacy/restore-replay.js
+            node --check src/modules/privacy/backup-inventory.js
             node --check src/modules/instagram/instagram-send.service.js
             node --check src/modules/inbox/testers-dm.service.js
             node --check src/modules/inbox/inbox-images.service.js
@@ -155,6 +166,9 @@ jobs:
               INBOX_MEDIA_DIR: '/home/socialbot/storage/inbox',
             };
             const current = dotenv.parse(fs.readFileSync('.env'));
+            if (current.PRIVACY_EXECUTOR_ENABLED === 'true' || process.env.PRIVACY_EXECUTOR_ENABLED === 'true') {
+              throw new Error('Deploy de validacao exige executor de exclusao desabilitado');
+            }
             for (const key of ['META_APP_ID', 'META_APP_SECRET', 'META_WEBHOOK_VERIFY_TOKEN']) {
               if (!current[key]?.trim()) throw new Error(`Configuracao webhook ausente: ${key}`);
             }
@@ -200,6 +214,11 @@ jobs:
 
               cd "$APP_DIR/backend"
               case "$MIGRATION_SET" in
+                "017")
+                  run_migration \
+                    "sql/017-privacy-scope-executor.sql" \
+                    "sql/017-privacy-scope-executor-verify.sql"
+                  ;;
                 "016")
                   run_migration \
                     "sql/016-privacy-deletion-requests.sql" \
@@ -280,6 +299,8 @@ jobs:
                 < sql/015-inbox-send-attempts-verify.sql
               docker exec -i socialbot_postgres psql -U n8n -d n8n \
                 < sql/016-privacy-deletion-requests-verify.sql
+              docker exec -i socialbot_postgres psql -U n8n -d n8n \
+                < sql/017-privacy-scope-executor-verify.sql
             fi
 
             if [[ "$RESTART_BACKEND" == "true" ]]; then

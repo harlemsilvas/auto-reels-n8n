@@ -9,6 +9,7 @@ function load(file, dependencies, clock = Date) {
   const module = { exports: {} };
   new Script(`(function(require,module,Date){${fs.readFileSync(filename, "utf8")}\n})`, { filename })
     .runInThisContext()((name) => {
+      if (name === "../privacy/scope-gate") return { withScope: async (_scope, callback) => callback(), outbound: async (_scope, _kind, callback) => callback() };
       assert.ok(Object.hasOwn(dependencies, name), `Dependencia inesperada: ${name}`);
       return dependencies[name];
     }, module, clock);

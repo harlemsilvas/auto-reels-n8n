@@ -9,6 +9,7 @@ function load(file, dependencies) {
   const filename = path.resolve(__dirname, "../src", file);
   new Script(`(function(require,module){\n${fs.readFileSync(filename, "utf8")}\n})`, { filename })
     .runInThisContext()((name) => {
+      if (name === "../privacy/scope-gate") return { withScope: async (_scope, callback) => callback(), outbound: async (_scope, _kind, callback) => callback() };
       assert.ok(Object.hasOwn(dependencies, name), name);
       return dependencies[name];
     }, module);

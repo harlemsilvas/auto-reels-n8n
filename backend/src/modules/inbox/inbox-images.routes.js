@@ -31,21 +31,27 @@ router.post("/:conversationId/images", (req, res, next) => {
   });
 });
 
-function serveImage(resolve) {
+function serveImage(resolve,guard) {
   return async (req, res, next) => {
-    try {
+    const send=async()=>{
       const file = await resolve(req);
       res.set({ "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" });
-      res.sendFile(file, { dotfiles: "deny" }, (error) => {
-        if (error) next(error.status === 404 || error.code === "ENOENT"
-          ? Object.assign(new Error("Imagem indisponivel."), { status: 404 }) : error);
-      });
-    } catch (error) { next(error); }
+      await new Promise((done,reject)=>res.sendFile(file,{dotfiles:"deny"},error=>error?reject(error):done()));
+    };
+    try {
+      if(guard)await guard(req,send);else await send();
+    } catch (error) {
+      if (error.code === "ENOENT" || error.status === 404) {
+        return res.status(404).json({ message: "Imagem nao encontrada." });
+      }
+      next(error);
+    }
   };
 }
 
 module.exports = {
   imageSendRoutes: router,
-  serveDeliveryImage: serveImage((req) => service.resolveDelivery(req.params.token)),
-  serveConversationImage: serveImage((req) => service.resolveConversationImage(req.params.conversationId, req.params.messageId)),
+  serveDeliveryImage: serveImage((req) => service.resolveDelivery(req.params.token),(req,send)=>service.withDelivery(req.params.token,send)),
+  serveConversationImage: serveImage((req) => service.resolveConversationImage(req.params.conversationId, req.params.messageId),
+    (req,send)=>service.withConversation(req.params.conversationId,send)),
 };

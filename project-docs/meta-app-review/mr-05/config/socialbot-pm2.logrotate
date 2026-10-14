@@ -1,0 +1,19 @@
+# Prepared only. Install separately after review; do not include Nginx/Docker logs.
+/home/socialbot/.pm2/logs/socialbot-backend-out.log /home/socialbot/.pm2/logs/socialbot-backend-error.log /home/socialbot/.pm2/logs/socialbot-worker-out.log /home/socialbot/.pm2/logs/socialbot-worker-error.log {
+    su socialbot socialbot
+    daily
+    maxsize 20M
+    rotate 14
+    maxage 14
+    missingok
+    notifempty
+    compress
+    delaycompress
+    dateext
+    dateformat -%Y%m%d-%H%M%S
+    create 0600 socialbot socialbot
+    sharedscripts
+    postrotate
+        /usr/sbin/runuser -u socialbot -- /usr/bin/pm2 reloadLogs
+    endscript
+}

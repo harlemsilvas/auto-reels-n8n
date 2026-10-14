@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "files": [
+    {
+      "path": "EXAMPLE.dump",
+      "category": "daily_database_backup",
+      "createdAt": "2026-10-14T00:00:00Z",
+      "creationVerified": false,
+      "hold": true,
+      "restoreEvidence": null,
+      "sha256": "REPLACE_WITH_VERIFIED_SHA256"
+    },
+    { "path": "EXAMPLE-receipt.json", "category": "deletion_receipt" }
+  ]
+}

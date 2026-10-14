@@ -64,4 +64,15 @@ function forgetScope({ accountId, instagramUserId }) {
   return removed;
 }
 
-module.exports = { lookupProfile, forgetScope };
+async function guardedLookup(input) {
+  if (!input.accountId || !/^\d+$/.test(input.instagramUserId ?? "") || !input.accessToken) return null;
+  try {return await require("../privacy/scope-gate").withScope(input,()=>lookupProfile(input));}
+  catch {forgetScope(input);return null;}
+}
+function cachedScopes() {
+  return [...entries.keys()].map(key=>{
+    const [accountId,instagramUserId]=JSON.parse(key);
+    return {accountId,instagramUserId};
+  });
+}
+module.exports = { lookupProfile:guardedLookup, forgetScope, cachedScopes };

@@ -1,4 +1,6 @@
 const { Pool } = require("pg");
+const { AsyncLocalStorage } = require("node:async_hooks");
+const scopedClient = new AsyncLocalStorage();
 const {
   DB_CONNECTION_STRING,
   DB_HOST,
@@ -34,8 +36,14 @@ function getPool() {
     pool = createPool();
   }
 
-  return pool;
+  const client = scopedClient.getStore();
+  if (!client) return pool;
+  // Repository transactions reuse the send lease; release never returns it early.
+  const facade = { query: (...args) => client.query(...args), release() {} };
+  return { options: pool.options, query: facade.query, connect: async () => facade };
 }
+
+function runWithClient(client, callback) { return scopedClient.run(client, callback); }
 
 async function query(text, params = []) {
   return getPool().query(text, params);
@@ -44,4 +52,5 @@ async function query(text, params = []) {
 module.exports = {
   getPool,
   query,
+  runWithClient,
 };

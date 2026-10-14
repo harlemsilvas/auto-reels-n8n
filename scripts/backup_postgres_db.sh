@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
+set -o noclobber
 
 # Backup PostgreSQL do SocialBot via Docker.
 #

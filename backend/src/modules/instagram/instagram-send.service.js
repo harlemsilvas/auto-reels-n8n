@@ -257,12 +257,15 @@ async function sendQuickReplies({
     recipientId,
   });
 
+  let delivered=false;
+  try {
   const response = await apiClient.sendQuickReplies({
     accessToken: account.accessToken,
     recipientId,
     messageText,
     replies,
   });
+  delivered=true;
 
   const savedMessage = await saveOutboundMessage({
     conversationId: conversation.id,
@@ -273,10 +276,17 @@ async function sendQuickReplies({
   });
 
   return savedMessage;
+  } catch(error) {
+    error.deliveryMayHaveSucceeded=delivered||!error.status||error.status>=500;
+    throw error;
+  }
 }
 
 module.exports = {
-  sendTextMessage,
-  sendImageMessage,
-  sendQuickReplies,
+  sendTextMessage: input => require("../privacy/scope-gate").outbound(
+    {accountId:input.accountId,instagramUserId:input.recipientId},"text",()=>sendTextMessage(input)),
+  sendImageMessage: input => require("../privacy/scope-gate").outbound(
+    {accountId:input.accountId,instagramUserId:input.recipientId},"image",()=>sendImageMessage(input),input.imageMetadata?.filename),
+  sendQuickReplies: input => require("../privacy/scope-gate").outbound(
+    {accountId:input.accountId,instagramUserId:input.recipientId},"quick_replies",()=>sendQuickReplies(input)),
 };

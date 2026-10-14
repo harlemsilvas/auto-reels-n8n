@@ -86,3 +86,11 @@ foram verificadas por fixtures, não por uma entrega Meta real. Nenhuma mutation
 DB, migration, exclusão de mídia, restart, chamada Meta, commit/push/deploy ou
 consulta VPS nesta etapa. A próxima fase é o desenho da exclusão transacional
 demonstrativa, com histórico/resumos, cópias e revalidação de envios/referências.
+
+## Evolução posterior — 14/10/2026
+
+Bloqueio por escopo e executor foram desenvolvidos e testados em schemas e
+arquivos temporários. Este relatório continua sem lista executável de limpeza;
+não alimenta automaticamente o executor. Estado, proteções e pendências estão
+em [executor-local.md](executor-local.md). Migration 017 não aplicada ao schema
+principal ou à VPS, sem exclusão real ou deploy desse incremento.

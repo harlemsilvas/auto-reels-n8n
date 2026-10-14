@@ -9,12 +9,15 @@ function load(file, dependencies) {
   const filename = path.resolve(__dirname, "../src", file), module = { exports: {} };
   new Script(`(function(require,module){${fs.readFileSync(filename,"utf8")}\n})`, {filename})
     .runInThisContext()(name => {
+      if (name === "../privacy/scope-gate") return { withScope: async (_scope, callback) => callback(), outbound: async (_scope, _kind, callback) => callback() };
       assert.ok(Object.hasOwn(dependencies,name), `Unexpected dependency: ${name}`);
       return dependencies[name];
     },module);
   return module.exports;
 }
 async function main() {
+  const previousExecutorFlag=process.env.PRIVACY_EXECUTOR_ENABLED;
+  delete process.env.PRIVACY_EXECUTOR_ENABLED;
   process.chdir(path.resolve(__dirname,".."));
   process.env.DOTENV_CONFIG_QUIET = "true";
   const env = require("../src/config/env");
@@ -102,8 +105,15 @@ async function main() {
         validateCsrf(_actor,token){return token==="demo-csrf";},
       },"./permissions.service":{hasPermission:()=>true},
     });
+    let executorCalls=0;
+    const executionStub=async(id,body,auth)=>{
+      assert.equal(id,requestId);assert.equal(auth.userId,actor.userId);
+      assert.deepEqual(body,{acknowledged:true});executorCalls++;
+      return {deletionComplete:false};
+    };
     const router=load("modules/privacy/deletion-requests.routes.js",{
       express,"../auth/admin-auth.middleware":middleware,"./deletion-requests.service":service,
+      "./deletion-executor":{blockScope:executionStub,executeDatabase:executionStub,processFiles:executionStub},
     });
     const app=express(); app.use("/requests",router);
     server=await new Promise((resolve,reject)=>{const s=app.listen(0,"127.0.0.1",error=>error?reject(error):resolve(s));s.on("error",reject);});
@@ -122,12 +132,26 @@ async function main() {
     assert.equal((await call("POST",`/requests/${requestId}/review-backups`,backupProof,"admin","demo-csrf")).status,200);
     assert.equal((await call("POST",`/requests/${requestId}/verify`,{...proof,scopeReviewed:false},"admin","demo-csrf")).status,400);
     assert.equal((await call("GET","/requests/not-a-uuid",null,"admin")).status,400);
+    for(const operation of ["block-scope","execute-database","process-files"]){
+      const url=`/requests/${requestId}/${operation}`,body={acknowledged:true};
+      assert.equal((await call("POST",url,body)).status,401);
+      assert.equal((await call("POST",url,body,"operator","demo-csrf")).status,403);
+      assert.equal((await call("POST",url,body,"admin")).status,403);
+      delete process.env.PRIVACY_EXECUTOR_ENABLED;
+      const disabled=await call("POST",url,body,"admin","demo-csrf");
+      assert.equal(disabled.status,503);assert.equal((await disabled.json()).code,"PRIVACY_EXECUTOR_DISABLED");
+      process.env.PRIVACY_EXECUTOR_ENABLED="true";
+      assert.equal((await call("POST",url,body,"admin","demo-csrf")).status,200);
+    }
+    assert.equal(executorCalls,3);
     const malformed=await fetch(base+"/requests",{method:"POST",headers:{"content-type":"application/json",cookie:"demo=admin","x-csrf-token":"demo-csrf"},body:'{"private-demo-secret":'});
     assert.equal(malformed.status,400);
     assert.doesNotMatch(await malformed.text(),/private-demo-secret|stack/);
     assert.equal((await pool.query("SELECT count(*)::int AS n FROM instagram_messages")).rows[0].n,2);
     console.log("Approved: migration rollback/idempotence/verifier, durable create/replay/scope/duplicate, verification gates, tasks/files shared protection, safe output, and HTTP session/admin/CSRF with auth flag disabled. Temporary schema only; no cleanup.");
   } finally {
+    if(previousExecutorFlag===undefined)delete process.env.PRIVACY_EXECUTOR_ENABLED;
+    else process.env.PRIVACY_EXECUTOR_ENABLED=previousExecutorFlag;
     if(server){server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
     await pool.end();
     if(created) await admin.query(`DROP SCHEMA ${schema} CASCADE`);

@@ -75,6 +75,8 @@ async function sendConversationImage(conversationId, file) {
   const base = deliveryBase();
   const image = await normalizeImage(file);
   const filename = randomUUID() + image.extension;
+  return require("../privacy/scope-gate").outbound({accountId:conversation.rows[0].accountId,
+    instagramUserId:conversation.rows[0].recipientId},"image",async()=>{
   await fs.mkdir(INBOX_MEDIA_DIR, { recursive: true, mode: 0o700 });
   await fs.writeFile(imagePath(filename), image.buffer, { flag: "wx", mode: 0o600 });
   const token = grantDelivery(filename, { accountId: conversation.rows[0].accountId,
@@ -91,6 +93,7 @@ async function sendConversationImage(conversationId, file) {
     }
     throw error;
   }
+  },filename);
 }
 
 async function resolveConversationImage(conversationId, messageId) {
@@ -112,4 +115,29 @@ function revokeScope({ accountId, instagramUserId }) {
   return { removed, legacyUnscoped };
 }
 
-module.exports = { MAX_IMAGE_BYTES, normalizeImage, resolveDelivery, resolveConversationImage, sendConversationImage, revokeScope };
+async function guardedSend(conversationId,file) {
+  if(!uuid.test(conversationId))throw failure(400,"Conversa invalida.");
+  const row=(await query("SELECT account_id,instagram_user_id FROM instagram_conversations WHERE id=$1 AND deleted_at IS NULL",[conversationId])).rows[0];
+  if(!row)throw failure(404,"Conversa nao encontrada.");
+  return require("../privacy/scope-gate").withScope({accountId:row.account_id,instagramUserId:row.instagram_user_id},
+    ()=>sendConversationImage(conversationId,file));
+}
+async function withDelivery(token,callback) {
+  const entry=capabilities.get(token);
+  resolveDelivery(token);
+  if(!entry?.accountId||!entry.instagramUserId)throw failure(404,"Imagem indisponivel.");
+  try {return await require("../privacy/scope-gate").withScope(entry,callback);}
+  catch(error){if(error.code==='PRIVACY_SCOPE_BLOCKED')revokeScope(entry);throw error;}
+}
+async function withConversation(conversationId,callback) {
+  if(!uuid.test(conversationId))throw failure(400,"Conversa invalida.");
+  const row=(await query("SELECT account_id,instagram_user_id FROM instagram_conversations WHERE id=$1 AND deleted_at IS NULL",[conversationId])).rows[0];
+  if(!row)throw failure(404,"Conversa nao encontrada.");
+  return require("../privacy/scope-gate").withScope({accountId:row.account_id,instagramUserId:row.instagram_user_id},callback);
+}
+function cachedScopes() {
+  return [...capabilities.values()].filter(entry=>entry.accountId&&entry.instagramUserId)
+    .map(({accountId,instagramUserId})=>({accountId,instagramUserId}));
+}
+module.exports = { MAX_IMAGE_BYTES, normalizeImage, resolveDelivery, resolveConversationImage,
+  sendConversationImage:guardedSend, revokeScope, withDelivery, withConversation, cachedScopes };

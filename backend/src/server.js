@@ -36,6 +36,7 @@ async function bootstrap() {
     startEnqueueReadyCollector();
     startRecoveryCollector();
     startDailyMaintenance();
+    require("./modules/privacy/cache-sweep").startCacheSweep();
   });
 }
 

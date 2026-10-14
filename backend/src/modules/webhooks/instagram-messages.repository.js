@@ -7,45 +7,23 @@ const { query, getPool } = require("../../lib/db");
  */
 
 async function saveWebhookEvent(payload, eventType = null) {
-  const payloadJson = JSON.stringify(payload);
-
+  const client=await getPool().connect();
   try {
-    await query(
-      `
-        INSERT INTO webhook_events (
-          provider,
-          event_type,
-          payload
-        )
-        VALUES (
-          'instagram',
-          $1,
-          $2::jsonb
-        )
-      `,
-      [eventType, payloadJson],
-    );
-    return;
-  } catch (error) {
-    // Compatibilidade com schema antigo sem coluna provider.
-    if (error?.code !== "42703") {
-      throw error;
+    await client.query("BEGIN");
+    const filtered=await require("../privacy/webhook-scope").filter(client,payload);
+    if(!filtered.entry.length){await client.query("COMMIT");return;}
+    const payloadJson=JSON.stringify(filtered);
+    await client.query("SAVEPOINT webhook_schema");
+    try {
+      await client.query("INSERT INTO webhook_events(provider,event_type,payload) VALUES('instagram',$1,$2::jsonb)",[eventType,payloadJson]);
+    } catch(error) {
+      await client.query("ROLLBACK TO SAVEPOINT webhook_schema");
+      if(error.code!=="42703")throw error;
+      await client.query("INSERT INTO webhook_events(event_type,payload) VALUES($1,$2::jsonb)",[eventType,payloadJson]);
     }
-  }
-
-  await query(
-    `
-      INSERT INTO webhook_events (
-        event_type,
-        payload
-      )
-      VALUES (
-        $1,
-        $2::jsonb
-      )
-    `,
-    [eventType, payloadJson],
-  );
+    await client.query("COMMIT");
+  } catch(error){await client.query("ROLLBACK");throw error;}
+  finally{client.release();}
 }
 
 /**
